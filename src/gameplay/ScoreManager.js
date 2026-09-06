@@ -1,0 +1,189 @@
+/**
+ * ScoreManager.js
+ * Pure scoring/combo/statistics logic. No Three.js, no DOM - which is exactly
+ * why it is the part of the game with real unit tests (tests/score.test.js).
+ *
+ * Rules implemented (all values come from data/config.js):
+ *   major hazard  fast +15  slow +7
+ *   minor hazard  fast +5   slow +2
+ *   wrong flag     0 points (configurable penalty) + a safety tip
+ *   combo          3 correct in a row -> combo active, +comboBonus per find
+ *   difficulty     final score is multiplied by the difficulty multiplier
+ */
+import { SCORING, rankForScore } from '../data/config.js';
+import { bus, EV } from '../core/EventBus.js';
+
+export class ScoreManager {
+  /**
+   * @param {object} o
+   * @param {number} o.multiplier   difficulty score multiplier
+   * @param {object} o.scoring      override SCORING for tests/tuning
+   * @param {boolean} o.emit        emit events on the global bus (false in tests)
+   */
+  constructor({ multiplier = 1, scoring = SCORING, emit = true } = {}) {
+    this.cfg = scoring;
+    this.multiplier = multiplier;
+    this.emit = emit;
+    this.reset();
+  }
+
+  reset() {
+    this.rawScore = 0;
+    this.correct = 0;
+    this.wrong = 0;
+    this.attempts = 0;
+    this.streak = 0;
+    this.bestStreak = 0;
+    this.comboActive = false;
+    this.comboBonusTotal = 0;
+    /** @type {{id:string,severity:string,reactionTime:number,points:number,fast:boolean}[]} */
+    this.finds = [];
+    /** @type {{reason:string,at:number}[]} */
+    this.misses = [];
+    this.expired = [];
+  }
+
+  /** Final score after the difficulty multiplier, rounded to an integer. */
+  get score() {
+    return Math.max(0, Math.round(this.rawScore * this.multiplier));
+  }
+
+  get rank() {
+    return rankForScore(this.score);
+  }
+
+  get accuracy() {
+    return this.attempts === 0 ? 0 : this.correct / this.attempts;
+  }
+
+  get averageReactionTime() {
+    if (this.finds.length === 0) return null;
+    const sum = this.finds.reduce((a, f) => a + f.reactionTime, 0);
+    return sum / this.finds.length;
+  }
+
+  /**
+   * Was this find "fast"? Fast means inside `fastThresholdRatio` of the time
+   * that was allotted for the hazard.
+   */
+  isFast(reactionTime, allottedTime) {
+    if (!allottedTime || allottedTime <= 0) return false;
+    return reactionTime <= allottedTime * this.cfg.fastThresholdRatio;
+  }
+
+  /**
+   * Record a correct hazard identification.
+   * @param {object} o
+   * @param {string} o.id
+   * @param {'major'|'minor'} o.severity
+   * @param {number} o.reactionTime seconds taken
+   * @param {number} o.allottedTime seconds available for this hazard
+   * @returns {{points:number, fast:boolean, combo:boolean, comboBonus:number}}
+   */
+  recordCorrect({ id, severity, reactionTime, allottedTime }) {
+    const fast = this.isFast(reactionTime, allottedTime);
+    const table = this.cfg[severity] ?? this.cfg.minor;
+    const base = fast ? table.fast : table.slow;
+
+    this.attempts++;
+    this.correct++;
+    this.streak++;
+    this.bestStreak = Math.max(this.bestStreak, this.streak);
+
+    const wasCombo = this.comboActive;
+    if (this.streak >= this.cfg.comboLength) {
+      this.comboActive = true;
+      if (!wasCombo && this.emit) bus.emit(EV.COMBO_START, { streak: this.streak });
+    }
+
+    let comboBonus = 0;
+    if (this.comboActive) {
+      comboBonus = this.cfg.comboBonus;
+      this.comboBonusTotal += comboBonus;
+    }
+
+    const points = base + comboBonus;
+    this.rawScore += points;
+    this.finds.push({ id, severity, reactionTime, points, fast });
+
+    if (this.emit) {
+      bus.emit(EV.SCORE_CHANGED, {
+        score: this.score,
+        delta: Math.round(points * this.multiplier),
+        streak: this.streak,
+        comboActive: this.comboActive,
+      });
+    }
+
+    return { points, fast, combo: this.comboActive, comboBonus };
+  }
+
+  /**
+   * Record a wrong flag. Breaks the combo streak.
+   * @returns {{points:number}}
+   */
+  recordWrong({ reason = '' } = {}) {
+    this.attempts++;
+    this.wrong++;
+    const hadCombo = this.comboActive;
+    this.streak = 0;
+    this.comboActive = false;
+    this.misses.push({ reason, at: Date.now() });
+
+    const penalty = this.cfg.wrongPenalty ?? 0;
+    if (penalty) this.rawScore = Math.max(0, this.rawScore - penalty);
+
+    if (this.emit) {
+      if (hadCombo) bus.emit(EV.COMBO_BREAK, {});
+      bus.emit(EV.SCORE_CHANGED, {
+        score: this.score,
+        delta: -Math.round(penalty * this.multiplier),
+        streak: 0,
+        comboActive: false,
+      });
+    }
+    return { points: -penalty };
+  }
+
+  /** A hazard's clock ran out without it being found. Also breaks the combo. */
+  recordExpired({ id, severity }) {
+    const hadCombo = this.comboActive;
+    this.streak = 0;
+    this.comboActive = false;
+    this.expired.push({ id, severity });
+    if (this.emit && hadCombo) bus.emit(EV.COMBO_BREAK, {});
+  }
+
+  /** Everything the results screen needs. */
+  summary({ totalHazards = 0, elapsed = 0, difficulty = 'mid', environment = '', mode = 'test' } = {}) {
+    const byCategory = {};
+    for (const f of this.finds) {
+      byCategory[f.id] = { severity: f.severity, points: f.points, fast: f.fast, reactionTime: f.reactionTime };
+    }
+    return {
+      mode,
+      difficulty,
+      environment,
+      score: this.score,
+      rawScore: this.rawScore,
+      multiplier: this.multiplier,
+      correct: this.correct,
+      wrong: this.wrong,
+      attempts: this.attempts,
+      totalHazards,
+      missed: Math.max(0, totalHazards - this.correct),
+      accuracy: this.accuracy,
+      averageReactionTime: this.averageReactionTime,
+      bestCombo: this.bestStreak,
+      comboBonusTotal: this.comboBonusTotal,
+      rank: this.rank,
+      finds: [...this.finds],
+      misses: [...this.misses],
+      expired: [...this.expired],
+      elapsed,
+      perfect: this.wrong === 0 && totalHazards > 0 && this.correct === totalHazards,
+      finishedAt: Date.now(),
+      byCategory,
+    };
+  }
+}
