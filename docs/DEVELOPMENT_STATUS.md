@@ -153,3 +153,51 @@ None blocking. Optional only:
 5. Rotate scenario sub-offsets by `heading` for exact collider placement
 6. Instructor dashboard / cohort results
 7. Round replay showing what was missed and where
+
+---
+
+## Deployment
+
+**Live artifact:** https://claude.ai/code/artifact/7ba87d99-7847-41fe-8c73-b71445dbcbdc
+(private to the account that owns it until shared from the page's share menu)
+
+### Single-file build
+
+```bash
+npm run build:single      # -> dist-single/beat-the-hazard.html
+```
+
+Produces **one self-contained 677 kB HTML file** with CSS and JS inlined and
+**zero external requests** — no CDN, no fonts, no images, no audio files. It can
+be opened directly from disk, emailed, or dropped on any static host.
+
+The only URL string in the bundle is the XHTML namespace constant used
+internally by Three.js; it is not a network request.
+
+### Verified in a sandboxed iframe
+
+The hosted artifact runs the page in a sandboxed iframe **without
+`allow="pointer-lock"`**, which is the riskiest difference from local play. This
+was reproduced locally and tested:
+
+| Check | Result |
+|---|---|
+| Game boots and loads a round | ✅ 15 hazards, 60 fps |
+| Pointer lock refused | ✅ `lockFailed: true` — as expected |
+| Drag-look fallback engages | ✅ camera turns (yaw 0 → −0.616) |
+| Click flags a hazard | ✅ +15 score |
+| Drag does **not** flag | ✅ no accidental wrong answers |
+| localStorage / profile | ✅ works |
+
+This is exactly why the pointer-lock fallback (bug #4) was worth building.
+
+### Other hosting options
+
+The same `dist/` or `dist-single/` output is a plain static site and will work
+on GitHub Pages, Netlify, Vercel, Cloudflare Pages or any web server. Those all
+require the project owner's own account, so they were not set up here.
+
+```bash
+npm run build        # -> dist/  (normal multi-file build)
+npm run preview      # serve the production build locally
+```
