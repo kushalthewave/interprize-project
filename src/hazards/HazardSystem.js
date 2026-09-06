@@ -102,9 +102,19 @@ export class HazardSystem {
     const geo = new THREE.BoxGeometry(inst.size.x, inst.size.y, inst.size.z);
     const proxy = new THREE.Mesh(
       geo,
-      new THREE.MeshBasicMaterial({ visible: false }),
+      // DoubleSide matters: several hazard volumes are large enough to stand
+      // inside (the walkway a forklift is driving down, the blind corner).
+      // With the default FrontSide the raycast finds no front face from inside
+      // the box, making the hazard impossible to flag from exactly the spot
+      // where it is most obvious.
+      new THREE.MeshBasicMaterial({ visible: false, side: THREE.DoubleSide }),
     );
     proxy.position.copy(inst.center);
+    // Mesh.raycast() reads matrixWorld, NOT position. Without this the proxy
+    // is still at the origin as far as raycasting is concerned until the first
+    // render updates the scene graph - which silently breaks all targeting on
+    // the opening frames (and entirely if the tab is not rendering yet).
+    proxy.updateMatrixWorld(true);
     proxy.userData.hazardId = inst.id;
     proxy.userData.instance = inst;
     proxy.name = `proxy-${inst.id}`;
@@ -130,9 +140,10 @@ export class HazardSystem {
   registerDecoy({ center, size, reason }) {
     const proxy = new THREE.Mesh(
       new THREE.BoxGeometry(size.x, size.y, size.z),
-      new THREE.MeshBasicMaterial({ visible: false }),
+      new THREE.MeshBasicMaterial({ visible: false, side: THREE.DoubleSide }),
     );
     proxy.position.copy(center);
+    proxy.updateMatrixWorld(true); // see register() - raycasting needs matrixWorld
     proxy.userData.decoy = { reason };
     proxy.name = 'proxy-decoy';
     this.group.add(proxy);
@@ -258,6 +269,11 @@ export class HazardSystem {
   /**
    * Coarse line-of-sight test from the camera to a point against the collider
    * AABBs. Uses a slab test per box - no scene traversal.
+   *
+   * Two boxes must never count as occluders, or hazards become unflaggable:
+   *  - the box the TARGET sits in (a hazard's own collider, or the racking it
+   *    is attached to) - otherwise every hazard occludes itself
+   *  - the box the CAMERA is standing in
    */
   _occluded(point) {
     const o = this.camera.position;
@@ -270,8 +286,18 @@ export class HazardSystem {
     const iy = dy / len;
     const iz = dz / len;
 
+    /** Is p inside this collider box, allowing a margin? */
+    const contains = (c, p, m) =>
+      p.x >= c.cx - c.hx - m && p.x <= c.cx + c.hx + m &&
+      p.z >= c.cz - c.hz - m && p.z <= c.cz + c.hz + m &&
+      p.y >= -m && p.y <= (c.h ?? 3) + m;
+
     for (const c of this.occluders) {
       if (!c.opaque) continue;
+      // Self-occlusion guards.
+      if (contains(c, point, 0.6)) continue;
+      if (contains(c, o, 0.2)) continue;
+
       const minX = c.cx - c.hx;
       const maxX = c.cx + c.hx;
       const minZ = c.cz - c.hz;
@@ -279,8 +305,8 @@ export class HazardSystem {
       const minY = 0;
       const maxY = c.h ?? 3;
 
-      let t0 = 0.15; // start slightly ahead so we never self-occlude
-      let t1 = len - 0.25; // stop just short of the target
+      let t0 = 0.2; // start slightly ahead so we never self-occlude
+      let t1 = len - 0.6; // stop well short of the target
       if (t1 <= t0) continue;
 
       let ok = true;

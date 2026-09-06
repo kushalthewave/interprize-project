@@ -178,17 +178,38 @@ function boot() {
    * ---------------------------------------------------------------- */
   player.onLockChange = (locked) => {
     const playing = game.state === STATE.PLAYING;
-    ui.setLockPrompt(playing && !locked && !isTouch);
+    // Once the browser has refused pointer lock, stop asking - drag-look is
+    // now the control scheme and the prompt would just be in the way.
+    ui.setLockPrompt(playing && !locked && !isTouch && !player.lockFailed);
+  };
+
+  player.onLockUnavailable = () => {
+    ui.setLockPrompt(false);
+    ui.setDragLookMode(true);
+    ui.toast('Mouse capture unavailable here — click and drag to look around.', 'error');
   };
 
   canvas.addEventListener('mousedown', (e) => {
-    if (game.state !== STATE.PLAYING) return;
-    if (!player.locked) {
+    if (game.state !== STATE.PLAYING || e.button !== 0) return;
+    // First click tries to capture the mouse; it must not also flag a hazard.
+    if (!player.locked && !player.lockFailed) {
       player.requestLock();
       return;
     }
-    if (e.button === 0) game.flag();
+    if (player.locked) game.flag();
+    // In drag-look mode the flag happens on mouseup, so a drag that was meant
+    // to turn the camera is not mistaken for a hazard call.
   });
+
+  canvas.addEventListener('mouseup', (e) => {
+    if (game.state !== STATE.PLAYING || e.button !== 0) return;
+    if (player.locked || !player.lockFailed) return;
+    // A click, not a drag: treat it as flagging whatever is under the reticle.
+    if (player.dragMoved < 6) game.flag();
+  });
+
+  // Losing the window mid-drag must not leave the camera stuck to the mouse.
+  window.addEventListener('blur', () => { player.dragging = false; });
 
   document.addEventListener('keydown', (e) => {
     // Ignore while typing in a form field.

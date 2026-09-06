@@ -100,7 +100,9 @@ export class HUD {
       this.comboBadge.hidden = true;
       this.feedback.hidden = true;
       this.trainPanel.hidden = d.mode !== 'train';
-      if (d.mode === 'train') this._renderTrainPanel({ index: 0, total: d.totalHazards, next: null });
+      if (d.mode === 'train') {
+        this._renderTrainPanel({ index: 0, total: d.totalHazards, next: null, started: true });
+      }
       this.show();
     });
 
@@ -200,22 +202,27 @@ export class HUD {
   }
 
   _renderTrainPanel(d) {
-    if (this.trainPanel.hidden && d.next == null && d.index === 0) {
-      // still show the opening instruction
-      this.trainPanel.hidden = false;
-    }
+    this.trainPanel.hidden = false;
+
+    // Three distinct states. `next == null` alone does NOT mean "finished" -
+    // at round start nothing has been found yet and there is no "next" to
+    // name, which previously showed "Training complete" on the opening frame.
+    const complete = !d.started && d.next == null && d.index >= d.total && d.total > 0;
+
     mount(
       this.trainPanel,
       el('div.tp-k', { text: `Training · ${d.index}/${d.total} learned` }),
-      d.next
-        ? el('h4', { text: 'Find the next hazard' })
-        : el('h4', { text: '🎓 Training complete' }),
-      el('p', {
-        text: d.next
-          ? (d.next.hint ?? 'Walk the building and look for anything physically wrong. Highlighted rings mark hazards you have not found yet.')
-          : 'You have identified every hazard in this environment. Test Mode is now unlocked.',
+      el('h4', {
+        text: complete ? '🎓 Training complete' : d.next ? 'Find the next hazard' : 'Explore the warehouse',
       }),
-      d.next && el('div.kw', {}, [el('span', { text: d.next.name })]),
+      el('p', {
+        text: complete
+          ? 'You have identified every hazard in this environment. Test Mode is now unlocked.'
+          : d.next
+            ? (d.next.hint ?? 'Look for anything physically wrong: an obstruction, damage, instability, or a person in the wrong place.')
+            : 'Walk around and look for anything physically wrong. Glowing rings mark the hazards you have not found yet — look at one and press E to flag it.',
+      }),
+      d.next && !complete && el('div.kw', {}, [el('span', { text: d.next.name })]),
     );
   }
 
