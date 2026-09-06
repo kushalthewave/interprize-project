@@ -97,11 +97,23 @@ describe('Timer - warning states', () => {
   });
 
   it('goes critical in the last few seconds', () => {
+    // Critical threshold is min(10, secondsPerHazard * 0.15) = min(10, 9) = 9s.
     const t = new Timer({ secondsPerHazard: 60, hazardCount: 1 });
     t.start();
-    t.tick(52);
+    t.tick(48); // 12s left - warning, but not yet critical
+    expect(t.warning).toBe(true);
     expect(t.critical).toBe(false);
-    t.tick(2); // 6s left, min(10, 9) = 9
+    t.tick(4); // 8s left - inside the 9s critical band
+    expect(t.critical).toBe(true);
+  });
+
+  it('caps the critical band at 10s even on a long clock', () => {
+    // 0.15 * 90 = 13.5, so the 10s cap applies.
+    const t = new Timer({ secondsPerHazard: 90, hazardCount: 1 });
+    t.start();
+    t.tick(79); // 11s left
+    expect(t.critical).toBe(false);
+    t.tick(2); // 9s left
     expect(t.critical).toBe(true);
   });
 });

@@ -34,6 +34,18 @@ export class PlayerController {
 
     this.enabled = false;
     this.locked = false;
+    /**
+     * Pointer lock is not always available: embedded iframes without
+     * allow="pointer-lock", some kiosk/managed browsers, and any context where
+     * the user dismisses the permission all refuse it. When that happens we
+     * fall back to click-and-drag looking so the game stays fully playable
+     * rather than stranding the player on the "click to look around" prompt.
+     */
+    this.lockSupported =
+      typeof document !== 'undefined' && !!domElement.requestPointerLock;
+    this.lockFailed = false;
+    this.dragging = false;
+    this.dragMoved = 0;
     this.crouching = false;
     this.running = false;
     this.height = PLAYER.eyeHeight;
@@ -71,20 +83,43 @@ export class PlayerController {
       if (e.code === 'ControlLeft' || e.code === 'KeyC') this.setCrouch(false);
     };
     this._onMouseMove = (e) => {
-      if (!this.locked || !this.enabled) return;
-      this.yaw -= e.movementX * PLAYER.lookSensitivity;
-      this.pitch -= e.movementY * PLAYER.lookSensitivity;
+      if (!this.enabled) return;
+      // Locked: use raw movement deltas. Unlocked: only while dragging.
+      if (!this.locked && !this.dragging) return;
+      const mx = e.movementX ?? 0;
+      const my = e.movementY ?? 0;
+      if (this.dragging) this.dragMoved += Math.abs(mx) + Math.abs(my);
+      const sens = this.locked ? PLAYER.lookSensitivity : PLAYER.lookSensitivity * 1.4;
+      this.yaw -= mx * sens;
+      this.pitch -= my * sens * (this.invertY ? -1 : 1);
       this._clampPitch();
     };
     this._onLockChange = () => {
       this.locked = document.pointerLockElement === this.dom;
+      if (this.locked) this.lockFailed = false;
       this.onLockChange?.(this.locked);
       if (!this.locked) this.keys.clear();
     };
     this._onLockError = () => {
       this.locked = false;
+      // Remember the refusal so the UI can switch to drag-look permanently
+      // instead of re-prompting for a lock that will never be granted.
+      this.lockFailed = true;
       this.onLockChange?.(false);
+      this.onLockUnavailable?.();
     };
+
+    // --- drag-to-look fallback ---
+    this._onMouseDown = (e) => {
+      if (!this.enabled || this.locked || e.button !== 0) return;
+      this.dragging = true;
+      this.dragMoved = 0;
+    };
+    this._onMouseUp = () => {
+      this.dragging = false;
+    };
+    this.dom.addEventListener('mousedown', this._onMouseDown);
+    window.addEventListener('mouseup', this._onMouseUp);
 
     document.addEventListener('keydown', this._onKeyDown);
     document.addEventListener('keyup', this._onKeyUp);
@@ -102,10 +137,28 @@ export class PlayerController {
 
   requestLock() {
     if (this.locked) return;
-    const p = this.dom.requestPointerLock?.();
-    // Chrome returns a promise in newer versions; swallow the rejection that
-    // happens if the user pressed Esc within the browser's lock cooldown.
-    if (p && typeof p.catch === 'function') p.catch(() => {});
+    if (!this.lockSupported) {
+      this.lockFailed = true;
+      this.onLockUnavailable?.();
+      return;
+    }
+    let p;
+    try {
+      p = this.dom.requestPointerLock?.();
+    } catch {
+      this.lockFailed = true;
+      this.onLockUnavailable?.();
+      return;
+    }
+    // Newer Chrome returns a promise. A rejection means the lock was refused
+    // (sandboxed iframe, permissions policy, or the Esc cooldown) - fall back
+    // to drag-look rather than leaving the player unable to move the camera.
+    if (p && typeof p.catch === 'function') {
+      p.catch(() => {
+        this.lockFailed = true;
+        this.onLockUnavailable?.();
+      });
+    }
   }
 
   releaseLock() {
@@ -264,5 +317,7 @@ export class PlayerController {
     document.removeEventListener('mousemove', this._onMouseMove);
     document.removeEventListener('pointerlockchange', this._onLockChange);
     document.removeEventListener('pointerlockerror', this._onLockError);
+    this.dom.removeEventListener('mousedown', this._onMouseDown);
+    window.removeEventListener('mouseup', this._onMouseUp);
   }
 }

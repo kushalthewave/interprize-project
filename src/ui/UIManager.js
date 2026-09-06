@@ -271,6 +271,24 @@ export class UIManager {
     this.clickPrompt.hidden = !visible;
   }
 
+  /**
+   * Switch the on-screen control hints to drag-look, used when the browser
+   * refuses pointer lock (sandboxed iframe, permissions policy, kiosk mode).
+   */
+  setDragLookMode(on) {
+    if (!on) return;
+    this.clickPrompt.hidden = true;
+    mount(
+      this.hud.hint,
+      el('span', { html: '<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move' }),
+      el('span', { html: '<kbd>Drag</kbd> Look around' }),
+      el('span', { html: '<kbd>Shift</kbd> Run' }),
+      el('span', { html: '<kbd>C</kbd> Crouch' }),
+      el('span', { html: '<kbd>E</kbd> / <kbd>Click</kbd> Flag hazard' }),
+      el('span', { html: '<kbd>Esc</kbd> Pause' }),
+    );
+  }
+
   toast(message, kind = '') {
     const t = el(`div.toast${kind ? `.${kind}` : ''}`, { text: message });
     this.toasts.append(t);

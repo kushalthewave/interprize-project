@@ -68,6 +68,8 @@ export class GameManager {
     this._lastSummary = null;
     this._roundStart = 0;
     this._warnedAt = -1;
+    /** Diagnostic: which phase loadEnvironment() last completed. */
+    this._loadStep = 'none';
 
     this.engine.addUpdater((dt, t) => this.update(dt, t));
   }
@@ -101,6 +103,7 @@ export class GameManager {
 
     // tear down anything already loaded
     this.unload();
+    this._loadStep = 'unload';
     await frame();
 
     const diff = this.difficulty;
@@ -114,6 +117,7 @@ export class GameManager {
     this.world.onBoxImpact = () => this.audio?.boxImpact();
 
     bus.emit(EV.LOADING, { active: true, label: 'Building the warehouse…', progress: 0.25 });
+    this._loadStep = 'world-created';
     await frame();
 
     env.build(this.world);
@@ -124,6 +128,7 @@ export class GameManager {
     console.info(`[Game] ${env.meta.id}: merged ${opt.before} meshes into ${opt.after} (${opt.merged} batches)`);
 
     bus.emit(EV.LOADING, { active: true, label: 'Placing hazards…', progress: 0.7 });
+    this._loadStep = 'optimized';
     await frame();
 
     this.player.setColliders(this.world.colliders);
@@ -136,9 +141,11 @@ export class GameManager {
     this.player.teleport(spawn.x, spawn.z, spawn.yaw ?? 0);
 
     bus.emit(EV.LOADING, { active: true, label: 'Ready.', progress: 1 });
+    this._loadStep = 'spawned';
     await frame();
     await frame();
 
+    this._loadStep = 'ready';
     this.state = STATE.READY;
     bus.emit(EV.LOADING, { active: false });
     return this.world;
