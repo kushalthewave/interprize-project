@@ -1,140 +1,155 @@
 # Development Status
 
-**Last updated:** 2026-09-06 (session 1, paused by user request)
-**Overall:** PARTIAL — core is built and running; mid-debug on first-load QA.
+**Last updated:** 2026-09-07
+**Overall:** ✅ **COMPLETE and working** for the specified scope, with the
+limitations below stated honestly.
 
 ---
 
-## Environment findings (verified, not assumed)
+## Health
 
-| Tool | Status | Note |
-|---|---|---|
-| Node.js | ✅ v24.20.0 | **Was NOT installed.** Installed via existing nvm4w during this session. |
-| npm | ✅ 11.19.0 | `esbuild` postinstall required explicit `npm install-scripts approve esbuild`. |
-| Git | ✅ 2.55.0 | |
-| Python | ✅ 3.14.7 | Used for scripted file patching only. |
-| **Blender** | ❌ **NOT INSTALLED** | No `blender` on PATH, no `Program Files/Blender Foundation`. All 3D geometry is therefore **procedural Three.js**, not Blender-authored. See `docs/DECISIONS.md`. |
-
-⚠️ Node is **not on the system PATH** — nvm's shim directory is on PATH but empty.
-Commands must be run with the version dir prepended:
-```bash
-export PATH="/c/Users/acer/AppData/Local/nvm/v24.20.0:$PATH"
-```
-`.claude/launch.json` invokes `node.exe` by absolute path for the same reason.
+| Check | Status |
+|---|---|
+| Build (`npm run build`) | ✅ passing, 2.6 s |
+| Tests (`npm test`) | ✅ **94 / 94 passing** |
+| Syntax gate | ✅ 34 files, 0 errors |
+| App boots | ✅ no console errors |
+| Playthrough, all 3 environments | ✅ every hazard reachable |
+| Performance | ✅ 60 fps, 1,520 draw calls |
 
 ---
 
 ## COMPLETED
 
 ### Foundation
-- Vite 7 + Three.js 0.180 + Vitest 3, vanilla ES modules (no framework). `npm run build` **passes**.
-- `scripts/syntax-check.mjs` — esbuild-based syntax gate over all sources (31 files, 0 errors).
-- Project structure, `.gitignore`, `.env.example` (no secrets committed).
+- Vite 7 + Three.js 0.180 + Vitest 3, vanilla ES modules
+- `scripts/syntax-check.mjs` — esbuild syntax gate
+- `scripts/qa-harness.js` — repeatable in-browser hazard reachability check
+- `scripts/gen-hazard-docs.mjs` — generates `docs/HAZARDS.md` from source data
+- `.env.example`, `.gitignore` — no secrets committed
 
 ### Core engine
-- `core/Engine.js` — renderer, frame loop, resize, FPS tracking, **adaptive pixel-ratio quality**, WebGL context-loss recovery.
-- `core/EventBus.js` — pub/sub; gameplay never touches the DOM.
-- `core/Textures.js` — **all textures generated procedurally on canvas**: worn concrete, cardboard with printed labels/barcodes, pallet wood with knots, painted steel, profiled wall cladding, oil-spill decal, hazard chevrons, and a correctly-shaped **Nepal flag** (double pennant, moon + 12-ray sun).
+- `Engine` — render loop, adaptive pixel-ratio quality, WebGL context-loss recovery, dt clamping
+- `EventBus` — decouples gameplay from UI; handler errors isolated
+- `Textures` — every texture drawn on canvas, deterministic, cached
 
-### Environment / art
-- `props/Materials.js` — shared material + geometry cache (draw-call state minimisation).
-- `props/Storage.js` — APR racking (real proportions), Euro pallets, cartons, tidy loads, **unstable loads**, over-height stacks, broken pallets.
-- `props/Forklift.js` — procedural counterbalance truck (mast, carriage, tines, FOPS guard, beacon, reversing lights), hand pallet truck, roll cage.
-- `props/Worker.js` — procedural figures with walk/idle cycles; hi-vis, no-PPE, driver, and **Nepali kurta-surwal / kurti-surwal avatars** (dhaka topi, dupatta).
-- `props/SafetyProps.js` — fire points, exit signs, bilingual (English/Nepali) signage, barriers, cones, convex mirrors, ladders, trailing cables, spills, drums.
-- `props/Structure.js` — shell, portal frame + trusses, high-bay lighting rig, dock doors, fire-exit doors, roller shutters, office block, painted walkways/lines/labels.
-- `World.js` — scene build context + **static-geometry merge pass** (see Performance below).
-- `Scenarios.js` — **all 15 hazards as physical situations**, reusable across environments, plus safe "decoy" lookalikes.
-- 3 environments: `env01` Main Storage Hall (15 hazards), `env02` Loading & Dispatch Bay (12), `env03` High-Bay Annexe (15).
+### 3D world
+- Full prop library: racking, pallets, cartons, forklifts, workers, safety equipment, building structure
+- `World` build context + **static-geometry merge pass** (9,587 → 994 meshes)
+- **All 15 hazards** as physical scenarios in `Scenarios.js`
+- Decoy system — safe lookalikes that teach on a wrong flag
+- 3 environments, sharing one prop and scenario library
 
 ### Gameplay
-- `ScoreManager.js` — exact brief scoring (major 15/7, minor 5/2, wrong 0), combo at 3-in-a-row, difficulty multiplier, full stats.
-- `Timer.js` — round + per-hazard reaction clocks, warning/critical states.
-- `HazardSystem.js` — invisible proxy raycast targeting + ray-vs-AABB occlusion rejection, correct/wrong validation, highlight markers.
-- `GameManager.js` — Train/Test modes, round lifecycle, expiry, results summary with coaching tips.
-- `Profile.js` — localStorage-backed profile, progression gates (Train → Simple → Mid → Hard), 8 achievements, history. Storage adapter is swappable.
-- `AudioManager.js` — **fully synthesised** Web Audio (ambience, forklift engine, reversing alarm, cues). No audio files, no licensing.
+- `ScoreManager` — exact brief scoring, combo, stats, summary (pure, unit-tested)
+- `Timer` — round + per-hazard clocks (pure, unit-tested)
+- `HazardSystem` — proxy raycast targeting, occlusion, validation, markers
+- `GameManager` — Train/Test modes, lifecycle, coaching tips
+- `Profile` — persistence, progression gates, 8 achievements, history
+- `AudioManager` — fully synthesised
 
 ### UI
-- `styles.css`, `dom.js`, `HUD.js`, `Screens.js`, `UIManager.js`, `main.js`, `index.html`.
-- Login, main menu, environment select, difficulty select, HUD, results, profile, progress, hazard guide, settings, pause, loading, toasts, touch controls.
+- Login, main menu, environment select, difficulty select, HUD, results, profile, progress, hazard guide, settings, pause, loading, toasts, touch controls
+- Responsive; keyboard accessible; `prefers-reduced-motion` respected
 
-### Performance
-- **Static-geometry merge:** `World.optimize()` bakes static props into per-material batches.
-  Measured on env01: **9,587 meshes → 994 objects across 74 merged batches.** ✅ verified in browser.
-
----
-
-## VERIFIED IN BROWSER (Chromium, localhost:5173)
-- ✅ App boots, no console errors.
-- ✅ Login screen renders; sign-in works; profile persists.
-- ✅ Main menu, environment select, difficulty select all render correctly.
-- ✅ env01 builds: 15 hazards + 5 decoys + 29 colliders registered.
-- ✅ Merge pass runs and reports correctly.
-
-## Bugs found and FIXED this session
-1. **`el()` helper did not parse `#id`** → `#hud`, `#toasts`, `#touch` were created as invalid tag names, so **none of their CSS applied**. Fixed with a proper selector parser.
-2. **Spawn yaw faced the wall** in all 3 environments → the player spawned looking at a blank wall with the entire warehouse behind them (only 38 draw calls rendering). Fixed.
-3. **9,587 draw calls per frame** → added the static merge pass. Now 74 batches.
-4. **Loader hung in hidden tabs** — `frame()` awaited `requestAnimationFrame`, which browsers stop firing when the tab is hidden. Now races rAF against a timeout.
-5. Dead `P.fireExitDoor` reference in `Scenarios.js` (build warning). Removed.
+### Documentation
+- `README.md` + 9 documents in `docs/`
+- `scripts/blender/` with an honest never-executed warning
 
 ---
 
-## ⏳ IN PROGRESS — RESUME HERE
+## Bugs found and fixed
 
-### 🔴 OPEN BUG (next task)
-`GameManager.loadEnvironment()` **never leaves `state === 'loading'`** for env01.
+All nine were found by **driving the real game in a browser** — none would have
+been caught by unit tests alone.
 
-Evidence gathered:
-- `env.build()` completes (15 hazards, 29 colliders registered).
-- `World.optimize()` completes (console logs `merged 9587 meshes into 994 (74 batches)`).
-- The returned promise neither resolves nor rejects (`__r` stays `null`), so it is **hanging on an `await`, not throwing**.
-- Remaining awaits after the merge are `frame()` calls; the rAF/timeout race fix was applied but the page under test may not have picked it up.
+| # | Bug | Impact |
+|---|---|---|
+| 1 | Proxies never had `matrixWorld` updated after registration | **14 of 15 hazards unflaggable**; the 15th was a false positive |
+| 2 | Occlusion counted a hazard's own collider as blocking it | 3 hazards unflaggable |
+| 3 | Proxies used `FrontSide` — no hit from inside a large volume | Unflaggable from the most obvious vantage point |
+| 4 | Pointer lock had no fallback | Player stranded on "Click to look around" |
+| 5 | Train Mode showed "Training complete" on the opening frame | Wrong and confusing |
+| 6 | `el()` did not parse `#id` selectors | `#hud`, `#toasts`, `#touch` had **no CSS at all** |
+| 7 | Spawn yaw faced a blank wall in all 3 environments | Spawned looking at nothing |
+| 8 | 9,587 draw calls per frame | Unusable performance |
+| 9 | Loader awaited rAF, which stops in hidden tabs | Load could stall forever |
 
-Next debugging steps:
-1. Hard-reload and confirm the patched `frame()` is actually live (`GameManager.js` timestamp / add a temp log).
-2. If still hanging, instrument each `await frame()` in `loadEnvironment` with a sequence log to find which one stalls.
-3. Note the Browser pane was **hidden** during testing, which suppresses rAF — front the tab (`tabs_select`) before re-testing, and re-measure FPS with the tab visible.
-
-### Not yet started
-- [ ] **Tests** — `tests/score.test.js` and `tests/timer.test.js` are written but **have not been run yet**. `hazard.test.js`, `profile.test.js`, `world.test.js` not written.
-- [ ] **Docs** — only this file exists. Still needed: `PROJECT_CONTEXT.md`, `ARCHITECTURE.md`, `GAME_DESIGN.md`, `HAZARDS.md`, `ENVIRONMENTS.md`, `DECISIONS.md`, `TESTING.md`, `ASSET_CREDITS.md`.
-- [ ] **README.md**.
-- [ ] `scripts/blender/` Python scripts (for use if Blender is ever installed).
-- [ ] Visual QA pass on env02 and env03 (never loaded in a browser yet).
-- [ ] Full playthrough test: flag a hazard → feedback → results screen.
-- [ ] WebXR support (P4).
-- [ ] Git checkpoint commits.
+Plus one **test** bug: a timer assertion had incorrect arithmetic; `Timer` was
+correct. Fixed and extended.
 
 ---
 
-## KNOWN ISSUES / LIMITATIONS (honest)
-- 🇳🇵 The flag emoji in the UI header renders as the letters "NP" on Windows (no emoji flag font). Cosmetic; the in-world 3D flag is drawn properly and is unaffected.
-- FPS has **not been measured with the render surface visible** — the 60fps reading was taken with the pane hidden and is not meaningful.
-- env02 and env03 have never been loaded in a browser.
-- Google OAuth is **not configured and not tested** — the UI honestly reports "not configured" rather than faking a sign-in.
-- **No VR headset available** — WebXR is unimplemented and untested.
-- Blender unavailable → geometry is procedural primitives, not modelled assets. Not photorealistic; aimed at believable scale and hazard readability.
+## Verified results
+
+Multi-angle reachability harness — 24 vantage points per hazard:
+
+| Environment | Difficulty | Reachable | Score | Rank |
+|---|---|---|---|---|
+| env01 Main Storage Hall | Mid | **15 / 15** | 243 | Champion |
+| env02 Loading & Dispatch | Mid | **12 / 12** | 175 | Champion |
+| env03 High-Bay Annexe | Hard | **15 / 15** | 310 | Champion |
+
+Also confirmed: results screen, ranks, achievements (5 unlocked on a perfect
+run), profile persistence, and the Train → Simple → Mid progression gate.
+
+Performance: 60 fps · 1,520 draw calls · 272,622 triangles · 192 geometries ·
+35 textures · 74 merged batches · ~183 kB gzipped bundle.
+
+---
+
+## NOT IMPLEMENTED (deliberate, documented)
+
+| Item | Reason |
+|---|---|
+| **WebXR / VR** | No headset available. Shipping untested VR code and calling it done would be dishonest. Desktop play never depended on it. |
+| **Google OAuth** | No client ID. The code path exists and activates with `VITE_GOOGLE_CLIENT_ID`, but has **never been executed against Google**. The UI says "not configured". |
+| **Blender assets** | Blender not installed. Scripts written, syntax-checked, **never run**. |
+| **Rigged/skinned characters** | Would have required Blender plus rigging work; the brief said character animation must not block the core game. |
+
+## NOT TESTED
+
+| Item | Reason |
+|---|---|
+| Touch controls on a real device | No phone or tablet available |
+| Firefox / Safari | Only Chromium available |
+| Screen readers | No assistive tech available |
+| Long-session stability | No soak test performed |
+| Performance on low-end hardware | One machine only |
+
+## KNOWN ISSUES
+
+| Issue | Severity | Note |
+|---|---|---|
+| 🇳🇵 emoji renders as "NP" in the UI header on Windows | Cosmetic | No emoji flag font on Windows. The in-world 3D flag is drawn from scratch and is fine. |
+| ~920 dynamic meshes still draw individually | Minor | Workers and forklifts. 60 fps is met; further merging is the top optimisation. |
+| Scenario sub-offsets are not rotated by `heading` | Minor | Some colliders sit slightly off when a scenario is rotated. No gameplay impact — verified every hazard is still reachable from multiple angles. |
+| Loading is slow in a background tab | Cosmetic | Browsers throttle timers when hidden. Completes correctly; instant when visible. |
 
 ## MANUAL ACTION REQUIRED
+
 None blocking. Optional only:
-- To enable Google sign-in: create an OAuth 2.0 Web client in Google Cloud Console, add `http://localhost:5173` as an authorised JavaScript origin, and put the client ID in `.env` as `VITE_GOOGLE_CLIENT_ID`. Never commit `.env`.
-- To regenerate assets in Blender: install Blender, then run the scripts in `scripts/blender/` (not yet written).
 
-## NEXT PRIORITY (in order)
-1. Fix the loading-state hang (above).
-2. Run the test suite; fix failures; add remaining test files.
-3. Full manual playthrough of env01 with the pane visible; capture screenshots; fix visual bugs.
-4. QA env02 + env03.
-5. Write the docs and README.
-6. Git checkpoints.
+**To enable Google sign-in**
+1. Google Cloud Console → APIs & Services → Credentials
+2. Create an OAuth 2.0 Client ID, type *Web application*
+3. Add `http://localhost:5173` as an authorised JavaScript origin
+4. Copy `.env.example` to `.env` and set `VITE_GOOGLE_CLIENT_ID=<your id>`
+5. Restart the dev server. **Never commit `.env`.**
 
-## How to run
-```bash
-export PATH="/c/Users/acer/AppData/Local/nvm/v24.20.0:$PATH"
-npm run dev      # http://localhost:5173
-npm run build
-npm test
-node scripts/syntax-check.mjs
-```
+**To regenerate assets in Blender**
+1. Install Blender 4.x
+2. `blender --background --python scripts/blender/build_warehouse.py`
+3. Expect to debug — see `scripts/blender/README.md`
+
+---
+
+## NEXT PRIORITY
+
+1. Merge rigid sub-assemblies inside animated props (~920 → ~200 draw calls)
+2. Real-device touch testing
+3. Firefox and Safari verification
+4. WebXR, once a headset is available
+5. Rotate scenario sub-offsets by `heading` for exact collider placement
+6. Instructor dashboard / cohort results
+7. Round replay showing what was missed and where
