@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b0f14" />
+    <meta
+      name="description"
+      content="Beat The Hazard - a 3D interactive health and safety training game for warehouse forklift and pedestrian safety."
+    />
+    <title>Beat The Hazard · Warehouse Safety Training</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚠️</text></svg>" />
+  </head>
+  <body>
+    <canvas id="scene" aria-label="3D warehouse view"></canvas>
+    <div id="ui"></div>
+
+    <noscript>
+      <div style="position:fixed;inset:0;display:grid;place-items:center;background:#0b0f14;color:#e9eef4;font-family:system-ui,sans-serif;padding:2rem;text-align:center">
+        <div>
+          <h1 style="color:#f2b90c">Beat The Hazard</h1>
+          <p>This training game needs JavaScript enabled to run.</p>
+        </div>
+      </div>
+    </noscript>
+
+    <div id="boot-fallback" style="position:fixed;inset:0;display:grid;place-items:center;background:#0b0f14;color:#97a4b2;font-family:system-ui,sans-serif;z-index:5">
+      <div style="text-align:center">
+        <div style="font-size:1.6rem;font-weight:800;color:#f2b90c;margin-bottom:.5rem">BEAT THE HAZARD</div>
+        <div>Starting…</div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
