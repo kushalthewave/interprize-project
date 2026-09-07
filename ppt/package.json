@@ -1,0 +1,12 @@
+{
+  "name": "beat-the-hazard-deck",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Presentation generator. Kept separate so the game's own dependencies stay lean.",
+  "scripts": {
+    "build": "node build-deck.cjs"
+  },
+  "devDependencies": {
+    "pptxgenjs": "^3.12.0"
+  }
+}

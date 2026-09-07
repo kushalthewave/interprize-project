@@ -7,3 +7,6 @@ dist-single/
 .DS_Store
 .vite/
 coverage/
+ppt/node_modules/
+ppt/shots/
+ppt/capture.log
