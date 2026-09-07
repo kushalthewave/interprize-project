@@ -1,9 +1,7 @@
 # Builds the game and publishes it to GitHub Pages on every push to main.
 #
-# ONE-TIME MANUAL STEP: in the repository, go to
-#   Settings -> Pages -> Build and deployment -> Source: "GitHub Actions"
-# Until that is set, this workflow will build successfully but the deploy step
-# will fail with "Pages site not found".
+# `enablement: true` on configure-pages turns Pages on automatically the first
+# time this runs, so no manual repository setting is required.
 #
 # Once enabled the game is live at:
 #   https://kushalthewave.github.io/interprize-project/
@@ -32,9 +30,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -57,7 +55,13 @@ jobs:
       - name: Include the standalone single-file build in the site
         run: cp dist-single/beat-the-hazard.html dist/beat-the-hazard.html
 
-      - uses: actions/configure-pages@v5
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+        with:
+          # Switches the repository to "GitHub Actions" as the Pages source on
+          # the first run, instead of failing with "Pages site not found".
+          enablement: true
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
