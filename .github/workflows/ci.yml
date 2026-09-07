@@ -1,0 +1,24 @@
+# Runs the test suite and build on pushes and pull requests.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Syntax gate
+        run: node scripts/syntax-check.mjs
+      - name: Unit tests
+        run: npm test
+      - name: Production build
+        run: npm run build
