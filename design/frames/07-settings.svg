@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900">
+  <title>07 Settings</title>
+  <rect width="1440" height="900" fill="#0b0f14"/>
+  
+  <text x="420" y="96" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="11" fill="#f2b90c" font-weight="700" text-anchor="start" letter-spacing="1.8">SETTINGS</text>
+  <text x="420" y="138" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="30" fill="#e9eef4" font-weight="800" text-anchor="start">Settings</text>
+  <text x="420" y="166" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="13" fill="#97a4b2" font-weight="400" text-anchor="start">Changes apply immediately and are saved to this device.</text>
+  <rect x="420" y="200" width="600" height="180" rx="12" fill="#121820" stroke="#2a323b" stroke-width="1"/>
+  <text x="448" y="234" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="15" fill="#e9eef4" font-weight="700" text-anchor="start">🔊 Audio</text>
+  <text x="448" y="276" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="13.5" fill="#e9eef4" font-weight="700" text-anchor="start">Sound</text>
+  <text x="448" y="294" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="11" fill="#97a4b2" font-weight="400" text-anchor="start">Ambience, forklift engines, reversing alarms and</text>
+  <text x="448" y="310.5" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="11" fill="#97a4b2" font-weight="400" text-anchor="start">feedback cues.</text>
+  <rect x="958" y="272" width="34" height="20" rx="999" fill="#f2b90c"/>
+  <circle cx="982" cy="282" r="7" fill="#1a1204"/>
+  <line x1="448" y1="310" x2="992" y2="310" stroke="#2a323b" stroke-width="1"/>
+  <text x="448" y="338" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="13.5" fill="#e9eef4" font-weight="700" text-anchor="start">Volume</text>
+  <text x="448" y="356" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="11" fill="#97a4b2" font-weight="400" text-anchor="start">Overall loudness of every sound.</text>
+  <rect x="760" y="344" width="180" height="5" rx="3" fill="#2c343d"/>
+  <rect x="760" y="344" width="118" height="5" rx="3" fill="#f2b90c"/>
+  <circle cx="878" cy="346" r="8" fill="#f2b90c"/>
+  <text x="990" y="351" font-family="JetBrains Mono, Consolas, monospace" font-size="12.5" fill="#f2b90c" font-weight="700" text-anchor="end">70%</text>
+  
+  <rect x="420" y="398" width="600" height="180" rx="12" fill="#121820" stroke="#2a323b" stroke-width="1"/>
+  <text x="448" y="432" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="15" fill="#e9eef4" font-weight="700" text-anchor="start">🎮 Controls</text>
+  <text x="448" y="474" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="13.5" fill="#e9eef4" font-weight="700" text-anchor="start">Look sensitivity</text>
+  <text x="448" y="492" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="11" fill="#97a4b2" font-weight="400" text-anchor="start">How fast the camera turns with the mouse.</text>
+  <rect x="760" y="480" width="180" height="5" rx="3" fill="#2c343d"/>
+  <rect x="760" y="480" width="118" height="5" rx="3" fill="#f2b90c"/>
+  <circle cx="878" cy="482" r="8" fill="#f2b90c"/>
+  <text x="990" y="487" font-family="JetBrains Mono, Consolas, monospace" font-size="12.5" fill="#f2b90c" font-weight="700" text-anchor="end">1.00×</text>
+  <line x1="448" y1="508" x2="992" y2="508" stroke="#2a323b" stroke-width="1"/>
+  <text x="448" y="536" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="13.5" fill="#e9eef4" font-weight="700" text-anchor="start">Invert vertical look</text>
+  <text x="448" y="554" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="11" fill="#97a4b2" font-weight="400" text-anchor="start">Push the mouse forward to look down.</text>
+  <rect x="958" y="532" width="34" height="20" rx="999" fill="#2c343d"/>
+  <circle cx="968" cy="542" r="7" fill="#97a4b2"/>
+  
+  <rect x="420" y="596" width="600" height="180" rx="12" fill="#121820" stroke="#2a323b" stroke-width="1"/>
+  <text x="448" y="630" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="15" fill="#e9eef4" font-weight="700" text-anchor="start">🎯 Gameplay</text>
+  <text x="448" y="672" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="13.5" fill="#e9eef4" font-weight="700" text-anchor="start">Timed Test Mode</text>
+  <text x="448" y="690" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="11" fill="#97a4b2" font-weight="400" text-anchor="start">Run tests against the reaction clock. Off = untimed</text>
+  <text x="448" y="706.5" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="11" fill="#97a4b2" font-weight="400" text-anchor="start">practice.</text>
+  <rect x="958" y="668" width="34" height="20" rx="999" fill="#f2b90c"/>
+  <circle cx="982" cy="678" r="7" fill="#1a1204"/>
+  <line x1="448" y1="706" x2="992" y2="706" stroke="#2a323b" stroke-width="1"/>
+  <text x="448" y="734" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="13.5" fill="#e9eef4" font-weight="700" text-anchor="start">Show hazard locations</text>
+  <text x="448" y="752" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="11" fill="#97a4b2" font-weight="400" text-anchor="start">Name the aisle or area a hazard is in.</text>
+  <rect x="958" y="730" width="34" height="20" rx="999" fill="#f2b90c"/>
+  <circle cx="982" cy="740" r="7" fill="#1a1204"/>
+  
+  <rect x="420" y="794" width="600" height="180" rx="12" fill="#121820" stroke="#2a323b" stroke-width="1"/>
+  <text x="448" y="828" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="15" fill="#e9eef4" font-weight="700" text-anchor="start">♿ Accessibility &amp; display</text>
+  <text x="448" y="870" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="13.5" fill="#e9eef4" font-weight="700" text-anchor="start">Reduce motion</text>
+  <text x="448" y="888" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="11" fill="#97a4b2" font-weight="400" text-anchor="start">Turns off camera head bob while walking.</text>
+  <rect x="958" y="866" width="34" height="20" rx="999" fill="#2c343d"/>
+  <circle cx="968" cy="876" r="7" fill="#97a4b2"/>
+  <line x1="448" y1="904" x2="992" y2="904" stroke="#2a323b" stroke-width="1"/>
+  <text x="448" y="932" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="13.5" fill="#e9eef4" font-weight="700" text-anchor="start">Show performance overlay</text>
+  <text x="448" y="950" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="11" fill="#97a4b2" font-weight="400" text-anchor="start">Displays frame rate and draw calls while playing.</text>
+  <rect x="958" y="928" width="34" height="20" rx="999" fill="#2c343d"/>
+  <circle cx="968" cy="938" r="7" fill="#97a4b2"/>
+  
+
+</svg>

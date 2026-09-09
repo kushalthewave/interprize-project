@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900">
+  <title>01 Login</title>
+  <rect width="1440" height="900" fill="#0b0f14"/>
+  
+  
+  <text x="720" y="150" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="46" fill="#f2b90c" font-weight="900" text-anchor="middle" letter-spacing="-0.5">BEAT THE HAZARD</text>
+  <text x="720" y="180" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="15" fill="#97a4b2" font-weight="400" text-anchor="middle">Warehouse Forklift &amp; Pedestrian Safety Training</text>
+  <text x="720" y="206" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="11" fill="#64717f" font-weight="400" text-anchor="middle" letter-spacing="1.6">HIMALAYA LOGISTICS · BIRGUNJ DISTRIBUTION CENTRE</text>
+  <rect x="480" y="250" width="480" height="430" rx="12" fill="#121820" stroke="#2a323b" stroke-width="1"/>
+  <text x="520" y="300" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="24" fill="#e9eef4" font-weight="800" text-anchor="start">Start training</text>
+  <text x="520" y="326" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="12.5" fill="#97a4b2" font-weight="400" text-anchor="start">Your name and progress are stored on this device only.</text>
+
+  <text x="520" y="372" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="10.5" fill="#97a4b2" font-weight="700" text-anchor="start" letter-spacing="1.2">YOUR NAME</text>
+  <rect x="520" y="384" width="400" height="44" rx="8" fill="#080c11" stroke="#2a323b" stroke-width="1"/>
+  <text x="538" y="412" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="14" fill="#64717f" font-weight="400" text-anchor="start">e.g. Sunita Shrestha</text>
+
+  <text x="520" y="462" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="10.5" fill="#97a4b2" font-weight="700" text-anchor="start" letter-spacing="1.2">CHOOSE YOUR AVATAR</text>
+  <rect x="520" y="474" width="192" height="104" rx="10" fill="#1a2129" stroke="#f2b90c" stroke-width="2"/>
+  <text x="616" y="516" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="30" fill="#e9eef4" font-weight="400" text-anchor="middle">🧑🏽‍🏭</text>
+  <text x="616" y="540" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="13" fill="#e9eef4" font-weight="700" text-anchor="middle">Ramesh</text>
+  <text x="616" y="558" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="10" fill="#64717f" font-weight="400" text-anchor="middle">Daura-surwal · dhaka topi</text>
+  <rect x="728" y="474" width="192" height="104" rx="10" fill="#161d25" stroke="#2a323b" stroke-width="1"/>
+  <text x="824" y="516" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="30" fill="#e9eef4" font-weight="400" text-anchor="middle">👩🏽‍🏭</text>
+  <text x="824" y="540" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="13" fill="#e9eef4" font-weight="700" text-anchor="middle">Sunita</text>
+  <text x="824" y="558" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="10" fill="#64717f" font-weight="400" text-anchor="middle">Kurti-surwal · dupatta</text>
+
+  
+  <rect x="520" y="604" width="400" height="50" rx="8" fill="#f2b90c" stroke="none" stroke-width="1"/>
+  <text x="720" y="634.76" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="16" fill="#1a1204" font-weight="800" text-anchor="middle">Enter the warehouse</text>
+  <text x="520" y="676" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="12" fill="#97a4b2" font-weight="600" text-anchor="start">Continue as guest</text>
+  <text x="920" y="676" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="11.5" fill="#64717f" font-weight="400" text-anchor="end">Google sign-in not configured</text>
+
+  <text x="720" y="726" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="11.5" fill="#64717f" font-weight="400" text-anchor="middle">This is a training simulation. Hazards shown are staged for teaching purposes.</text>
+
+</svg>
