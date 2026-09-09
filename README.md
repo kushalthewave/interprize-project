@@ -31,6 +31,15 @@ looks like, then prove you can spot them on your own against the clock.
 
 ---
 
+## Play it
+
+**▶ https://kushalthewave.github.io/interprize-project/**
+
+No install and no account — it runs in the browser. There is also a
+[standalone single-file build](https://kushalthewave.github.io/interprize-project/beat-the-hazard.html)
+(677 kB) that can be saved and opened straight from disk with no server and no
+internet connection.
+
 ## What it is
 
 Most workplace-safety e-learning is a slideshow with a multiple-choice quiz.
