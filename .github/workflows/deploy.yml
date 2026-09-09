@@ -59,6 +59,10 @@ jobs:
       - name: Assemble the site
         run: |
           cp dist-single/beat-the-hazard.html dist/beat-the-hazard.html
+          # The company marketing site is plain static HTML with no build
+          # step, so it is copied in as-is and served from /company/.
+          mkdir -p dist/company
+          cp -r marketing-site/. dist/company/
           # Stop GitHub applying Jekyll processing to the built assets.
           touch dist/.nojekyll
 
