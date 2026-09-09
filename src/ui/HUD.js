@@ -96,7 +96,9 @@ export class HUD {
       this.chipFound.querySelector('.k').textContent = d.showHazardCount
         ? 'Hazards found' : 'Hazards found (total hidden)';
       this.elScore.textContent = '0';
-      this.elTimer.textContent = Timer.format(d.secondsPerHazard);
+      this.timed = d.timed !== false;
+      this.chipTimer.querySelector('.k').textContent = this.timed ? 'Reaction clock' : 'Time elapsed';
+      this.elTimer.textContent = this.timed ? Timer.format(d.secondsPerHazard) : '00:00';
       this.comboBadge.hidden = true;
       this.feedback.hidden = true;
       this.trainPanel.hidden = d.mode !== 'train';
@@ -107,7 +109,11 @@ export class HUD {
     });
 
     on(EV.GAME_TICK, (d) => {
-      this.elTimer.textContent = Timer.format(d.hazardRemaining);
+      // Untimed practice counts up instead of down - a frozen countdown of
+      // "600:00" told the player nothing.
+      this.elTimer.textContent = this.timed
+        ? Timer.format(d.hazardRemaining)
+        : Timer.format(d.elapsed ?? 0);
       this.chipTimer.classList.toggle('warn', d.warning && !d.critical);
       this.chipTimer.classList.toggle('crit', d.critical);
       this.elScore.textContent = String(d.score);
@@ -139,10 +145,13 @@ export class HUD {
 
     on(EV.HAZARD_FOCUS, (d) => this._showFeedback(d));
     on(EV.HAZARD_EXPIRED, (d) => {
+      // Deliberately does not name a hazard: when the clock expires we cannot
+      // know which one the player was hunting, so naming one was misleading.
+      const n = d.remaining ?? 0;
       this._card({
         kind: 'expired',
-        title: '⏱ Time up on that hazard',
-        body: `The clock ran out. "${d.name}" is still out there - keep looking.`,
+        title: '⏱ Reaction clock reset',
+        body: `That search took a while, so your combo has reset. ${n} hazard${n === 1 ? '' : 's'} still to find — keep going.`,
       });
     });
     on(EV.TRAIN_STEP, (d) => this._renderTrainPanel(d));
@@ -157,6 +166,7 @@ export class HUD {
         title: `✓ ${h.name}`,
         points: `+${d.points}`,
         severity: h.severity,
+        location: d.where,
         body: h.whyDangerous,
         tip: h.safetyTip,
         extra: d.fast ? 'Fast response bonus' : null,
@@ -174,7 +184,7 @@ export class HUD {
     }
   }
 
-  _card({ kind, title, points, body, tip, extra, severity, combo, train, keywords }) {
+  _card({ kind, title, points, body, tip, extra, severity, combo, train, keywords, location }) {
     const f = this.feedback;
     f.className = `feedback ${kind === 'correct' ? '' : kind}`.trim();
     mount(
@@ -185,13 +195,19 @@ export class HUD {
         combo && el('span.tag.tag-minor', { text: 'combo' }),
         points && el('span.fb-points', { text: points }),
       ]),
+      location && el('div.fb-where', {}, ['📍 ', location]),
       el('div.fb-body', { text: body }),
       extra && el('div.faint', { text: extra, style: { marginTop: '0.4rem' } }),
       train && el('div.fb-body', { text: train, style: { marginTop: '0.55rem' } }),
       tip && el('div.fb-tip', {}, [el('strong', { text: 'Safe practice: ' }), tip]),
+      // Keywords used to render as unlabelled grey pills on a dark panel -
+      // present in the DOM but effectively invisible. They now get a heading
+      // and their own high-contrast styling.
       keywords?.length &&
-        el('div.kw', { style: { display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.6rem' } },
-          keywords.map((k) => el('span.stat-pill', { text: k }))),
+        el('div.fb-keywords', {}, [
+          el('span.fb-kw-label', { text: 'Remember' }),
+          el('div.fb-kw-list', {}, keywords.map((k) => el('span.kw-chip', { text: k }))),
+        ]),
     );
     f.hidden = false;
 
@@ -223,6 +239,10 @@ export class HUD {
             : 'Walk around and look for anything physically wrong. Glowing rings mark the hazards you have not found yet — look at one and press E to flag it.',
       }),
       d.next && !complete && el('div.kw', {}, [el('span', { text: d.next.name })]),
+      // Where to go. Without this the player can know WHAT to look for and
+      // still have no idea which end of a 62 m building to walk to.
+      d.next?.where && !complete &&
+        el('div.tp-where', {}, [el('span.tp-pin', { text: '📍' }), d.next.where]),
     );
   }
 

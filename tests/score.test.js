@@ -100,10 +100,25 @@ describe('ScoreManager - combo', () => {
     expect(s.streak).toBe(0);
   });
 
-  it('breaks the combo when a hazard expires', () => {
+  it('breaks the combo when the reaction clock runs out', () => {
     for (const id of ['a', 'b', 'c']) s.recordCorrect(fast(id, 'minor'));
-    s.recordExpired({ id: 'x', severity: 'major' });
+    s.noteSlowSearch();
     expect(s.comboActive).toBe(false);
+    expect(s.streak).toBe(0);
+  });
+
+  it('counts slow searches without blaming a specific hazard', () => {
+    // Regression: expiry used to be attributed to hazards.remaining[0] - an
+    // arbitrary hazard the player was probably nowhere near - which produced a
+    // wrong "missed" list. It must only record that the search was slow.
+    s.recordCorrect(fast('a', 'major'));
+    s.noteSlowSearch();
+    s.noteSlowSearch();
+    const sum = s.summary({ totalHazards: 5 });
+    expect(sum.slowSearches).toBe(2);
+    expect(sum.correct).toBe(1);
+    expect(sum.wrong).toBe(0);          // a slow search is not a wrong answer
+    expect(sum.score).toBe(15);         // and it costs no points
   });
 
   it('records the best streak even after it is broken', () => {

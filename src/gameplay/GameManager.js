@@ -176,8 +176,13 @@ export class GameManager {
       scoring: SCORING,
     });
 
+    // The reaction clock can be switched off in Settings. When it is off the
+    // round is untimed: a very large budget is used so nothing ever expires,
+    // and every find is scored at the "slow" tier rather than being penalised
+    // for a clock the player was never shown.
+    this.timed = mode === MODE.TEST && this.profile.settings.timedTest !== false;
     this.timer = new Timer({
-      secondsPerHazard: mode === MODE.TRAIN ? 600 : diff.secondsPerHazard,
+      secondsPerHazard: this.timed ? diff.secondsPerHazard : 36000,
       hazardCount: total,
       warnAt: 0.25,
     });
@@ -211,6 +216,7 @@ export class GameManager {
       environment: this.environmentId,
       totalHazards: total,
       secondsPerHazard: this.timer.secondsPerHazard,
+      timed: this.timed,
       showHazardCount: mode === MODE.TRAIN || diff.showHazardCount,
     });
   }
@@ -261,6 +267,7 @@ export class GameManager {
         kind: 'correct',
         hazard: inst.def,
         hint: inst.hint,
+        where: this.profile.settings.showLocations === false ? null : inst.where,
         points: Math.round(out.points * this.score.multiplier),
         fast: out.fast,
         combo: out.combo,
@@ -295,7 +302,14 @@ export class GameManager {
     bus.emit(EV.TRAIN_STEP, {
       index: t.index,
       total: t.order.length,
-      next: next ? { id: next.id, name: next.def.name, hint: next.hint } : null,
+      next: next
+        ? {
+            id: next.id,
+            name: next.def.name,
+            hint: next.hint,
+            where: this.profile.settings.showLocations === false ? null : next.where,
+          }
+        : null,
       justFound: found?.def ?? null,
     });
     if (!next) {
@@ -318,18 +332,25 @@ export class GameManager {
 
     const { expired, hazardExpired } = this.timer.tick(dt);
 
-    // per-hazard clock ran out: the current hazard is "missed" but the round
-    // continues - a training tool should not punish with a hard stop.
-    if (hazardExpired && this.mode === MODE.TEST) {
-      const next = this.hazards.remaining[0];
-      if (next) {
-        this.score.recordExpired({ id: next.id, severity: next.severity });
-        bus.emit(EV.HAZARD_EXPIRED, { id: next.id, name: next.def.name });
-      }
+    // The per-hazard clock ran out.
+    //
+    // It deliberately does NOT mark a specific hazard as missed. It used to
+    // penalise `hazards.remaining[0]` - the first unfound hazard in
+    // registration order - which is arbitrary: the player was almost certainly
+    // searching somewhere else entirely, so the game blamed them for missing a
+    // hazard they had never even approached, and named it in the HUD.
+    //
+    // What the clock actually measures is search pace. Running slow breaks the
+    // combo (fair - the streak is a speed reward) and the round continues.
+    if (hazardExpired && this.mode === MODE.TEST && this.timed) {
+      this.score.noteSlowSearch();
+      bus.emit(EV.HAZARD_EXPIRED, {
+        remaining: this.hazards.progress.total - this.hazards.progress.found,
+      });
     }
 
     // timer audio warnings, at most once per second
-    if (this.mode === MODE.TEST) {
+    if (this.mode === MODE.TEST && this.timed) {
       const sec = Math.ceil(this.timer.hazardRemaining);
       if (sec !== this._warnedAt && sec <= 5 && sec > 0) {
         this._warnedAt = sec;
@@ -338,11 +359,13 @@ export class GameManager {
     }
 
     bus.emit(EV.GAME_TICK, {
+      elapsed: this.timer.elapsed,
       remaining: this.timer.remaining,
       display: this.timer.display,
       hazardRemaining: this.timer.hazardRemaining,
-      warning: this.timer.warning,
-      critical: this.timer.critical,
+      timed: this.timed,
+      warning: this.timed && this.timer.warning,
+      critical: this.timed && this.timer.critical,
       score: this.score.score,
       streak: this.score.streak,
       combo: this.score.comboActive,
@@ -382,7 +405,16 @@ export class GameManager {
     summary.tips = this._tips(summary);
     summary.missedHazards = this.hazards.instances
       .filter((i) => !i.found)
-      .map((i) => ({ id: i.id, name: i.def.name, severity: i.severity, safetyTip: i.def.safetyTip }));
+      .map((i) => ({
+        id: i.id, name: i.def.name, severity: i.severity,
+        safetyTip: i.def.safetyTip,
+        where: i.where,
+      }));
+    // Where each found hazard was, so the results screen can show a route back.
+    summary.foundLocations = Object.fromEntries(
+      this.hazards.instances.filter((i) => i.found).map((i) => [i.id, i.where]),
+    );
+    summary.timed = this.timed;
 
     let unlocked = [];
     if (this.mode === MODE.TRAIN) {

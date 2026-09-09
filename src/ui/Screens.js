@@ -267,6 +267,7 @@ export function resultsScreen(ctx, { summary }) {
       el('span.mark', { text: '✓' }),
       el('div', { style: { flex: '1' } }, [
         el('div.hz-name', { text: h?.name ?? f.id }),
+        s.foundLocations?.[f.id] && el('div.hz-where', {}, ['📍 ', s.foundLocations[f.id]]),
         el('div.hz-tip', { text: h?.safetyTip ?? '' }),
       ]),
       el('span.hz-time', { text: `${secs(f.reactionTime)} · +${f.points}` }),
@@ -278,6 +279,7 @@ export function resultsScreen(ctx, { summary }) {
       el('span.mark', { text: '✗' }),
       el('div', { style: { flex: '1' } }, [
         el('div.hz-name', {}, [h.name, ' ', el(`span.tag.tag-${h.severity}`, { text: h.severity })]),
+        h.where && el('div.hz-where', {}, ['📍 ', h.where]),
         el('div.hz-tip', { text: h.safetyTip }),
       ]),
     ]),
@@ -554,33 +556,86 @@ export function settingsScreen(ctx) {
   const p = ctx.profile;
   const s = p.settings;
 
+  /** A labelled on/off row. */
   const toggle = (key, label, desc) => {
     const input = el('input', { type: 'checkbox', checked: !!s[key], id: `set-${key}` });
     input.addEventListener('change', () => ctx.actions.setSetting(key, input.checked));
-    return el('div.row.between', { style: { padding: '0.6rem 0', borderBottom: '1px solid var(--border)' } }, [
+    return el('div.set-row', {}, [
       el('div', {}, [
-        el('div', { text: label, style: { fontWeight: '700' } }),
-        el('div.faint', { text: desc }),
+        el('label', {
+          for: `set-${key}`, text: label,
+          class: 'set-label',
+          style: { textTransform: 'none', letterSpacing: 'normal', marginBottom: '0', fontSize: '0.92rem', color: 'var(--text)' },
+        }),
+        el('div.set-desc', { text: desc }),
       ]),
       input,
     ]);
   };
 
-  const vol = el('input', { type: 'range', min: '0', max: '100', value: String(Math.round(s.volume * 100)), id: 'set-vol' });
-  vol.addEventListener('input', () => ctx.actions.setSetting('volume', Number(vol.value) / 100));
+  /** A slider with a live readout, so the value is never a mystery. */
+  const slider = (key, label, desc, { min, max, step, value, format, toSetting }) => {
+    const out = el('span.set-val', { text: format(value) });
+    const input = el('input', {
+      type: 'range', min: String(min), max: String(max), step: String(step),
+      value: String(value), id: `set-${key}`,
+    });
+    input.addEventListener('input', () => {
+      const v = Number(input.value);
+      out.textContent = format(v);
+      ctx.actions.setSetting(key, toSetting ? toSetting(v) : v);
+    });
+    return el('div', { style: { padding: '0.7rem 0', borderBottom: '1px solid var(--border)' } }, [
+      el('div.row.between', { style: { marginBottom: '0.1rem' } }, [
+        el('div.set-label', { text: label }),
+      ]),
+      el('div.set-desc', { text: desc, style: { marginBottom: '0.5rem' } }),
+      el('div.set-slider', {}, [input, out]),
+    ]);
+  };
 
   return el('div.screen', {}, [
     el('div.screen-inner.narrow', {}, [
-      el('div.section-head', {}, [el('h2', { text: 'Settings' })]),
-      el('div.card.stack', {}, [
-        toggle('audio', 'Sound', 'Ambience, alarms and feedback cues.'),
-        el('div', {}, [el('label', { for: 'set-vol', text: 'Volume' }), vol]),
-        toggle('reducedMotion', 'Reduce motion', 'Disables head bob and softens animations.'),
-        toggle('showFps', 'Show performance overlay', 'Displays FPS and draw calls in-game.'),
-        toggle('invertY', 'Invert vertical look', 'Flip the up/down mouse axis.'),
+      el('div.section-head', {}, [
+        el('h2', { text: 'Settings' }),
+        el('p', { text: 'Changes apply immediately and are saved to this device.' }),
+      ]),
+
+      el('div.card', {}, [
+        el('h3', { text: '🔊 Audio' }),
+        toggle('audio', 'Sound', 'Ambience, forklift engines, reversing alarms and feedback cues.'),
+        slider('volume', 'Volume', 'Overall loudness of every sound.', {
+          min: 0, max: 100, step: 1,
+          value: Math.round((s.volume ?? 0.7) * 100),
+          format: (v) => `${v}%`,
+          toSetting: (v) => v / 100,
+        }),
+      ]),
+
+      el('div.card.mt', {}, [
+        el('h3', { text: '🎮 Controls' }),
+        slider('lookSensitivity', 'Look sensitivity', 'How fast the camera turns with the mouse.', {
+          min: 25, max: 300, step: 5,
+          value: Math.round((s.lookSensitivity ?? 1) * 100),
+          format: (v) => `${(v / 100).toFixed(2)}×`,
+          toSetting: (v) => v / 100,
+        }),
+        toggle('invertY', 'Invert vertical look', 'Push the mouse forward to look down.'),
+      ]),
+
+      el('div.card.mt', {}, [
+        el('h3', { text: '🎯 Gameplay' }),
+        toggle('timedTest', 'Timed Test Mode', 'Run tests against the reaction clock. Turn off for untimed practice — hazards are still scored, just at the standard rate.'),
+        toggle('showLocations', 'Show hazard locations', 'Name the aisle or area a hazard is in, in Train Mode and on the results screen.'),
+      ]),
+
+      el('div.card.mt', {}, [
+        el('h3', { text: '♿ Accessibility & display' }),
+        toggle('reducedMotion', 'Reduce motion', 'Turns off camera head bob while walking.'),
+        toggle('showFps', 'Show performance overlay', 'Displays frame rate and draw calls while playing.'),
       ]),
       el('div.card.stack.mt', {}, [
-        el('h3', { text: 'Data' }),
+        el('h3', { text: '💾 Data' }),
         el('p.faint', { text: 'Progress is stored in this browser. Clearing it cannot be undone.' }),
         el('button.btn.btn-danger.btn-block', {
           text: 'Reset all progress',

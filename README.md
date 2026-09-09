@@ -328,9 +328,8 @@ that does not:
 - **This is not photorealistic.** It is stylised, procedurally generated
   geometry aimed at believable *scale, layout and hazard readability*. It will
   not be mistaken for a rendered CAD walkthrough.
-- **Blender was not used.** Blender is not installed on the development machine.
-  `scripts/blender/` contains Python scripts to regenerate equivalent assets if
-  Blender becomes available, but **they have not been executed or verified**.
+- **No modelling tool was used.** Every mesh is generated in code at runtime.
+  There are no `.glb`/`.fbx` assets in the project at all.
 - **The human figures are not rigged or skinned.** They are primitive-built
   figures with a procedural walk cycle.
 - **WebXR / VR is not implemented.** No headset was available, so rather than

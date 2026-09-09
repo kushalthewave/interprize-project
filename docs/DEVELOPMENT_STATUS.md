@@ -54,7 +54,6 @@ limitations below stated honestly.
 
 ### Documentation
 - `README.md` + 9 documents in `docs/`
-- `scripts/blender/` with an honest never-executed warning
 
 ---
 
@@ -104,7 +103,7 @@ Performance: 60 fps · 1,520 draw calls · 272,622 triangles · 192 geometries �
 |---|---|
 | **WebXR / VR** | No headset available. Shipping untested VR code and calling it done would be dishonest. Desktop play never depended on it. |
 | **Google OAuth** | No client ID. The code path exists and activates with `VITE_GOOGLE_CLIENT_ID`, but has **never been executed against Google**. The UI says "not configured". |
-| **Blender assets** | Blender not installed. Scripts written, syntax-checked, **never run**. |
+| **Blender assets** | Blender not installed. Generator scripts were written but never executed or integrated, so they have been **removed** rather than left as dead weight. |
 | **Rigged/skinned characters** | Would have required Blender plus rigging work; the brief said character animation must not block the core game. |
 
 ## NOT TESTED
@@ -136,11 +135,6 @@ None blocking. Optional only:
 3. Add `http://localhost:5173` as an authorised JavaScript origin
 4. Copy `.env.example` to `.env` and set `VITE_GOOGLE_CLIENT_ID=<your id>`
 5. Restart the dev server. **Never commit `.env`.**
-
-**To regenerate assets in Blender**
-1. Install Blender 4.x
-2. `blender --background --python scripts/blender/build_warehouse.py`
-3. Expect to debug — see `scripts/blender/README.md`
 
 ---
 

@@ -73,10 +73,24 @@ export class Engine {
     return () => this.updaters.delete(fn);
   }
 
+  /**
+   * Resize the renderer and camera to the window.
+   *
+   * Both dimensions are clamped to at least 1px. A zero-sized viewport - a
+   * hidden iframe, a minimised window, a display:none container - otherwise
+   * gives `aspect = 0`, which makes the projection matrix singular. Every
+   * element of it (and of its inverse) becomes NaN, and because hazard
+   * targeting unprojects through that matrix, the reticle silently stops
+   * hitting anything. It does not recover on its own either: without a later
+   * resize event the NaN persists after the window becomes visible again.
+   */
   resize() {
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-    this.camera.aspect = w / Math.max(1, h);
+    const w = Math.max(1, window.innerWidth || this.canvas.clientWidth || 1);
+    const h = Math.max(1, window.innerHeight || this.canvas.clientHeight || 1);
+    const aspect = w / h;
+    if (!Number.isFinite(aspect) || aspect <= 0) return;
+
+    this.camera.aspect = aspect;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h, false);
   }

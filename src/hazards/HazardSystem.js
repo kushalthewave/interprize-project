@@ -32,13 +32,17 @@ export class HazardInstance {
    * @param {THREE.Vector3} o.size    world-space size of the hazard volume
    * @param {string} [o.hint]         scene-specific extra guidance for Train Mode
    */
-  constructor({ id, anchor, center, size, hint = null, highlightTargets = [] }) {
+  constructor({ id, anchor, center, size, hint = null, location = null, heightBand = null, highlightTargets = [] }) {
     this.def = getHazard(id);
     this.id = id;
     this.anchor = anchor;
     this.center = center.clone();
     this.size = size.clone();
     this.hint = hint;
+    /** Where it is, in words the player can navigate by ("Aisle C, north end"). */
+    this.location = location;
+    /** Roughly how high it sits: floor level / eye level / above head / high up. */
+    this.heightBand = heightBand;
     this.highlightTargets = highlightTargets;
 
     this.found = false;
@@ -51,6 +55,12 @@ export class HazardInstance {
 
   get severity() {
     return this.def.severity;
+  }
+
+  /** One line a player can act on: "Aisle C, north end - high up". */
+  get where() {
+    if (!this.location) return this.heightBand ?? '';
+    return this.heightBand ? `${this.location} — ${this.heightBand}` : this.location;
   }
 }
 

@@ -4,9 +4,8 @@
  *
  * HONEST NOTE: this is not a scanned/CAD model. It is a hand-proportioned
  * low-poly truck (~2.4m long, 1.15m wide, 2.1m to the top of the overhead
- * guard) sized against a 1.7m person so that scale reads correctly. Blender
- * is not available in this environment; scripts/blender/ contains a Python
- * script that regenerates an equivalent mesh should Blender become available.
+ * guard) sized against a 1.7m person so that scale reads correctly. All of the
+ * geometry in this game is generated in code - there are no modelled assets.
  *
  * The returned group exposes:
  *   userData.mast          - the lifting carriage (animatable)

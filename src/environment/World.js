@@ -79,7 +79,27 @@ export class World {
    * Declare a hazard. `object` is used to compute the volume when explicit
    * center/size are not supplied.
    */
-  hazard({ id, object = null, center = null, size = null, hint = null, pad = 0.25 }) {
+  /**
+   * Describe where a point is, in words a person can act on.
+   *
+   * Scenes set `world.locator` to a function of (x, z). Without one this falls
+   * back to a compass description, which is still better than nothing.
+   */
+  locate(x, z) {
+    if (this.locator) {
+      try {
+        const s = this.locator(x, z);
+        if (s) return s;
+      } catch (err) {
+        console.warn('[World] locator threw:', err);
+      }
+    }
+    const ns = z < -4 ? 'north' : z > 4 ? 'south' : 'centre';
+    const ew = x < -4 ? 'west' : x > 4 ? 'east' : 'centre';
+    return ns === ew ? 'centre of the building' : `${ns} ${ew} area`.replace('centre ', '');
+  }
+
+  hazard({ id, object = null, center = null, size = null, hint = null, location = null, pad = 0.25 }) {
     let c = center;
     let s = size;
     if ((!c || !s) && object) {
@@ -93,7 +113,17 @@ export class World {
     s.x = Math.max(s.x, 0.6);
     s.y = Math.max(s.y, 0.6);
     s.z = Math.max(s.z, 0.6);
-    return this.hazards.register(new HazardInstance({ id, anchor: object, center: c, size: s, hint }));
+
+    // A location the player can navigate by, plus the height band, because
+    // "Aisle C" is not enough when the hazard is 4 m up on a rack beam.
+    const where = location ?? this.locate(c.x, c.z);
+    const band = c.y > 3.5 ? 'high up' : c.y > 1.9 ? 'above head height' : c.y < 0.8 ? 'at floor level' : 'at eye level';
+
+    return this.hazards.register(new HazardInstance({
+      id, anchor: object, center: c, size: s, hint,
+      location: where,
+      heightBand: band,
+    }));
   }
 
   /**

@@ -39,6 +39,24 @@ export function build(world) {
     width: W, depth: D, height: Hh, colliders: world.colliders, wallColor: '#6f777e',
   }));
 
+  /* ---------------- location naming ---------------- */
+  // Runs A-F are stencilled on the floor at the end of each aisle, so the
+  // location text matches what the player can read in-world.
+  world.locator = (x, z) => {
+    const runX = [-19, -11.4, -3.8, 3.8, 11.4, 19];
+    const end = z < -8 ? 'north end' : z > 8 ? 'south end' : 'middle';
+    if (z < -D / 2 + 6) return x > 0 ? 'dock face, east' : 'goods-in, west';
+    if (x < -W / 2 + 5) return 'west wall';
+    if (x > W / 2 - 5) return 'east wall';
+    let best = null, bestD = 4.5;
+    runX.forEach((rx, i) => {
+      const d = Math.abs(x - rx);
+      if (d < bestD) { bestD = d; best = String.fromCharCode(65 + i); }
+    });
+    return best ? `Run ${best}, ${end}` : `narrow aisle, ${end}`;
+  };
+
+
   // Deliberately dimmer and foggier than the other two sites - this is one of
   // the ways the environment itself raises difficulty.
   const lights = Struct.lighting({

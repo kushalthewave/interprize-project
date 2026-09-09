@@ -40,7 +40,8 @@ export class ScoreManager {
     this.finds = [];
     /** @type {{reason:string,at:number}[]} */
     this.misses = [];
-    this.expired = [];
+    /** How many times the reaction clock ran out mid-search. */
+    this.slowSearches = 0;
   }
 
   /** Final score after the difficulty multiplier, rounded to an integer. */
@@ -145,12 +146,20 @@ export class ScoreManager {
     return { points: -penalty };
   }
 
-  /** A hazard's clock ran out without it being found. Also breaks the combo. */
-  recordExpired({ id, severity }) {
+  /**
+   * The reaction clock ran out without a find.
+   *
+   * This is NOT attributed to a particular hazard: when the clock expires the
+   * player is searching, and there is no way to know which hazard they were
+   * looking for. Blaming a specific one (previously the first unfound hazard in
+   * registration order) produced misleading feedback and a wrong "missed" list.
+   * It records a slow search and breaks the combo, nothing more.
+   */
+  noteSlowSearch() {
     const hadCombo = this.comboActive;
     this.streak = 0;
     this.comboActive = false;
-    this.expired.push({ id, severity });
+    this.slowSearches++;
     if (this.emit && hadCombo) bus.emit(EV.COMBO_BREAK, {});
   }
 
@@ -179,7 +188,7 @@ export class ScoreManager {
       rank: this.rank,
       finds: [...this.finds],
       misses: [...this.misses],
-      expired: [...this.expired],
+      slowSearches: this.slowSearches,
       elapsed,
       perfect: this.wrong === 0 && totalHazards > 0 && this.correct === totalHazards,
       finishedAt: Date.now(),

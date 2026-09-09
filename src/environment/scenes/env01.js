@@ -42,6 +42,33 @@ export function build(world) {
   const Hh = meta.size.height;
   const opts = world.opts;
 
+  /* ---------------- location naming ---------------- */
+  // Gives every hazard a place a player can actually navigate to, e.g.
+  // "Aisle C, north end". Used by Train Mode, the feedback card and results.
+  world.locator = (x, z) => {
+    const aisles = [
+      { x: -16.5, n: 'Aisle A' }, { x: -8, n: 'Aisle B' },
+      { x: 8, n: 'Aisle C' }, { x: 16.5, n: 'Aisle D' },
+    ];
+    const end = z < -6 ? 'north end' : z > 6 ? 'south end' : 'cross aisle';
+
+    if (x < -W / 2 + 13) return z > 8 ? 'by the office block' : 'west wall';
+    if (x > W / 2 - 6) return 'east wall';
+    // Only the strip hard against the north wall is dock/goods-in. A wider
+    // band swallowed the north ends of the aisles and mislabelled hazards
+    // that are plainly in Aisle C as being "at the loading dock".
+    if (z < -D / 2 + 8) return x > 4 ? 'loading dock area' : 'goods-in area';
+
+    // nearest named aisle, if we are close enough to one to mean it
+    let best = null, bestD = 6;
+    for (const a of aisles) {
+      const d = Math.abs(x - a.x);
+      if (d < bestD) { bestD = d; best = a; }
+    }
+    if (best) return `${best.n}, ${end}`;
+    return z > 6 ? 'main walkway, south' : z < -6 ? 'central aisle, north' : 'central cross aisle';
+  };
+
   /* ---------------- shell + lighting ---------------- */
   const shell = Struct.warehouseShell({
     width: W, depth: D, height: Hh, colliders: world.colliders, wallColor: '#8f989f',

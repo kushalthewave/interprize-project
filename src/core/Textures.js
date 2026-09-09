@@ -2,9 +2,8 @@
  * Textures.js
  * Procedurally generated canvas textures.
  *
- * Why procedural: Blender is not installed in this environment and shipping
- * third-party image assets creates licensing/attribution overhead for a
- * university project. Canvas-generated textures give us grime, wear, printed
+ * Why procedural: shipping third-party image assets creates licensing and
+ * attribution overhead. Canvas-generated textures give us grime, wear, printed
  * signage and floor markings with zero external dependencies, and they are
  * cached so each is only rasterised once.
  *
