@@ -166,7 +166,6 @@ pixel-ratio scaling drops resolution below ~40 fps and recovers above 58 fps.
 | **Firefox / Safari** | Only Chromium was available. No known reason for incompatibility — the app uses standard WebGL2, Web Audio and Pointer Lock — but this is untested. |
 | **Screen readers** | Focus management, semantic buttons and labels are in place; no assistive-technology testing was performed. |
 | **Long-session stability** | No multi-hour soak test. Disposal paths exist and are called on unload, but no leak profiling was done. |
-| **Blender scripts** | `scripts/blender/*.py` have **never been executed** — Blender is not installed. |
 
 ---
 

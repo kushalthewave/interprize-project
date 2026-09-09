@@ -18,7 +18,8 @@ This started as a constraint and became a deliberate choice.
 
 **The constraint.** Blender is not installed on the development machine
 (verified: no `blender` on PATH, no `Program Files/Blender Foundation`), so
-authoring assets locally was not possible.
+authoring assets locally was not possible. No modelled assets exist in the
+project, and no generator scripts are shipped.
 
 **Why the fallback turned out to be the better option anyway:**
 

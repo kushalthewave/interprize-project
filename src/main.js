@@ -131,9 +131,9 @@ function boot() {
     touchLook(dx, dy) { player.applyTouchLook(dx, dy); },
     setSetting(k, v) {
       profile.setSetting(k, v);
-      if (k === 'audio') { audio.init(); audio.setEnabled(v); }
-      if (k === 'volume') audio.setVolume(v);
-      if (k === 'showFps') ui.setFps('', v);
+      if (k === 'audio') audio.init();
+      // One path for everything, so a setting can never be saved but not applied.
+      applySettings();
     },
     toast(msg, kind) { ui.toast(msg, kind); },
   };
@@ -165,12 +165,20 @@ function boot() {
     if (!isTouch) ui.setLockPrompt(true);
   }
 
+  /**
+   * Push every saved setting into the systems that consume it.
+   * Called on round start and whenever the profile changes, so a setting
+   * changed mid-session takes effect immediately.
+   */
   function applySettings() {
     const s = profile.settings;
     audio.setEnabled(s.audio);
     audio.setVolume(s.volume);
-    player.reducedMotion = s.reducedMotion;
+    player.reducedMotion = !!s.reducedMotion;
+    player.invertY = !!s.invertY;
+    player.lookSensitivity = s.lookSensitivity ?? 1;
     if (s.reducedMotion) player._bob = 0;
+    ui.setFps('', !!s.showFps);
   }
 
   /* ---------------------------------------------------------------- *

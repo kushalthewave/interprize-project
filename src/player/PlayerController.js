@@ -59,6 +59,14 @@ export class PlayerController {
     this.keys = new Set();
     this.touch = { move: { x: 0, y: 0 }, look: { x: 0, y: 0 }, active: false };
 
+    /* --- user settings, applied from Profile via main.applySettings() --- */
+    /** Flip the vertical look axis. */
+    this.invertY = false;
+    /** Disable head bob (and any other camera motion) for motion sensitivity. */
+    this.reducedMotion = false;
+    /** Multiplier on look speed, 0.25 - 3.0. */
+    this.lookSensitivity = 1;
+
     this._bind();
   }
 
@@ -89,7 +97,8 @@ export class PlayerController {
       const mx = e.movementX ?? 0;
       const my = e.movementY ?? 0;
       if (this.dragging) this.dragMoved += Math.abs(mx) + Math.abs(my);
-      const sens = this.locked ? PLAYER.lookSensitivity : PLAYER.lookSensitivity * 1.4;
+      const base = this.locked ? PLAYER.lookSensitivity : PLAYER.lookSensitivity * 1.4;
+      const sens = base * this.lookSensitivity;
       this.yaw -= mx * sens;
       this.pitch -= my * sens * (this.invertY ? -1 : 1);
       this._clampPitch();
@@ -267,10 +276,17 @@ export class PlayerController {
     this.height += (this.targetHeight - this.height) * (1 - Math.exp(-14 * dt));
 
     // --- subtle head bob so walking feels physical (disabled when still)
-    const sp = Math.hypot(this.velocity.x, this.velocity.z);
-    this._bobT = (this._bobT ?? 0) + dt * sp * 1.9;
-    const bob = sp > 0.4 ? Math.sin(this._bobT * 2) * 0.022 * Math.min(1, sp / PLAYER.walkSpeed) : 0;
-    this._bob = (this._bob ?? 0) + (bob - (this._bob ?? 0)) * (1 - Math.exp(-12 * dt));
+    // Honours the "reduce motion" setting: some people get motion sick from
+    // camera bob, so it must be genuinely switchable off, not just damped.
+    if (this.reducedMotion) {
+      this._bob = 0;
+      this._bobT = 0;
+    } else {
+      const sp = Math.hypot(this.velocity.x, this.velocity.z);
+      this._bobT = (this._bobT ?? 0) + dt * sp * 1.9;
+      const bob = sp > 0.4 ? Math.sin(this._bobT * 2) * 0.022 * Math.min(1, sp / PLAYER.walkSpeed) : 0;
+      this._bob = (this._bob ?? 0) + (bob - (this._bob ?? 0)) * (1 - Math.exp(-12 * dt));
+    }
 
     this._applyCamera();
   }

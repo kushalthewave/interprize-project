@@ -665,3 +665,71 @@ h3 { margin: 0 0 0.5rem; font-size: 1.05rem; font-weight: 700; }
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
 }
+
+/* ==================================================================
+   Hazard location + safety keywords
+   Added after playtesting: keywords were rendering as unlabelled grey
+   pills on a dark panel (invisible in practice), and nothing told the
+   player WHERE in a 62 m building to walk.
+   ================================================================== */
+
+.fb-where {
+  display: flex; align-items: center; gap: 0.35rem;
+  margin: 0.15rem 0 0.55rem;
+  font-size: 0.82rem; font-weight: 700; letter-spacing: 0.01em;
+  color: var(--accent);
+}
+
+.fb-keywords {
+  margin-top: 0.75rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--border);
+}
+.fb-kw-label {
+  display: block;
+  font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase;
+  font-weight: 800; color: var(--accent); margin-bottom: 0.45rem;
+}
+.fb-kw-list { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+
+/* High-contrast chip - the old .stat-pill was grey-on-dark and unreadable */
+.kw-chip {
+  padding: 0.28rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #1a1204;
+  background: linear-gradient(180deg, #ffd75e, var(--accent));
+  white-space: nowrap;
+}
+
+.train-panel .tp-where {
+  display: flex; align-items: center; gap: 0.35rem;
+  margin-top: 0.6rem; padding: 0.45rem 0.6rem;
+  border-radius: var(--radius-sm);
+  background: rgba(242, 185, 12, 0.13);
+  color: #ffdf8a; font-size: 0.82rem; font-weight: 700;
+}
+.train-panel .tp-pin { font-size: 0.9rem; }
+
+.hazard-row .hz-where {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  margin-top: 0.25rem;
+  font-size: 0.76rem; font-weight: 700; color: var(--accent);
+}
+
+/* Settings rows */
+.set-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1rem; padding: 0.7rem 0; border-bottom: 1px solid var(--border);
+}
+.set-row:last-child { border-bottom: none; }
+.set-row .set-label { font-weight: 700; font-size: 0.92rem; }
+.set-row .set-desc { font-size: 0.78rem; color: var(--text-dim); line-height: 1.4; margin-top: 0.12rem; }
+.set-row input[type='checkbox'] { width: 20px; height: 20px; accent-color: var(--accent); flex: none; cursor: pointer; }
+.set-slider { display: flex; align-items: center; gap: 0.75rem; }
+.set-slider input[type='range'] { flex: 1; }
+.set-slider .set-val {
+  min-width: 3.2rem; text-align: right;
+  font-family: var(--mono); font-size: 0.85rem; font-weight: 700; color: var(--accent);
+}

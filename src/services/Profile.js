@@ -102,6 +102,12 @@ function blankProfile() {
       invertY: false,
       showFps: false,
       reducedMotion: false,
+      /** Look-speed multiplier, 0.25 - 3.0. */
+      lookSensitivity: 1,
+      /** Run Test Mode against the reaction clock. Off = untimed practice. */
+      timedTest: true,
+      /** Show each hazard's location in Train Mode and on the results screen. */
+      showLocations: true,
     },
   };
 }

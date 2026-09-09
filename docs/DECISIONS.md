@@ -46,9 +46,12 @@ UI is small. Bundle: **~183 kB gzipped**, of which Three.js is ~126 kB.
 documented fallback. **Blender is not installed** on the development machine —
 verified: no `blender` on PATH, no `Program Files/Blender Foundation`.
 
+Generator scripts were written early on but were never executed and never
+integrated with the game, so they were **deleted** rather than left in the
+repository as dead weight that implies a pipeline which does not exist.
+
 **Decision.** Generate all geometry procedurally in Three.js, and all textures
-on `<canvas>` at load. Write Blender Python scripts for later use, clearly
-marked as unexecuted.
+on `<canvas>` at load.
 
 **Why.**
 

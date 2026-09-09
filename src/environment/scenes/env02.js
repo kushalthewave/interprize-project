@@ -37,6 +37,29 @@ export function build(world) {
   const Hh = meta.size.height;
   const opts = world.opts;
 
+  /* ---------------- location naming ---------------- */
+  // The dock face and the outbound bays are both numbered on the floor, so the
+  // location text can use the same numbers the player can read in-world.
+  world.locator = (x, z) => {
+    const dockXs = [-26, -17, -8, 1, 10, 19];
+    if (z < -D / 2 + 7) {
+      let best = 0, bestD = 1e9;
+      dockXs.forEach((dx, i) => {
+        const d = Math.abs(x - dx);
+        if (d < bestD) { bestD = d; best = i; }
+      });
+      return bestD < 5 ? `Dock door ${best + 1}` : 'dock face';
+    }
+    if (z > 8) {
+      const bay = Math.round((x + 26) / 9) + 1;
+      return bay >= 1 && bay <= 6 ? `Outbound bay ${bay}` : 'marshalling area';
+    }
+    if (z > 4.5) return 'pedestrian route';
+    if (x < -W / 2 + 6) return 'west end';
+    if (x > W / 2 - 6) return 'east end';
+    return 'main vehicle aisle';
+  };
+
   /* ---------------- shell ---------------- */
   world.add(Struct.warehouseShell({
     width: W, depth: D, height: Hh, colliders: world.colliders, wallColor: '#7f8a93',

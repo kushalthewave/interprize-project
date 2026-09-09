@@ -3,10 +3,9 @@
  * Procedural low-poly human figures, ~1.72m tall.
  *
  * HONEST NOTE: these are stylised primitive-built figures with a simple
- * procedural walk/idle cycle - not rigged, skinned character models. Blender
- * is unavailable in this environment (see docs/DECISIONS.md). Proportions are
- * set against real anthropometry so scale against the racking and forklift
- * reads correctly, which is what matters for hazard judgement.
+ * procedural walk/idle cycle - not rigged, skinned character models.
+ * Proportions are set against real anthropometry so scale against the racking
+ * and forklift reads correctly, which is what matters for hazard judgement.
  *
  * Variants:
  *   'hivis'   compliant worker: hi-vis vest + hard hat + boots

@@ -135,7 +135,6 @@ If you change anything, keep these:
 ## Known limitations
 
 - Not photorealistic — stylised procedural geometry
-- Blender scripts written but never executed
 - Human figures are not rigged or skinned
 - No VR, no real-device touch testing, no OAuth testing
 - Chromium only
