@@ -3,19 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Himal Interactive — Training people actually finish</title>
-<meta name="description" content="Himal Interactive builds browser-based 3D safety training. Beat The Hazard teaches warehouse forklift and pedestrian safety by putting people on the floor, not in front of a slide deck.">
+<title>Beat The Hazard — 3D warehouse safety training in the browser</title>
+<meta name="description" content="Beat The Hazard is browser-based 3D warehouse safety training. It puts a trainee on the floor and scores whether they can spot forklift and pedestrian hazards under a clock. No install, no headset, works offline. Built by Himal Interactive.">
 <meta name="theme-color" content="#0b0f14">
 <link rel="icon" href="img/logo-mark.png">
 
-<meta property="og:title" content="Himal Interactive — Beat The Hazard">
-<meta property="og:description" content="Browser-based 3D warehouse safety training. No install, no headset, works offline.">
+<meta property="og:title" content="Beat The Hazard — 3D warehouse safety training">
+<meta property="og:description" content="Fifteen hazards, three warehouses, a clock. Runs in a browser tab — no install, no headset, works offline.">
 <meta property="og:type" content="website">
 <meta property="og:image" content="img/env01_wide.jpg">
+<meta property="og:site_name" content="Beat The Hazard">
 
 <style>
 /* ==================================================================
-   Himal Interactive — company site.
+   Beat The Hazard — product site, published by Himal Interactive.
    The palette, type scale and the HUD-chip motif are lifted from
    src/ui/styles.css so the site and the product read as one thing.
    Everything is inline: no build step, no CDN, no tracking.
@@ -86,9 +87,24 @@ header.stuck{border-bottom-color:var(--border);background:rgba(11,15,20,.93)}
 .hero{padding-top:clamp(56px,8vw,96px);padding-bottom:0;overflow:hidden}
 .hero-grid{display:grid;grid-template-columns:1.04fr .96fr;gap:52px;align-items:center}
 @media(max-width:940px){.hero-grid{grid-template-columns:1fr;gap:36px}}
-.hero h1{font-size:clamp(2.35rem,5.6vw,4rem);font-weight:800}
-.hero h1 em{font-style:normal;color:var(--accent)}
-.hero .lead{font-size:1.14rem;margin-bottom:1.9em}
+/* The product name is the hero. The slogan supports it, rather than
+   competing with it for the same optical weight. */
+.wordmark{
+  font-size:clamp(2.5rem,6.4vw,4.6rem);font-weight:800;line-height:.95;
+  letter-spacing:-.035em;margin:0 0 .38em;text-transform:uppercase;
+  display:flex;flex-wrap:wrap;align-items:baseline;gap:0 .28em;
+}
+.wordmark span{
+  font-size:.42em;font-weight:700;letter-spacing:.02em;color:var(--accent);
+  align-self:center;
+}
+.pitch{
+  font-size:clamp(1.15rem,2.3vw,1.55rem);font-weight:650;color:var(--text);
+  line-height:1.3;letter-spacing:-.015em;margin:0 0 .85em;
+  padding-left:16px;border-left:3px solid var(--accent);
+}
+.pitch em{font-style:normal;color:var(--accent)}
+.hero .lead{font-size:1.06rem;margin-bottom:1.9em}
 .cta-row{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
 .cta-note{font-size:.82rem;color:var(--faint);margin:16px 0 0}
 .shot{
@@ -218,13 +234,13 @@ footer a:hover{color:var(--accent)}
   <div class="wrap nav">
     <a class="brand" href="#top">
       <img src="img/logo-mark.png" alt="">
-      <span>HIMAL INTERACTIVE<small>Training people actually finish</small></span>
+      <span>BEAT THE HAZARD<small>by Himal Interactive</small></span>
     </a>
     <nav>
-      <a href="#product">Product</a>
+      <a href="#product">The product</a>
       <a href="#hazards">Hazards</a>
       <a href="#how">How it works</a>
-      <a href="#company">Company</a>
+      <a href="#company">Who we are</a>
       <a class="btn btn-primary" href="https://kushalthewave.github.io/interprize-project/" target="_blank" rel="noopener">Play the demo</a>
     </nav>
   </div>
@@ -235,12 +251,14 @@ footer a:hover{color:var(--accent)}
   <div class="wrap hero-grid">
     <div>
       <p class="eyebrow">Warehouse safety training · in the browser</p>
-      <h1>Nobody remembers<br>the slide deck.<br><em>They remember the near-miss.</em></h1>
+      <h1 class="wordmark">Beat<span>The</span>Hazard</h1>
+      <p class="pitch">Nobody remembers the slide deck.<br>
+        <em>They remember the near-miss.</em></p>
       <p class="lead">
-        <strong>Beat The Hazard</strong> puts a trainee on the warehouse floor and asks them
-        to do the one thing that actually matters: spot what is about to go wrong,
-        before it does. Fifteen real hazards, three environments, a clock that tightens
-        with every difficulty — and a debrief that names every single thing they walked past.
+        Beat The Hazard puts a trainee on the warehouse floor and asks them to do the one
+        thing that actually matters: spot what is about to go wrong, before it does.
+        Fifteen real hazards, three environments, a clock that tightens with every
+        difficulty — and a debrief that names every single thing they walked past.
       </p>
       <div class="cta-row">
         <a class="btn btn-primary" href="https://kushalthewave.github.io/interprize-project/" target="_blank" rel="noopener">Play the live demo →</a>
@@ -430,8 +448,11 @@ footer a:hover{color:var(--accent)}
 <!-- ============================ COMPANY ============================ -->
 <section id="company" class="band">
   <div class="wrap">
-    <p class="eyebrow rv">The company</p>
+    <p class="eyebrow rv">Who builds it</p>
     <h2 class="rv">Himal Interactive</h2>
+    <p class="lead rv" style="margin-bottom:26px">
+      Beat The Hazard is our product. This is the company behind it.
+    </p>
     <p class="mission rv">
       We build training that people actually finish — and remember on the floor a week later.
     </p>
@@ -482,10 +503,11 @@ footer a:hover{color:var(--accent)}
       <div>
         <a class="brand" href="#top" style="margin-bottom:14px">
           <img src="img/logo-mark.png" alt="">
-          <span>HIMAL INTERACTIVE<small>Training people actually finish</small></span>
+          <span>BEAT THE HAZARD<small>by Himal Interactive</small></span>
         </a>
         <p style="font-size:.88rem;max-width:38ch;margin:0">
-          Browser-based 3D safety training. Built in the open, documented honestly.
+          Browser-based 3D warehouse safety training. Built in the open,
+          documented honestly.
         </p>
       </div>
       <div>
