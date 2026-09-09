@@ -54,9 +54,18 @@ authenticator *produced* an assertion — which means the device is present and
 the person passed verification. We do not verify the signature.
 `authenticateWithPasskey()` returns `verified: false` to keep that explicit.
 
+**You do NOT need Windows Hello.** An earlier version gated this on
+`isUserVerifyingPlatformAuthenticatorAvailable()`, which meant every desktop
+without a fingerprint reader saw "Passkeys unavailable". That was wrong:
+WebAuthn also supports **your phone** (scan a QR — the hybrid transport) and
+**USB security keys**. When no built-in authenticator is present, the
+`authenticatorAttachment` constraint is dropped so the browser offers
+everything it can. The credential's reported transports then label it
+correctly: "Phone or tablet", "Security key", or "Windows Hello".
+
 **Requirements.** A secure context (`https` or `localhost`). It will not work
 from `file://`, so the standalone single-file build reports passkeys as
-unavailable and says why.
+unavailable and says why. Use the online version for passkeys.
 
 **To make it real:** verify the assertion server-side in
 `AuthManager.signInWithPasskey()`. The ceremony does not change.
@@ -66,6 +75,12 @@ unavailable and says why.
 ## 2. Social sign-in
 
 ### Google — works today, no backend
+
+> **You do not need to edit `.env` or redeploy.** Open **Settings → Security →
+> Social sign-in** in the running game, paste the Client ID, press *Save &
+> enable*, and the button works immediately. The panel also shows the exact
+> origin URL to paste into Google's console. `.env` still works and is the
+> better choice for a shared deployment; the in-app route is per-browser.
 
 1. <https://console.cloud.google.com> → **APIs & Services → Credentials**
 2. **Create Credentials → OAuth client ID → Web application**
@@ -212,6 +227,9 @@ Tests: `tests/totp.test.js` (53), `tests/qr.test.js` (17).
 | Wrong code at sign-in keeps the gate closed and shows an error | ✅ |
 | Correct code reaches the menu | ✅ |
 | Passkeys report unavailability with a specific reason | ✅ |
-| Passkey on real hardware | ⬜ **Not tested** — no biometric enrolled on the test machine |
+| Passkey offered without a built-in authenticator | ✅ Now shows "Set up a passkey" instead of "unavailable" |
+| Provider enabled at runtime from Settings | ✅ Google button goes live with no rebuild |
+| GitHub still refused with only a Client ID | ✅ Correctly needs the endpoint too |
+| Passkey ceremony on real hardware | ⬜ **Not tested** — no authenticator on the test machine |
 | Google / Facebook against live servers | ⬜ **Not tested** — no credentials configured |
 | GitHub end to end | ⬜ **Not tested** — needs the backend endpoint |

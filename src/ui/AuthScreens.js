@@ -10,6 +10,7 @@ import { el, mount } from './dom.js';
 import { qrToCanvas } from '../services/auth/qr.js';
 import { formatSecret } from '../services/auth/base32.js';
 import { totp, secondsRemaining } from '../services/auth/totp.js';
+import { setAuthConfig, getStoredAuthConfig, isFromBuild } from '../services/auth/providers.js';
 
 const AVATARS = {
   male: { face: '🧑🏽‍🏭', label: 'Ramesh', sub: 'Daura-surwal inspired · dhaka topi' },
@@ -94,11 +95,26 @@ export function loginScreen(ctx, caps) {
         ]),
       ]);
     }
-    return el('div.auth-unavailable', {}, [
+    // Available but nothing enrolled yet: offer to create one right here
+    // rather than sending the user away to find a settings screen.
+    return el('button.auth-btn.auth-passkey', {
+      on: {
+        click: async () => {
+          showErr('');
+          const name = nameInput.value.trim() || p.name || 'Trainee';
+          try { await ctx.actions.createPasskeyAndSignIn({ name, avatar }); }
+          catch (e) { showErr(e.message); }
+        },
+      },
+    }, [
       el('span.auth-icon', { text: '🔐' }),
       el('span', {}, [
-        el('span.auth-label', { text: 'No passkey yet' }),
-        el('span.auth-sub', { text: 'Sign in below, then add one from Settings → Security.' }),
+        el('span.auth-label', { text: 'Set up a passkey' }),
+        el('span.auth-sub', {
+          text: pk.platform
+            ? 'Use your fingerprint, face or device PIN — takes a few seconds'
+            : 'Use your phone or a security key — takes a few seconds',
+        }),
       ]),
     ]);
   };
@@ -310,7 +326,110 @@ export function securityPanel(ctx, caps, rerender) {
         }),
       ]));
 
+  /* ---- social provider setup ---- */
+  rows.push(providerSetupPanel(ctx, caps, rerender));
+
   return rows;
+}
+
+/**
+ * Let the user switch on Google / Facebook / GitHub without editing .env or
+ * redeploying. A Client ID is a public identifier by design, so it is safe to
+ * paste into the app and keep in localStorage; no secret is ever entered here.
+ */
+function providerSetupPanel(ctx, caps, rerender) {
+  const stored = getStoredAuthConfig();
+
+  const field = (key, label, placeholder, help, link) => {
+    const input = el('input', {
+      type: 'text', value: stored[key] ?? '', placeholder,
+      id: `cfg-${key}`, autocomplete: 'off', spellcheck: false,
+    });
+    const fromBuild = isFromBuild(key);
+    return {
+      key,
+      input,
+      node: el('div', { style: { marginTop: '0.9rem' } }, [
+        el('label', {
+          for: `cfg-${key}`, text: label,
+          style: { textTransform: 'none', letterSpacing: 'normal', fontSize: '0.82rem', color: 'var(--text)' },
+        }),
+        el('div.set-desc', { style: { marginBottom: '0.4rem' } }, [
+          help,
+          link ? ' ' : '',
+          link ? el('a', {
+            href: link, target: '_blank', rel: 'noopener noreferrer',
+            text: 'Open console ↗',
+            style: { color: 'var(--accent)', fontWeight: '700' },
+          }) : '',
+        ]),
+        input,
+        fromBuild ? el('div.set-desc', { text: 'Currently supplied by .env at build time.' }) : '',
+      ]),
+    };
+  };
+
+  const fields = [
+    field('googleClientId', 'Google Client ID',
+      'xxxxxxxx.apps.googleusercontent.com',
+      'Credentials → Create OAuth client ID → Web application. Add this site under "Authorised JavaScript origins". No secret needed.',
+      'https://console.cloud.google.com/apis/credentials'),
+    field('facebookAppId', 'Facebook App ID',
+      '1234567890123456',
+      'Create an app → add "Facebook Login" → add this site to Valid OAuth Redirect URIs.',
+      'https://developers.facebook.com/apps'),
+    field('githubClientId', 'GitHub Client ID',
+      'Iv1.xxxxxxxxxxxx',
+      'Register an OAuth App. On its own this is not enough — GitHub also needs the endpoint below.',
+      'https://github.com/settings/developers'),
+    field('githubTokenEndpoint', 'GitHub token endpoint (server)',
+      'https://your-worker.workers.dev/github',
+      'GitHub cannot finish sign-in in a browser: the exchange needs the client secret and its endpoint sends no CORS headers. Deploy the small function in docs/AUTHENTICATION.md and paste its URL here.',
+      null),
+  ];
+
+  const origin = el('code', {
+    text: window.location.origin,
+    style: { color: 'var(--accent)', userSelect: 'all', wordBreak: 'break-all' },
+  });
+
+  return el('div.card.mt', {}, [
+    el('h3', { text: '🌐 Social sign-in' }),
+    el('p.set-desc', {
+      text: 'Turn on the buttons on the login screen. These are public identifiers, ' +
+        'so they are safe to paste here — you are never asked for a secret.',
+    }),
+    el('div.auth-note.small', {}, [
+      'When a provider asks for an authorised origin or redirect URL, use: ', origin,
+    ]),
+    ...fields.map((f) => f.node),
+    el('div.row.mt', {}, [
+      el('button.btn.btn-primary', {
+        text: 'Save & enable',
+        on: {
+          click: async () => {
+            const patch = {};
+            for (const f of fields) patch[f.key] = f.input.value;
+            setAuthConfig(patch);
+            await ctx.actions.refreshAuthCaps();
+            ctx.actions.toast('Sign-in providers updated', 'ok');
+            rerender();
+          },
+        },
+      }),
+      el('button.btn.btn-ghost', {
+        text: 'Clear all',
+        on: {
+          click: async () => {
+            if (!confirm('Remove the saved sign-in provider settings?')) return;
+            setAuthConfig({ googleClientId: '', facebookAppId: '', githubClientId: '', githubTokenEndpoint: '' });
+            await ctx.actions.refreshAuthCaps();
+            rerender();
+          },
+        },
+      }),
+    ]),
+  ]);
 }
 
 /* ================================================================== *

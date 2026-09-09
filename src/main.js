@@ -90,6 +90,31 @@ function boot() {
       await completeSignIn();
     },
 
+    /**
+     * Create a passkey and sign in with it in one step, straight from the
+     * login screen. Previously the only route was "sign in some other way
+     * first, then go and find Settings", which nobody would do.
+     */
+    async createPasskeyAndSignIn({ name, avatar }) {
+      // The profile has to exist before a credential can be attached to it.
+      auth.signInWithName({ name, avatar });
+      try {
+        await auth.enrolPasskey();
+      } catch (err) {
+        // Roll back so a cancelled prompt does not silently sign them in.
+        auth.signOut();
+        await refreshCaps();
+        throw err;
+      }
+      await refreshCaps();
+      await completeSignIn();
+    },
+
+    /** Re-read auth capabilities after the provider settings change. */
+    async refreshAuthCaps() {
+      return refreshCaps();
+    },
+
     /** Start the authenticator-app enrolment flow. */
     beginTotpSetup() {
       const { secret, uri } = auth.beginTotpSetup ? auth.beginTotpSetup() : auth.beginTotpEnrolment();
