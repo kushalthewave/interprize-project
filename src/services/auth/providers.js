@@ -32,13 +32,81 @@ const env = (key) => {
   }
 };
 
-export const CONFIG = {
-  googleClientId: env('VITE_GOOGLE_CLIENT_ID'),
-  facebookAppId: env('VITE_FACEBOOK_APP_ID'),
-  githubClientId: env('VITE_GITHUB_CLIENT_ID'),
-  /** A server endpoint that exchanges a GitHub code for a profile. */
-  githubTokenEndpoint: env('VITE_GITHUB_TOKEN_ENDPOINT'),
+/**
+ * Runtime configuration.
+ *
+ * Client IDs used to come only from `import.meta.env`, which meant they were
+ * baked in at build time: enabling Google on the deployed site required editing
+ * .env, rebuilding and redeploying. That is a poor experience for what is
+ * really just one public string.
+ *
+ * They can now also be set from Settings -> Security at runtime and are kept in
+ * localStorage. Runtime values win over build-time ones, so a deployed copy can
+ * be configured in place without a rebuild.
+ *
+ * These are all PUBLIC identifiers - a Google Client ID is designed to be
+ * visible in page source. No secret is ever stored here; GitHub's secret stays
+ * on its server-side endpoint, which is exactly why GitHub needs one.
+ */
+const STORE_KEY = 'beat-the-hazard:auth-config:v1';
+
+function readStored() {
+  try {
+    return JSON.parse(window.localStorage.getItem(STORE_KEY) || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function writeStored(obj) {
+  try {
+    window.localStorage.setItem(STORE_KEY, JSON.stringify(obj));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const FIELDS = {
+  googleClientId: 'VITE_GOOGLE_CLIENT_ID',
+  facebookAppId: 'VITE_FACEBOOK_APP_ID',
+  githubClientId: 'VITE_GITHUB_CLIENT_ID',
+  githubTokenEndpoint: 'VITE_GITHUB_TOKEN_ENDPOINT',
 };
+
+/** Live view of the configuration: stored value first, then build-time. */
+export const CONFIG = {};
+for (const [key, envKey] of Object.entries(FIELDS)) {
+  Object.defineProperty(CONFIG, key, {
+    enumerable: true,
+    get() {
+      const stored = readStored()[key];
+      return (stored && String(stored).trim()) || env(envKey);
+    },
+  });
+}
+
+/** Save runtime configuration. Pass an empty string to clear a field. */
+export function setAuthConfig(patch) {
+  const current = readStored();
+  for (const [k, v] of Object.entries(patch)) {
+    if (!(k in FIELDS)) continue;
+    const value = String(v ?? '').trim();
+    if (value) current[k] = value;
+    else delete current[k];
+  }
+  return writeStored(current);
+}
+
+/** What has been set at runtime (for pre-filling the settings form). */
+export function getStoredAuthConfig() {
+  return readStored();
+}
+
+/** True when a field came from .env rather than the settings form. */
+export function isFromBuild(key) {
+  return !readStored()[key] && !!env(FIELDS[key]);
+}
 
 /** Load a third-party script once, resolving when it is ready. */
 const scriptCache = new Map();

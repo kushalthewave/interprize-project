@@ -85,24 +85,39 @@ export async function hasPlatformAuthenticator() {
   }
 }
 
-/** One call that tells the UI exactly what to show and why. */
+/**
+ * One call that tells the UI exactly what to show and why.
+ *
+ * Note what this deliberately does NOT do: it does not refuse passkeys just
+ * because there is no built-in fingerprint reader. A platform authenticator
+ * (Windows Hello, Touch ID) is the nicest option, but WebAuthn also supports
+ * a phone over the hybrid/QR transport and USB security keys. Gating on
+ * `isUserVerifyingPlatformAuthenticatorAvailable()` locked the feature away
+ * from every desktop without Windows Hello configured, which is most of them.
+ *
+ * The only genuine blockers are: no WebAuthn API, or an insecure context.
+ */
 export async function passkeyAvailability() {
   if (!isPasskeySupported()) {
-    return { available: false, reason: 'This browser does not support passkeys.' };
+    return { available: false, platform: false, reason: 'This browser does not support passkeys.' };
   }
   if (!isSecureContextOk()) {
     return {
       available: false,
-      reason: 'Passkeys need a secure connection (https). They will not work when the file is opened directly from disk.',
+      platform: false,
+      reason: 'Passkeys need a secure connection (https). They do not work when the file is opened directly from disk — use the online version.',
     };
   }
-  if (!(await hasPlatformAuthenticator())) {
-    return {
-      available: false,
-      reason: 'No fingerprint, face or PIN unlock is set up on this device.',
-    };
-  }
-  return { available: true, reason: '' };
+
+  const platform = await hasPlatformAuthenticator();
+  return {
+    available: true,
+    platform,
+    // A hint, not a refusal.
+    reason: platform
+      ? ''
+      : 'No built-in fingerprint or face unlock detected — you can use your phone or a security key instead.',
+  };
 }
 
 /* ------------------------------------------------------------------ *
@@ -117,6 +132,7 @@ export async function passkeyAvailability() {
 export async function registerPasskey({ name, displayName = name }) {
   const check = await passkeyAvailability();
   if (!check.available) throw new Error(check.reason);
+  const platform = check.platform;
 
   // A real server would issue this challenge and remember it. With no server
   // the challenge is still random per attempt, which is what stops a stored
@@ -140,10 +156,15 @@ export async function registerPasskey({ name, displayName = name }) {
         { type: 'public-key', alg: -7 },   // ES256
         { type: 'public-key', alg: -257 }, // RS256
       ],
+      // `authenticatorAttachment` is deliberately omitted when there is no
+      // built-in authenticator. Pinning it to 'platform' makes the browser
+      // refuse outright on a desktop without Windows Hello, instead of
+      // offering the phone-over-QR and security-key options it supports.
+      // Leaving it unset lets the browser present everything available.
       authenticatorSelection: {
-        authenticatorAttachment: 'platform', // Windows Hello / Touch ID
+        ...(platform ? { authenticatorAttachment: 'platform' } : {}),
         residentKey: 'preferred',
-        userVerification: 'required',        // force biometric or PIN
+        userVerification: 'required', // still force a biometric or PIN
       },
       timeout: 60000,
       attestation: 'none', // nothing verifies attestation without a server
@@ -157,7 +178,7 @@ export async function registerPasskey({ name, displayName = name }) {
     id: bufferToBase64url(credential.rawId),
     createdAt: Date.now(),
     transports,
-    deviceLabel: describeDevice(),
+    deviceLabel: describeDevice(transports, platform),
   };
 }
 
@@ -191,14 +212,22 @@ export async function authenticateWithPasskey(credentialIds = []) {
   return { id: bufferToBase64url(assertion.rawId), verified: false };
 }
 
-/** A friendly label so the profile can show which device a passkey belongs to. */
-function describeDevice() {
+/**
+ * A friendly label so the profile can show where a passkey actually lives.
+ * The transports the authenticator reports are more reliable than the user
+ * agent: 'hybrid' means a phone, 'usb'/'nfc' means a security key.
+ */
+function describeDevice(transports = [], platform = true) {
+  if (transports.includes('hybrid')) return 'Phone or tablet';
+  if (transports.includes('usb') || transports.includes('nfc')) return 'Security key';
+  if (!platform) return 'External authenticator';
+
   const ua = navigator.userAgent;
   if (/Windows/i.test(ua)) return 'Windows Hello';
   if (/Mac OS X|Macintosh/i.test(ua)) return 'Touch ID';
   if (/iPhone|iPad|iOS/i.test(ua)) return 'Face ID / Touch ID';
   if (/Android/i.test(ua)) return 'Android screen lock';
-  return 'this device';
+  return 'This device';
 }
 
 /** Turn a WebAuthn DOMException into something worth showing a person. */
