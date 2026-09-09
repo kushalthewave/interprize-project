@@ -69,6 +69,8 @@ what "good" looks like is half of hazard spotting.
 - **Three difficulties** that change the actual game, not just a label
 - Reaction clock, scoring, combo streaks, ranks and a detailed results breakdown
 - Profile with avatar, progression gates, achievements and score history
+- **Sign in with a passkey** (Windows Hello / Touch ID / Face ID), Google,
+  Facebook, or just a name — plus optional **authenticator-app 2FA**
 - Fully **synthesised audio** — ambience, forklift engine, reversing alarm, cues
 - Works **offline**; no server, no database, no account required
 - Desktop, tablet and phone (on-screen sticks); keyboard-only playable
@@ -334,8 +336,12 @@ that does not:
   figures with a procedural walk cycle.
 - **WebXR / VR is not implemented.** No headset was available, so rather than
   ship untested VR code, it is left out. Desktop play does not depend on it.
-- **Google sign-in is not configured and has never been tested.** The UI states
-  this honestly instead of faking a sign-in. Local demo auth is used.
+- **Social sign-in is implemented but not tested against live servers.** Google
+  and Facebook work with no backend once you add a free Client ID; GitHub needs
+  a small server endpoint and says so. See [`docs/AUTHENTICATION.md`](docs/AUTHENTICATION.md).
+- **Passkeys and TOTP are local, not server-verified.** With no backend they
+  protect a profile on a shared machine and implement the real standards
+  correctly, but they are not an authentication boundary. Documented in full.
 - **No mobile device testing.** Touch controls are implemented and the layout is
   responsive, but they have only been exercised in a desktop browser.
 - **Performance was measured on one machine.** 60 fps there; low-end hardware

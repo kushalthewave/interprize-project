@@ -733,3 +733,127 @@ h3 { margin: 0 0 0.5rem; font-size: 1.05rem; font-weight: 700; }
   min-width: 3.2rem; text-align: right;
   font-family: var(--mono); font-size: 0.85rem; font-weight: 700; color: var(--accent);
 }
+
+/* ==================================================================
+   Authentication: passkeys, social sign-in, TOTP
+   ================================================================== */
+
+.auth-btn {
+  display: flex; align-items: center; gap: 0.85rem; width: 100%;
+  padding: 0.85rem 1.1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  text-align: left;
+  transition: background 0.14s, border-color 0.14s, transform 0.08s;
+}
+.auth-btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.12); border-color: var(--border-strong); }
+.auth-btn:active:not(:disabled) { transform: translateY(1px); }
+.auth-btn.disabled, .auth-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.auth-passkey {
+  background: linear-gradient(180deg, rgba(242, 185, 12, 0.18), rgba(242, 185, 12, 0.08));
+  border-color: rgba(242, 185, 12, 0.5);
+}
+.auth-passkey:hover { background: rgba(242, 185, 12, 0.24); }
+
+.auth-icon {
+  flex: none; width: 30px; height: 30px; border-radius: 7px;
+  display: grid; place-items: center;
+  font-size: 1.05rem; font-weight: 800;
+  background: rgba(0, 0, 0, 0.28);
+}
+.auth-social .auth-icon { background: rgba(0, 0, 0, 0.16); }
+
+.auth-label { display: block; font-weight: 700; font-size: 0.95rem; }
+.auth-sub { display: block; font-size: 0.75rem; opacity: 0.75; margin-top: 0.1rem; line-height: 1.35; }
+
+.auth-unavailable {
+  display: flex; align-items: center; gap: 0.85rem;
+  padding: 0.8rem 1.1rem;
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--border);
+  color: var(--text-dim);
+}
+
+.auth-divider {
+  display: flex; align-items: center; gap: 0.75rem;
+  margin: 0.35rem 0;
+  color: var(--text-faint); font-size: 0.72rem;
+  letter-spacing: 0.08em; text-transform: uppercase; font-weight: 700;
+}
+.auth-divider::before, .auth-divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+
+.auth-error {
+  display: none;
+  padding: 0.6rem 0.8rem; border-radius: var(--radius-sm);
+  background: rgba(239, 68, 68, 0.12);
+  border-left: 3px solid var(--danger);
+  color: #fecaca; font-size: 0.85rem; line-height: 1.45;
+}
+.auth-error.show { display: block; }
+
+.auth-note {
+  padding: 0.7rem 0.85rem; border-radius: var(--radius-sm);
+  background: rgba(56, 189, 248, 0.09);
+  border-left: 3px solid var(--info);
+  color: #cfe9fa; font-size: 0.82rem; line-height: 1.5;
+}
+.auth-note.small { font-size: 0.76rem; color: var(--text-dim); background: rgba(255,255,255,0.04); border-left-color: var(--border-strong); }
+
+/* --- credentials list --- */
+.cred-row {
+  display: flex; align-items: center; gap: 0.8rem;
+  padding: 0.7rem 0.85rem; margin-top: 0.6rem;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid var(--border);
+}
+.cred-icon { font-size: 1.15rem; }
+.cred-name { font-weight: 700; font-size: 0.9rem; }
+.cred-meta { font-size: 0.74rem; color: var(--text-faint); margin-top: 0.12rem; }
+
+/* --- TOTP --- */
+.totp-input {
+  width: 100%;
+  padding: 0.9rem 1rem;
+  font-family: var(--mono);
+  font-size: 1.7rem;
+  font-weight: 700;
+  letter-spacing: 0.35em;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+}
+.totp-input:focus { outline: none; border-color: var(--accent); }
+
+.totp-qr-wrap {
+  display: grid; place-items: center;
+  padding: 1rem; margin: 0.5rem 0 0.75rem;
+  background: #ffffff; border-radius: var(--radius);
+}
+.totp-qr { display: block; image-rendering: pixelated; max-width: 100%; height: auto; }
+
+.totp-secret {
+  font-family: var(--mono);
+  font-size: 1.02rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 0.75rem 0.9rem;
+  margin: 0.5rem 0 0.6rem;
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px dashed var(--border-strong);
+  color: var(--accent);
+  word-break: break-all;
+  user-select: all;
+}
+
+@media (max-width: 720px) {
+  .totp-input { font-size: 1.35rem; letter-spacing: 0.22em; }
+}
