@@ -158,8 +158,22 @@ None blocking. Optional only:
 
 ## Deployment
 
-**Live artifact:** https://claude.ai/code/artifact/7ba87d99-7847-41fe-8c73-b71445dbcbdc
-(private to the account that owns it until shared from the page's share menu)
+**Live (public):** https://kushalthewave.github.io/interprize-project/
+**Standalone single file:** https://kushalthewave.github.io/interprize-project/beat-the-hazard.html
+**Private artifact:** https://claude.ai/code/artifact/7ba87d99-7847-41fe-8c73-b71445dbcbdc
+(the artifact is private to its owner until shared from the page's share menu)
+
+### How Pages is published
+
+Via the **`gh-pages` branch**, not the Pages deployment API. The API route
+(`actions/configure-pages` + `actions/deploy-pages`) requires the repository's
+Pages source to be set to "GitHub Actions" in Settings first; `enablement: true`
+could not create the site and failed with *"Get Pages site failed ... Not
+Found"*. Pushing a `gh-pages` branch works with no manual repository setting,
+and GitHub serves it automatically.
+
+Verified live: 15 hazards, 5 decoys, 1,549 draw calls, 273k triangles, no
+console errors.
 
 ### Single-file build
 

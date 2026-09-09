@@ -1,13 +1,17 @@
 # Builds the game and publishes it to GitHub Pages on every push to main.
 #
-# `enablement: true` on configure-pages turns Pages on automatically the first
-# time this runs, so no manual repository setting is required.
+# Publishes by pushing the built site to the `gh-pages` branch, rather than via
+# the Pages deployment API. The API route (actions/configure-pages +
+# actions/deploy-pages) needs the repository's Pages source to be set to
+# "GitHub Actions" in Settings first, and the `enablement: true` option could
+# not create the site on this repository - it failed with "Get Pages site
+# failed ... Not Found". Pushing a gh-pages branch works without that manual
+# step, and GitHub serves it automatically.
 #
-# Once enabled the game is live at:
-#   https://kushalthewave.github.io/interprize-project/
+# Live at: https://kushalthewave.github.io/interprize-project/
 #
-# vite.config.js uses `base: './'`, so relative asset paths work correctly from
-# a project subpath - no base override is needed here.
+# vite.config.js uses `base: './'`, so assets resolve correctly from the
+# project subpath - no base override is needed here.
 
 name: Deploy to GitHub Pages
 
@@ -16,18 +20,17 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Needs write access to push the built site to the gh-pages branch.
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
-# Let a running deploy finish rather than cancelling it mid-publish.
+# Let a running publish finish rather than cancelling it part-way.
 concurrency:
-  group: pages
+  group: gh-pages
   cancel-in-progress: false
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -40,6 +43,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Do not publish a broken build.
       - name: Check syntax
         run: node scripts/syntax-check.mjs
 
@@ -49,29 +53,23 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Build single-file version
+      - name: Build the standalone single-file version
         run: npm run build:single
 
-      - name: Include the standalone single-file build in the site
-        run: cp dist-single/beat-the-hazard.html dist/beat-the-hazard.html
+      - name: Assemble the site
+        run: |
+          cp dist-single/beat-the-hazard.html dist/beat-the-hazard.html
+          # Stop GitHub applying Jekyll processing to the built assets.
+          touch dist/.nojekyll
 
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
-        with:
-          # Switches the repository to "GitHub Actions" as the Pages source on
-          # the first run, instead of failing with "Pages site not found".
-          enablement: true
-
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Publish to gh-pages
+        run: |
+          cd dist
+          git init -q
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Publish site from ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:gh-pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
