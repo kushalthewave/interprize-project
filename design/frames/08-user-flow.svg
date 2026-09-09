@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900">
+  <title>08 User Flow</title>
+  <rect width="1440" height="900" fill="#0b0f14"/>
+  
+  <text x="120" y="96" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="11" fill="#f2b90c" font-weight="700" text-anchor="start" letter-spacing="1.8">PROTOTYPE FLOW</text>
+  <text x="120" y="138" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="28" fill="#e9eef4" font-weight="800" text-anchor="start">How a trainee moves through the game</text>
+
+  
+  <rect x="120" y="240" width="180" height="76" rx="10" fill="#121820" stroke="#2a323b" stroke-width="1"/>
+  <text x="210" y="272" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="15" fill="#e9eef4" font-weight="800" text-anchor="middle">Login</text>
+  <text x="210" y="294" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="10.5" fill="#97a4b2" font-weight="400" text-anchor="middle">name + avatar</text>
+  <line x1="300" y1="278" x2="348" y2="278" stroke="#f2b90c" stroke-width="2"/>
+  <polygon points="348,278 340,273 340,283" fill="#f2b90c"/>
+  
+  <rect x="356" y="240" width="180" height="76" rx="10" fill="#121820" stroke="#2a323b" stroke-width="1"/>
+  <text x="446" y="272" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="15" fill="#e9eef4" font-weight="800" text-anchor="middle">Main Menu</text>
+  <text x="446" y="294" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="10.5" fill="#97a4b2" font-weight="400" text-anchor="middle">six entry points</text>
+  <line x1="536" y1="278" x2="584" y2="278" stroke="#f2b90c" stroke-width="2"/>
+  <polygon points="584,278 576,273 576,283" fill="#f2b90c"/>
+  
+  <rect x="592" y="240" width="200" height="76" rx="10" fill="#121820" stroke="#2a323b" stroke-width="1"/>
+  <text x="692" y="272" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="15" fill="#e9eef4" font-weight="800" text-anchor="middle">Choose Site</text>
+  <text x="692" y="294" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="10.5" fill="#97a4b2" font-weight="400" text-anchor="middle">3 environments</text>
+  <line x1="792" y1="278" x2="840" y2="278" stroke="#f2b90c" stroke-width="2"/>
+  <polygon points="840,278 832,273 832,283" fill="#f2b90c"/>
+  
+  <rect x="848" y="240" width="200" height="76" rx="10" fill="#1c1f16" stroke="#2a323b" stroke-width="1"/>
+  <text x="948" y="272" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="15" fill="#e9eef4" font-weight="800" text-anchor="middle">Train Mode</text>
+  <text x="948" y="294" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="10.5" fill="#97a4b2" font-weight="400" text-anchor="middle">guided, highlighted</text>
+  <line x1="1048" y1="278" x2="1096" y2="278" stroke="#f2b90c" stroke-width="2"/>
+  <polygon points="1096,278 1088,273 1088,283" fill="#f2b90c"/>
+  
+  <rect x="1104" y="240" width="200" height="76" rx="10" fill="#12331f" stroke="#2a323b" stroke-width="1"/>
+  <text x="1204" y="272" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="15" fill="#e9eef4" font-weight="800" text-anchor="middle">Trained ✓</text>
+  <text x="1204" y="294" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="10.5" fill="#97a4b2" font-weight="400" text-anchor="middle">unlocks testing</text>
+
+  <line x1="948" y1="316" x2="948" y2="386" stroke="#f2b90c" stroke-width="2"/>
+  <polygon points="948,386 940,381 940,391" fill="#f2b90c"/>
+  
+  <rect x="848" y="390" width="200" height="76" rx="10" fill="#121820" stroke="#2a323b" stroke-width="1"/>
+  <text x="948" y="422" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="15" fill="#e9eef4" font-weight="800" text-anchor="middle">Choose Difficulty</text>
+  <text x="948" y="444" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="10.5" fill="#97a4b2" font-weight="400" text-anchor="middle">Simple / Mid / Hard</text>
+  <line x1="848" y1="428" x2="800" y2="428" stroke="#f2b90c" stroke-width="2"/>
+  <polygon points="800,428 792,423 792,433" fill="#f2b90c"/>
+  
+  <rect x="592" y="390" width="200" height="76" rx="10" fill="#1c1f16" stroke="#2a323b" stroke-width="1"/>
+  <text x="692" y="422" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="15" fill="#e9eef4" font-weight="800" text-anchor="middle">Test Mode</text>
+  <text x="692" y="444" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="10.5" fill="#97a4b2" font-weight="400" text-anchor="middle">timed, scored</text>
+  <line x1="592" y1="428" x2="544" y2="428" stroke="#f2b90c" stroke-width="2"/>
+  <polygon points="544,428 536,423 536,433" fill="#f2b90c"/>
+  
+  <rect x="356" y="390" width="180" height="76" rx="10" fill="#12331f" stroke="#2a323b" stroke-width="1"/>
+  <text x="446" y="422" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="15" fill="#e9eef4" font-weight="800" text-anchor="middle">Results</text>
+  <text x="446" y="444" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="10.5" fill="#97a4b2" font-weight="400" text-anchor="middle">rank + coaching</text>
+  <line x1="356" y1="428" x2="308" y2="428" stroke="#f2b90c" stroke-width="2"/>
+  <polygon points="308,428 300,423 300,433" fill="#f2b90c"/>
+  
+  <rect x="120" y="390" width="180" height="76" rx="10" fill="#121820" stroke="#2a323b" stroke-width="1"/>
+  <text x="210" y="422" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="15" fill="#e9eef4" font-weight="800" text-anchor="middle">Progress</text>
+  <text x="210" y="444" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="10.5" fill="#97a4b2" font-weight="400" text-anchor="middle">history, badges</text>
+
+  <rect x="120" y="530" width="1200" height="250" rx="12" fill="#121820" stroke="#2a323b" stroke-width="1"/>
+  <text x="150" y="566" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="16" fill="#e9eef4" font-weight="700" text-anchor="start">Test Mode loop</text>
+  <rect x="150" y="596" width="196" height="56" rx="8" fill="#161d26" stroke="#2a323b" stroke-width="1"/>
+  <text x="248" y="630" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="14" fill="#e9eef4" font-weight="700" text-anchor="middle">Observe</text>
+  <line x1="346" y1="624" x2="370" y2="624" stroke="#f2b90c" stroke-width="2"/>
+  <polygon points="370,624 362,619 362,629" fill="#f2b90c"/>
+  <rect x="374" y="596" width="196" height="56" rx="8" fill="#161d26" stroke="#2a323b" stroke-width="1"/>
+  <text x="472" y="630" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="14" fill="#e9eef4" font-weight="700" text-anchor="middle">Find</text>
+  <line x1="570" y1="624" x2="594" y2="624" stroke="#f2b90c" stroke-width="2"/>
+  <polygon points="594,624 586,619 586,629" fill="#f2b90c"/>
+  <rect x="598" y="596" width="196" height="56" rx="8" fill="#161d26" stroke="#2a323b" stroke-width="1"/>
+  <text x="696" y="630" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="14" fill="#e9eef4" font-weight="700" text-anchor="middle">Flag</text>
+  <line x1="794" y1="624" x2="818" y2="624" stroke="#f2b90c" stroke-width="2"/>
+  <polygon points="818,624 810,619 810,629" fill="#f2b90c"/>
+  <rect x="822" y="596" width="196" height="56" rx="8" fill="#161d26" stroke="#2a323b" stroke-width="1"/>
+  <text x="920" y="630" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="14" fill="#e9eef4" font-weight="700" text-anchor="middle">Validate</text>
+  <line x1="1018" y1="624" x2="1042" y2="624" stroke="#f2b90c" stroke-width="2"/>
+  <polygon points="1042,624 1034,619 1034,629" fill="#f2b90c"/>
+  <rect x="1046" y="596" width="196" height="56" rx="8" fill="#f2b90c" stroke="#2a323b" stroke-width="1"/>
+  <text x="1144" y="630" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="14" fill="#1a1204" font-weight="700" text-anchor="middle">Score</text>
+  
+  <text x="150" y="690" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="12.5" fill="#97a4b2" font-weight="400" text-anchor="start">Correct: points scored by severity and speed, plus a teaching card with the control and the safety keywords.</text>
+  <text x="150" y="708.75" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="12.5" fill="#97a4b2" font-weight="400" text-anchor="start">Wrong: zero points, the combo breaks, and the game explains why the thing you flagged is actually under</text>
+  <text x="150" y="727.5" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="12.5" fill="#97a4b2" font-weight="400" text-anchor="start">control.</text>
+  <text x="150" y="742" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="12.5" fill="#f2b90c" font-weight="400" text-anchor="start">A decoy — a spill that IS coned and signed, a rack with a green inspection tag — is a wrong answer on</text>
+  <text x="150" y="760.75" font-family="Inter, Segoe UI, system-ui, sans-serif" font-size="12.5" fill="#f2b90c" font-weight="400" text-anchor="start">purpose. Learning what "good" looks like is half of hazard spotting.</text>
+
+</svg>
