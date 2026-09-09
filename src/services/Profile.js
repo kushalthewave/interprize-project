@@ -96,6 +96,8 @@ function blankProfile() {
     progress: {},
     achievements: [],
     history: [],
+    /** Credentials: passkeys and TOTP. Managed by services/auth/AuthManager. */
+    security: { passkeys: [], totp: null, lastMethod: null },
     settings: {
       audio: true,
       volume: 0.7,
@@ -127,6 +129,7 @@ export class Profile {
     this.data.progress ??= {};
     this.data.achievements ??= [];
     this.data.history ??= [];
+    this.data.security = { ...base.security, ...(this.data.security ?? {}) };
   }
 
   save() {
@@ -310,9 +313,17 @@ export class Profile {
     return done / (environmentIds.length * per);
   }
 
+  /**
+   * Clear scores, achievements and history.
+   *
+   * Deliberately keeps identity, settings AND security credentials: someone
+   * clearing their scores has not asked to be signed out and to lose the
+   * passkey they registered. Removing credentials is a separate, explicit
+   * action in Settings -> Security.
+   */
   resetProgress() {
-    const { name, avatar, authProvider, email, settings } = this.data;
-    this.data = { ...blankProfile(), name, avatar, authProvider, email, settings };
+    const { name, avatar, authProvider, email, settings, security } = this.data;
+    this.data = { ...blankProfile(), name, avatar, authProvider, email, settings, security };
     this.save();
   }
 }

@@ -114,6 +114,7 @@ npm run build
 | [`HAZARDS.md`](HAZARDS.md) | All 15 hazards — **generated from source** |
 | [`ENVIRONMENTS.md`](ENVIRONMENTS.md) | The three warehouses, and how to add a fourth |
 | [`DECISIONS.md`](DECISIONS.md) | Every significant technical decision and why |
+| [`AUTHENTICATION.md`](AUTHENTICATION.md) | Sign-in methods, what each proves, setup steps |
 | [`TESTING.md`](TESTING.md) | What is tested, what is not, honestly |
 | [`ASSET_CREDITS.md`](ASSET_CREDITS.md) | Asset inventory (all procedural) and licences |
 | [`DEVELOPMENT_STATUS.md`](DEVELOPMENT_STATUS.md) | Live status, known issues, next priorities |

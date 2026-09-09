@@ -7,6 +7,7 @@ import { el, mount } from './dom.js';
 import { bus, EV } from '../core/EventBus.js';
 import { HUD } from './HUD.js';
 import * as Screens from './Screens.js';
+import * as Auth from './AuthScreens.js';
 import { ACHIEVEMENTS } from '../data/config.js';
 
 const LOADING_TIPS = [
@@ -37,6 +38,8 @@ export class UIManager {
 
     this.current = null;
     this.currentParams = {};
+    /** Auth capabilities, refreshed by main.js before showing the login screen. */
+    this.caps = { passkey: { available: false, enrolled: false, reason: '' }, totp: { enrolled: false }, providers: [] };
     this._subs = [];
     this._wire();
   }
@@ -229,7 +232,9 @@ export class UIManager {
 
     let node;
     switch (screen) {
-      case 'login': node = Screens.loginScreen(c); break;
+      case 'login': node = Auth.loginScreen(c, params.caps ?? this.caps); break;
+      case 'totp-challenge': node = Auth.totpChallengeScreen(c, params); break;
+      case 'totp-setup': node = Auth.totpSetupScreen(c, params); break;
       case 'menu': node = Screens.menuScreen(c); break;
       case 'environments': node = Screens.environmentScreen(c, { mode: 'test' }); break;
       case 'train-select': node = Screens.environmentScreen(c, { mode: 'train' }); break;

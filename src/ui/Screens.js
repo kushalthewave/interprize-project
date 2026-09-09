@@ -9,6 +9,7 @@ import { el, secs, pct } from './dom.js';
 import { DIFFICULTIES, DIFFICULTY_ORDER, ACHIEVEMENTS, RANKS } from '../data/config.js';
 import { HAZARDS, HAZARD_CATEGORIES } from '../data/hazards.js';
 import { ENVIRONMENTS } from '../environment/registry.js';
+import { securityPanel } from './AuthScreens.js';
 
 const AVATARS = {
   male: { face: '🧑🏽‍🏭', label: 'Ramesh', sub: 'Daura-surwal inspired · dhaka topi' },
@@ -634,6 +635,8 @@ export function settingsScreen(ctx) {
         toggle('reducedMotion', 'Reduce motion', 'Turns off camera head bob while walking.'),
         toggle('showFps', 'Show performance overlay', 'Displays frame rate and draw calls while playing.'),
       ]),
+      ...(ctx.auth ? securityPanel(ctx, ctx.authCaps ?? { passkey: { available: false, reason: '' } }, () => ctx.go('settings')) : []),
+
       el('div.card.stack.mt', {}, [
         el('h3', { text: '💾 Data' }),
         el('p.faint', { text: 'Progress is stored in this browser. Clearing it cannot be undone.' }),

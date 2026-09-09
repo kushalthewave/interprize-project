@@ -9,6 +9,7 @@ import { Engine } from './core/Engine.js';
 import { PlayerController } from './player/PlayerController.js';
 import { GameManager, MODE, STATE } from './gameplay/GameManager.js';
 import { Profile } from './services/Profile.js';
+import { AuthManager } from './services/auth/AuthManager.js';
 import { AudioManager } from './audio/AudioManager.js';
 import { UIManager } from './ui/UIManager.js';
 import { bus, EV } from './core/EventBus.js';
@@ -37,6 +38,7 @@ function boot() {
   }
 
   const profile = new Profile();
+  const auth = new AuthManager(profile);
   const audio = new AudioManager({
     enabled: profile.settings.audio,
     volume: profile.settings.volume,
@@ -49,54 +51,59 @@ function boot() {
   /* ---------------------------------------------------------------- *
    * Actions exposed to the UI
    * ---------------------------------------------------------------- */
+  /**
+   * After any successful sign-in, require the second factor if one is enrolled,
+   * then land on the menu. One funnel, so no route can skip 2FA.
+   */
+  async function completeSignIn() {
+    audio.init();
+    audio.resume();
+    if (auth.hasTotp) {
+      ui.go('totp-challenge', { onSuccess: () => ui.go('menu') });
+      return;
+    }
+    ui.go('menu');
+  }
+
+  /** Refresh what the login screen is allowed to offer. */
+  async function refreshCaps() {
+    ui.caps = await auth.capabilities();
+    ui.ctx.authCaps = ui.caps;
+    return ui.caps;
+  }
+
   const actions = {
-    signIn({ name, avatar }) {
-      audio.init();
-      audio.resume();
-      profile.signIn({ name, avatar, provider: 'local' });
-      ui.go('menu');
-      ui.toast(`Welcome, ${profile.name}`, 'ok');
+    async signInWithName({ name, avatar }) {
+      auth.signInWithName({ name, avatar });
+      await completeSignIn();
+    },
+
+    async signInWithProvider(id) {
+      const account = await auth.signInWithProvider(id);
+      ui.toast(`Signed in as ${account.name}`, 'ok');
+      await completeSignIn();
+    },
+
+    async signInWithPasskey() {
+      await auth.signInWithPasskey();
+      ui.toast('Unlocked with your passkey', 'ok');
+      await completeSignIn();
+    },
+
+    /** Start the authenticator-app enrolment flow. */
+    beginTotpSetup() {
+      const { secret, uri } = auth.beginTotpSetup ? auth.beginTotpSetup() : auth.beginTotpEnrolment();
+      ui.go('totp-setup', {
+        secret,
+        uri,
+        onDone: async () => { await refreshCaps(); ui.go('settings'); },
+        onCancel: () => ui.go('settings'),
+      });
     },
 
     signOut() {
-      profile.signOut();
-      ui.go('login');
-    },
-
-    /**
-     * Google OAuth. Deliberately NOT faked: without a configured client id
-     * this reports honestly instead of pretending to sign in.
-     * See docs/DEVELOPMENT_STATUS.md -> Manual actions required.
-     */
-    googleSignIn() {
-      const cid = import.meta.env?.VITE_GOOGLE_CLIENT_ID;
-      if (!cid) {
-        ui.toast('Google sign-in is not configured on this build.', 'error');
-        return;
-      }
-      if (!window.google?.accounts?.id) {
-        ui.toast('Google Identity Services script did not load.', 'error');
-        return;
-      }
-      window.google.accounts.id.initialize({
-        client_id: cid,
-        callback: (resp) => {
-          try {
-            const payload = JSON.parse(atob(resp.credential.split('.')[1]));
-            profile.signIn({
-              name: payload.name ?? 'Trainee',
-              avatar: profile.avatar,
-              provider: 'google',
-              email: payload.email ?? null,
-            });
-            ui.go('menu');
-          } catch (err) {
-            console.error('[Auth] failed to decode Google credential', err);
-            ui.toast('Google sign-in failed.', 'error');
-          }
-        },
-      });
-      window.google.accounts.id.prompt();
+      auth.signOut();
+      refreshCaps().then(() => ui.go('login'));
     },
 
     async startTrain(envId) {
@@ -140,8 +147,8 @@ function boot() {
 
   const ui = new UIManager(document.getElementById('ui'), {
     profile,
+    auth,
     actions,
-    googleClientId: import.meta.env?.VITE_GOOGLE_CLIENT_ID || '',
   });
 
   /* ---------------------------------------------------------------- *
@@ -274,10 +281,25 @@ function boot() {
    * Go
    * ---------------------------------------------------------------- */
   engine.start();
-  ui.go(profile.isSignedIn ? 'menu' : 'login');
+
+  // Decide the opening screen only after we know what auth can offer, and
+  // after any OAuth redirect has been consumed.
+  (async () => {
+    const redirected = await auth.completeRedirectSignIn();
+    await refreshCaps();
+    if (redirected) {
+      ui.toast(`Signed in as ${redirected.name}`, 'ok');
+      await completeSignIn();
+      return;
+    }
+    if (!profile.isSignedIn) { ui.go('login'); return; }
+    // A returning trainee with 2FA on still has to present a code.
+    if (auth.hasTotp) ui.go('totp-challenge', { onSuccess: () => ui.go('menu') });
+    else ui.go('menu');
+  })();
 
   // Expose a small surface for manual QA in the browser console.
-  window.BTH = { engine, game, player, profile, audio, ui, bus, EV };
+  window.BTH = { engine, game, player, profile, audio, ui, bus, EV, auth };
   document.getElementById('boot-fallback')?.remove();
   console.info('[Beat The Hazard] ready. window.BTH exposes the running systems.');
 }
