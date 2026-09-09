@@ -17,3 +17,6 @@ qrdbg.mjs
 assessment/_build/
 assessment/_figures/
 assessment/*.zip
+
+__pycache__/
+*.pyc
