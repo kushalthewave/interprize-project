@@ -12,3 +12,8 @@ ppt/shots/
 ppt/capture.log
 Beat-The-Hazard-SUBMISSION.zip
 qrdbg.mjs
+
+# Assessment pack: generated output, not source
+assessment/_build/
+assessment/_figures/
+assessment/*.zip
