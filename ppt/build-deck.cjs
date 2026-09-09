@@ -1,457 +1,400 @@
 /**
- * build-deck.js — generates the client / classroom presentation.
- * Run:  node ppt/build-deck.js
+ * build-deck.cjs — the 20-minute presentation deck.
+ *
+ *   cd ppt && npm run build
+ *
+ * Themed to match the game itself: the palette is lifted verbatim from
+ * src/ui/styles.css, and the recurring motif is the in-game HUD chip, so the
+ * slides and the live demo look like one product.
+ *
+ * Timing: every slide's speaker notes open with a [m:ss] cumulative marker.
+ * The plan is 18 minutes of slides + a 2-minute live demo = 20 minutes.
  */
 const pptxgen = require('pptxgenjs');
 const path = require('path');
 
 const SHOT = (n) => path.join(__dirname, 'shots', 'opt', `${n}.jpg`);
 
-/* ------------------------------------------------------------------ *
- * Palette — industrial safety: charcoal ground, hi-vis amber accent
- * ------------------------------------------------------------------ */
+/* Palette copied from src/ui/styles.css so deck and game never drift. */
 const C = {
-  ink: '14181C',        // deepest ground
-  charcoal: '1E2227',   // dark slide ground
-  slate: '2C333A',      // card on dark
-  amber: 'F2B90C',      // primary accent (hi-vis)
-  orange: 'E07B12',     // secondary accent
-  green: '1F8A4C',      // safe / correct
-  red: 'C0182A',        // hazard / major
-  paper: 'FFFFFF',      // light slide ground
-  mist: 'F1F3F5',       // light card
-  body: '3C444C',       // body text on light
-  muted: '6B747D',      // muted text on light
-  dimText: 'A8B2BB',    // muted text on dark
+  bg: '0B0F14',
+  bg2: '11171E',
+  panel: '151C25',
+  panel2: '1B2530',
+  border: '2A323B',
+  text: 'E9EEF4',
+  dim: '97A4B2',
+  faint: '64717F',
+  accent: 'F2B90C',
+  accent2: 'FF8A1F',
+  danger: 'EF4444',
+  success: '22C55E',
+  info: '38BDF8',
+  major: 'FF4D4D',
+  minor: 'FFC14D',
+  white: 'FFFFFF',
+  ink: '1A1204',
 };
 
-const F = { head: 'Arial', body: 'Calibri' };
+const F = { head: 'Arial', body: 'Calibri', mono: 'Consolas' };
 
 const pres = new pptxgen();
-pres.layout = 'LAYOUT_WIDE'; // 13.333 x 7.5 in — set BEFORE adding slides
+pres.layout = 'LAYOUT_WIDE';           // 13.333 x 7.5 in
 pres.author = 'Kushal Neupane';
 pres.company = 'Beat The Hazard';
 pres.title = 'Beat The Hazard';
 
 const W = 13.333;
 const H = 7.5;
-const M = 0.7; // page margin
+const M = 0.7;
 
 /* ------------------------------------------------------------------ *
- * Helpers
+ * Building blocks
  * ------------------------------------------------------------------ */
 
-/** Dark slide with optional full-bleed photo + scrim. */
-function darkSlide({ image = null, scrim = 62 } = {}) {
+function slide({ image = null, scrim = 74, bg = C.bg } = {}) {
   const s = pres.addSlide();
-  s.background = { color: C.charcoal };
+  s.background = { color: bg };
   if (image) {
     s.addImage({ path: image, x: 0, y: 0, w: W, h: H, sizing: { type: 'cover', w: W, h: H } });
-    s.addShape(pres.ShapeType.rect, {
-      x: 0, y: 0, w: W, h: H, fill: { color: C.ink, transparency: 100 - scrim },
-    });
+    s.addShape(pres.ShapeType.rect, { x: 0, y: 0, w: W, h: H, fill: { color: C.bg, transparency: 100 - scrim } });
   }
   return s;
 }
 
-function lightSlide() {
-  const s = pres.addSlide();
-  s.background = { color: C.paper };
-  return s;
-}
-
-/** Section title in the top-left. */
-function title(slide, text, { color = C.ink, y = 0.78, size = 34, w = W - M * 2, h = 0.8 } = {}) {
-  slide.addText(text, {
-    x: M, y, w, h,
-    isTextBox: true, margin: 0,
-    fontFace: F.head, fontSize: size, bold: true, color,
-    align: 'left', valign: 'middle',
-  });
-}
-
-function kicker(slide, text, { color = C.amber, y = 0.42 } = {}) {
-  slide.addText(text.toUpperCase(), {
-    x: M, y, w: W - M * 2, h: 0.3,
-    isTextBox: true, margin: 0,
-    fontFace: F.body, fontSize: 12, bold: true, color, charSpacing: 2,
-    align: 'left', valign: 'middle',
-  });
-}
-
-/** Amber circle with a number or short glyph. */
-function badge(slide, txt, x, y, d = 0.46, { fill = C.amber, color = C.ink, size = 14 } = {}) {
-  slide.addShape(pres.ShapeType.ellipse, { x, y, w: d, h: d, fill: { color: fill } });
-  slide.addText(String(txt), {
-    x, y, w: d, h: d, isTextBox: true, margin: 0,
-    fontFace: F.head, fontSize: size, bold: true, color,
-    align: 'center', valign: 'middle',
-  });
-}
-
-/** Big number + label callout. */
-function stat(slide, value, label, x, y, w, { color = C.amber, vSize = 40, sub = null } = {}) {
-  slide.addText(value, {
-    x, y, w, h: 0.75, isTextBox: true, margin: 0,
-    fontFace: F.head, fontSize: vSize, bold: true, color, align: 'left', valign: 'bottom',
-  });
-  slide.addText(label, {
-    x, y: y + 0.75, w, h: 0.32, isTextBox: true, margin: 0,
-    fontFace: F.body, fontSize: 12, bold: true, color: C.muted, align: 'left', valign: 'top',
-  });
-  if (sub) {
-    slide.addText(sub, {
-      x, y: y + 1.05, w, h: 0.3, isTextBox: true, margin: 0,
-      fontFace: F.body, fontSize: 10, color: C.muted, italic: true, align: 'left', valign: 'top',
-    });
-  }
-}
-
-function card(slide, x, y, w, h, { fill = C.mist, line = null, shadow = true } = {}) {
-  const opts = {
-    x, y, w, h, fill: { color: fill }, rectRadius: 0.08,
-  };
-  if (line) opts.line = { color: line, width: 1 };
-  if (shadow) opts.shadow = { type: 'outer', angle: 90, blur: 8, offset: 0.04, color: '000000', opacity: 0.10 };
-  slide.addShape(pres.ShapeType.roundRect, opts);
-}
-
-function body(slide, text, x, y, w, h, { size = 14, color = C.body, align = 'left', bold = false, italic = false, lineSpacingMultiple = 1.2 } = {}) {
-  slide.addText(text, {
+function txt(s, text, x, y, w, h, o = {}) {
+  s.addText(text, {
     x, y, w, h, isTextBox: true, margin: 0,
-    fontFace: F.body, fontSize: size, color, align, bold, italic,
-    valign: 'top', lineSpacingMultiple,
+    fontFace: o.mono ? F.mono : (o.headFont ? F.head : F.body),
+    fontSize: o.size ?? 14,
+    bold: o.bold ?? false,
+    italic: o.italic ?? false,
+    color: o.color ?? C.text,
+    align: o.align ?? 'left',
+    valign: o.valign ?? 'top',
+    charSpacing: o.spacing,
+    lineSpacingMultiple: o.lh ?? 1.2,
   });
 }
 
-function bullets(slide, items, x, y, w, h, { size = 14, color = C.body, space = 8 } = {}) {
-  slide.addText(
-    items.map((t, i) => ({
-      text: t,
-      options: { bullet: true, breakLine: i !== items.length - 1 },
-    })),
+/** Amber kicker + big title, the standard slide header. */
+function header(s, kicker, title, { titleSize = 32, lines = 1, color = C.text } = {}) {
+  txt(s, kicker.toUpperCase(), M, 0.42, W - M * 2, 0.3, {
+    size: 11.5, bold: true, color: C.accent, spacing: 1.8, valign: 'middle',
+  });
+  txt(s, title, M, 0.78, W - M * 2, lines > 1 ? 1.25 : 0.8, {
+    size: titleSize, bold: true, headFont: true, color, valign: 'middle', lh: 1.1,
+  });
+}
+
+function card(s, x, y, w, h, { fill = C.panel, line = C.border, r = 0.1 } = {}) {
+  s.addShape(pres.ShapeType.roundRect, {
+    x, y, w, h, rectRadius: r,
+    fill: { color: fill },
+    line: line ? { color: line, width: 1 } : { type: 'none' },
+  });
+}
+
+/**
+ * The recurring motif: an in-game HUD chip. Small caps label above a big
+ * mono value, in a rounded dark panel — exactly what the player sees.
+ */
+function hudChip(s, x, y, w, label, value, { color = C.text, h = 0.92 } = {}) {
+  card(s, x, y, w, h, { fill: C.panel2 });
+  txt(s, label.toUpperCase(), x + 0.22, y + 0.16, w - 0.44, 0.22, {
+    size: 8, bold: true, color: C.faint, spacing: 1.1,
+  });
+  txt(s, value, x + 0.22, y + 0.38, w - 0.44, 0.42, {
+    size: 20, bold: true, mono: true, color, valign: 'middle',
+  });
+}
+
+function chip(s, x, y, label, { fill = C.panel2, color = C.dim, size = 10.5 } = {}) {
+  // Width from an average ~0.5em glyph advance, converted points -> inches.
+  const w = label.length * size * (0.5 / 72) + 0.3;
+  s.addShape(pres.ShapeType.roundRect, {
+    x, y, w, h: 0.28, rectRadius: 0.5, fill: { color: fill }, line: { type: 'none' },
+  });
+  txt(s, label, x, y, w, 0.28, { size, bold: true, color, align: 'center', valign: 'middle' });
+  return w;
+}
+
+function bullets(s, items, x, y, w, h, { size = 13.5, color = C.text, gap = 9 } = {}) {
+  s.addText(
+    items.map((t, i) => ({ text: t, options: { bullet: true, breakLine: i !== items.length - 1 } })),
     {
       x, y, w, h, isTextBox: true, margin: 0,
-      fontFace: F.body, fontSize: size, color, valign: 'top', paraSpaceAfter: space,
+      fontFace: F.body, fontSize: size, color, valign: 'top', paraSpaceAfter: gap,
     },
   );
 }
 
+/** Numbered amber disc, used for steps and hazard numbering. */
+function disc(s, n, x, y, d = 0.44, { fill = C.accent, color = C.ink, size = 13 } = {}) {
+  s.addShape(pres.ShapeType.ellipse, { x, y, w: d, h: d, fill: { color: fill }, line: { type: 'none' } });
+  txt(s, String(n), x, y, d, d, { size, bold: true, headFont: true, color, align: 'center', valign: 'middle' });
+}
+
+/** Thin amber rule used sparingly under hero text only. */
+function rule(s, x, y, w = 1.4) {
+  s.addShape(pres.ShapeType.rect, { x, y, w, h: 0.035, fill: { color: C.accent }, line: { type: 'none' } });
+}
+
+const notes = (s, t) => s.addNotes(t);
+
 /* ================================================================== *
- * 1 — Title
+ * 1 — Title  [0:00 → 0:30]
  * ================================================================== */
 {
-  const s = darkSlide({ image: SHOT('env01_wide'), scrim: 70 });
-  s.addText('BEAT THE HAZARD', {
-    x: M, y: 2.25, w: W - M * 2, h: 1.25, isTextBox: true, margin: 0,
-    fontFace: F.head, fontSize: 60, bold: true, color: C.amber, align: 'left', valign: 'middle',
+  const s = slide({ image: SHOT('env01_wide'), scrim: 72 });
+  txt(s, 'BEAT THE HAZARD', M, 2.1, W - M * 2, 1.15, {
+    size: 58, bold: true, headFont: true, color: C.accent, valign: 'middle',
   });
-  s.addText('A 3D interactive health & safety training game for\nwarehouse forklift and pedestrian safety', {
-    x: M, y: 3.6, w: 8.6, h: 1.0, isTextBox: true, margin: 0,
-    fontFace: F.body, fontSize: 20, color: 'FFFFFF', align: 'left', valign: 'top', lineSpacingMultiple: 1.25,
-  });
-  s.addShape(pres.ShapeType.rect, { x: M, y: 4.95, w: 1.5, h: 0.035, fill: { color: C.amber } });
-  s.addText('Himalaya Logistics Distribution Centre  ·  Birgunj, Nepal', {
-    x: M, y: 5.2, w: 8, h: 0.35, isTextBox: true, margin: 0,
-    fontFace: F.body, fontSize: 14, color: C.dimText, align: 'left', valign: 'middle',
-  });
-  s.addText('Kushal Neupane', {
-    x: M, y: 6.5, w: 6, h: 0.35, isTextBox: true, margin: 0,
-    fontFace: F.body, fontSize: 13, bold: true, color: 'FFFFFF', align: 'left', valign: 'middle',
-  });
-  s.addNotes(
-    'Open by telling them what they are looking at: this is a real screenshot from the game, not a mock-up. ' +
-    'One line pitch: "We put the trainee inside the warehouse, instead of showing them slides about it." ' +
-    'Then move quickly to the problem.',
-  );
+  txt(s, 'A 3D interactive health & safety training game for\nwarehouse forklift and pedestrian safety',
+    M, 3.35, 8.6, 1.0, { size: 19, color: C.white, lh: 1.3 });
+  rule(s, M, 4.62);
+  txt(s, 'Himalaya Logistics Distribution Centre  ·  Birgunj, Nepal', M, 4.85, 8, 0.35,
+    { size: 13.5, color: C.dim, valign: 'middle' });
+
+  hudChip(s, M, 5.5, 1.9, 'Hazards', '15');
+  hudChip(s, M + 2.05, 5.5, 1.9, 'Sites', '3');
+  hudChip(s, M + 4.1, 5.5, 1.9, 'Tests', '165', { color: C.success });
+  hudChip(s, M + 6.15, 5.5, 1.9, 'Frame rate', '60', { color: C.success });
+
+  txt(s, 'Kushal Neupane', M, 6.75, 6, 0.32, { size: 12.5, bold: true, color: C.white });
+  notes(s, '[0:00 – 0:30] Open on the screenshot: "this is the actual game, running." ' +
+    'One-line pitch: we put the trainee INSIDE the warehouse instead of showing them slides about it. ' +
+    'Do not linger — the four numbers do the work. Move on within 30 seconds.');
 }
 
 /* ================================================================== *
- * 2 — The problem
+ * 2 — The problem  [0:30 → 2:00]
  * ================================================================== */
 {
-  const s = lightSlide();
-  kicker(s, 'The problem');
-  title(s, 'Safety training tests recall.\nThe job needs noticing.', { size: 30, y: 0.74, h: 1.25 });
+  const s = slide();
+  header(s, 'The problem', 'Safety training tests recall.\nThe job needs noticing.', { titleSize: 30, lines: 2 });
 
-  const cards = [
-    { t: 'Slides, then a quiz', d: 'Most warehouse safety e-learning is a slideshow followed by multiple choice. It checks whether you can repeat a rule.' },
-    { t: 'The real skill is visual', d: 'On the floor, nobody labels the hazard. You have to notice one rack upright is not vertical, or a carton overhangs a beam.' },
-    { t: 'The gap costs lives', d: 'Forklift and pedestrian incidents are among the most serious in warehousing — and they are spotted, or missed, by eye.' },
+  const items = [
+    ['Slides, then a quiz', 'Most warehouse e-learning is a slideshow and a multiple-choice test. It checks whether you can repeat a rule.'],
+    ['The real skill is visual', 'On the floor nobody labels the hazard. You have to notice one upright is not vertical, or a carton overhangs a beam.'],
+    ['That gap is where people get hurt', 'Forklift and pedestrian incidents are among the most serious in warehousing — and they are spotted, or missed, by eye.'],
   ];
   const cw = (W - M * 2 - 0.5) / 3;
-  cards.forEach((c, i) => {
+  items.forEach((it, i) => {
     const x = M + i * (cw + 0.25);
-    card(s, x, 2.35, cw, 2.5);
-    badge(s, i + 1, x + 0.35, 2.7, 0.44);
-    s.addText(c.t, {
-      x: x + 0.35, y: 3.3, w: cw - 0.7, h: 0.4, isTextBox: true, margin: 0,
-      fontFace: F.head, fontSize: 15, bold: true, color: C.ink, valign: 'top',
-    });
-    body(s, c.d, x + 0.35, 3.75, cw - 0.7, 1.0, { size: 12, color: C.muted });
+    card(s, x, 2.4, cw, 2.55);
+    disc(s, i + 1, x + 0.32, 2.72);
+    txt(s, it[0], x + 0.32, 3.32, cw - 0.64, 0.5, { size: 15, bold: true, headFont: true, lh: 1.15 });
+    txt(s, it[1], x + 0.32, 3.9, cw - 0.64, 1.0, { size: 12, color: C.dim, lh: 1.35 });
   });
 
-  body(s, 'A trainee can score full marks on the quiz and still walk past a blocked fire exit.',
-    M, 5.35, W - M * 2, 0.5, { size: 17, color: C.ink, italic: true });
-  s.addNotes(
-    'Keep this short — 60 to 90 seconds. The one line that lands is the italic sentence at the bottom: ' +
-    'passing the quiz and being safe on the floor are two different things. Ask the room: how would you test whether ' +
-    'someone would notice a hazard? That sets up the next slide.',
-  );
+  card(s, M, 5.35, W - M * 2, 0.95, { fill: C.panel2, line: null });
+  txt(s, 'A trainee can score full marks on the quiz and still walk past a blocked fire exit.',
+    M + 0.4, 5.35, W - M * 2 - 0.8, 0.95, { size: 17, italic: true, color: C.accent, valign: 'middle' });
+
+  notes(s, '[0:30 – 2:00] 90 seconds, no more. The amber line at the bottom is the one that lands — ' +
+    'read it out. Then ask the room: how would you test whether someone would NOTICE a hazard? ' +
+    'That question sets up the next two slides.');
 }
 
 /* ================================================================== *
- * 3 — The insight / approach
+ * 3 — What we built  [2:00 → 3:00]
  * ================================================================== */
 {
-  const s = lightSlide();
-  s.addImage({ path: SHOT('env01_walkway'), x: W / 2, y: 0, w: W / 2, h: H, sizing: { type: 'cover', w: W / 2, h: H } });
+  const s = slide();
+  s.addImage({ path: SHOT('env01_walkway'), x: W / 2 + 0.15, y: 0, w: W / 2 - 0.15, h: H,
+    sizing: { type: 'cover', w: W / 2 - 0.15, h: H } });
 
-  kicker(s, 'Our approach');
-  title(s, 'Put them in the building', { size: 32, y: 0.78 });
-  body(s,
-    'Beat The Hazard is a browser-based 3D warehouse the trainee walks around in first person.',
-    M, 1.6, 5.6, 0.8, { size: 15, color: C.body });
+  header(s, 'What we built', 'Put them in the building');
+  txt(s, 'A browser-based 3D warehouse the trainee walks around in first person.',
+    M, 1.75, 5.5, 0.5, { size: 15, color: C.text });
 
-  const pts = [
-    'Every hazard is built as real geometry, at real scale',
+  bullets(s, [
+    'Every hazard is real geometry, at real scale',
     'Inspect it from any angle, at your own eye level',
     'Train Mode teaches it; Test Mode measures whether it stuck',
     'Runs in any modern browser — no install, no headset',
-  ];
-  bullets(s, pts, M, 2.7, 5.5, 2.2, { size: 14 });
+    'Works completely offline',
+  ], M, 2.5, 5.4, 2.4);
 
-  card(s, M, 5.25, 5.5, 1.35, { fill: C.ink, shadow: false });
-  s.addText('Recognising a hazard is a spatial skill.\nSo we made the training spatial.', {
-    x: M + 0.35, y: 5.5, w: 4.8, h: 0.9, isTextBox: true, margin: 0,
-    fontFace: F.body, fontSize: 15, bold: true, color: C.amber, valign: 'middle', lineSpacingMultiple: 1.2,
-  });
-  s.addNotes(
-    'This is the pitch slide. Emphasise "no install, no headset" — it runs on the laptops the client already has. ' +
-    'The image on the right is the pedestrian walkway with workers and a forklift; point at it while you talk.',
-  );
+  card(s, M, 5.2, 5.4, 1.45, { fill: C.accent, line: null });
+  txt(s, 'Recognising a hazard is a spatial skill.\nSo we made the training spatial.',
+    M + 0.35, 5.2, 4.7, 1.45, { size: 15.5, bold: true, color: C.ink, valign: 'middle', lh: 1.25 });
+
+  notes(s, '[2:00 – 3:00] The pitch slide. Emphasise "no install, no headset" — it runs on the laptops ' +
+    'they already have, and offline, which matters on a warehouse floor with bad wifi. ' +
+    'Point at the image while you say it.');
 }
 
 /* ================================================================== *
- * 4 — The core rule
+ * 4 — The core rule  [3:00 → 5:00]
  * ================================================================== */
 {
-  const s = lightSlide();
-  kicker(s, 'The rule everything is built on');
-  title(s, 'A hazard is never an icon', { size: 32, y: 0.78 });
+  const s = slide();
+  header(s, 'The rule everything is built on', 'A hazard is never an icon');
 
-  card(s, M, 1.75, 4.5, 2.15, { fill: 'FBEAEC', line: 'E8B4BA' });
-  badge(s, '✕', M + 0.3, 2.0, 0.42, { fill: C.red, color: 'FFFFFF', size: 15 });
-  s.addText('What most tools do', {
-    x: M + 0.9, y: 2.02, w: 3.3, h: 0.4, isTextBox: true, margin: 0,
-    fontFace: F.head, fontSize: 15, bold: true, color: C.red, valign: 'middle',
-  });
-  body(s, 'A red marker floating in a photo, labelled "FALLING BOXES". The answer is given away — the trainee only has to click it.',
-    M + 0.3, 2.65, 3.9, 1.1, { size: 12.5, color: C.body });
+  card(s, M, 1.78, 4.5, 2.0, { fill: '2A1418', line: '5E2530' });
+  disc(s, '✕', M + 0.28, 2.0, 0.4, { fill: C.danger, color: C.white, size: 14 });
+  txt(s, 'What most tools do', M + 0.82, 2.0, 3.4, 0.4, { size: 14.5, bold: true, headFont: true, color: C.major, valign: 'middle' });
+  txt(s, 'A red marker floating over a photo, labelled "FALLING BOXES". The answer is given away — the trainee only has to click it.',
+    M + 0.28, 2.6, 3.95, 1.0, { size: 12, color: C.dim, lh: 1.35 });
 
-  card(s, M + 4.75, 1.75, 4.5, 2.15, { fill: 'E8F5EC', line: 'A9D5B9' });
-  badge(s, '✓', M + 5.05, 2.0, 0.42, { fill: C.green, color: 'FFFFFF', size: 15 });
-  s.addText('What we do', {
-    x: M + 5.65, y: 2.02, w: 3.3, h: 0.4, isTextBox: true, margin: 0,
-    fontFace: F.head, fontSize: 15, bold: true, color: C.green, valign: 'middle',
-  });
-  body(s, 'A rack bay where most cartons sit square — one is displaced, one is tilted, and one overhangs the beam and falls. You judge it by looking.',
-    M + 5.05, 2.65, 3.9, 1.1, { size: 12.5, color: C.body });
+  card(s, M + 4.75, 1.78, 4.5, 2.0, { fill: '10281A', line: '235E38' });
+  disc(s, '✓', M + 5.03, 2.0, 0.4, { fill: C.success, color: C.white, size: 14 });
+  txt(s, 'What we do', M + 5.57, 2.0, 3.4, 0.4, { size: 14.5, bold: true, headFont: true, color: C.success, valign: 'middle' });
+  txt(s, 'A rack bay where most cartons sit square — one is displaced, one is tilted, one overhangs the beam and falls. You judge it by looking.',
+    M + 5.03, 2.6, 3.95, 1.0, { size: 12, color: C.dim, lh: 1.35 });
 
-  s.addImage({ path: SHOT('hz_falling2'), x: M, y: 4.15, w: 9.25, h: 2.6, sizing: { type: 'cover', w: 9.25, h: 2.6 } });
-  s.addText('Real screenshot — the unstable pallet sits among correctly stacked ones. No label, no marker.', {
-    x: M, y: 6.85, w: 9.25, h: 0.3, isTextBox: true, margin: 0,
-    fontFace: F.body, fontSize: 11, italic: true, color: C.muted, valign: 'middle',
-  });
+  s.addImage({ path: SHOT('hz_falling2'), x: M, y: 4.0, w: 9.25, h: 2.65,
+    sizing: { type: 'cover', w: 9.25, h: 2.65 } });
+  txt(s, 'Real screenshot — the unstable pallet sits among correctly stacked ones. No label, no marker.',
+    M, 6.75, 9.25, 0.3, { size: 11, italic: true, color: C.faint });
 
-  card(s, 10.35, 1.75, 2.3, 5.0, { fill: C.ink, shadow: false });
-  s.addText('Why it matters', {
-    x: 10.6, y: 2.0, w: 1.85, h: 0.35, isTextBox: true, margin: 0,
-    fontFace: F.head, fontSize: 13, bold: true, color: C.amber, valign: 'middle',
-  });
-  body(s, 'If the hazard is a marker, you are training people to spot markers.\n\nIf the hazard is the warehouse itself, you are training people to spot hazards.',
-    10.6, 2.5, 1.85, 3.9, { size: 12.5, color: 'FFFFFF', lineSpacingMultiple: 1.3 });
-  s.addNotes(
-    'This is the single most important slide in the deck — it is the whole design philosophy in one comparison. ' +
-    'Spend time here. Invite them to look at the screenshot and find the bad pallet themselves; that moment of ' +
-    'searching IS the product.',
-  );
+  card(s, 10.35, 1.78, 2.3, 4.87, { fill: C.accent, line: null });
+  txt(s, 'Why it matters', 10.6, 2.02, 1.85, 0.4, { size: 13.5, bold: true, headFont: true, color: C.ink, valign: 'middle' });
+  txt(s, 'If the hazard is a marker, you are training people to spot markers.\n\nIf the hazard is the warehouse itself, you are training people to spot hazards.',
+    10.6, 2.55, 1.85, 3.9, { size: 12.5, color: C.ink, lh: 1.3 });
+
+  notes(s, '[3:00 – 5:00] THE most important slide — give it two full minutes. ' +
+    'Do not just describe it: point at the screenshot and ask the room to find the bad pallet themselves. ' +
+    'That few seconds of searching IS the product. Then read the amber column on the right.');
 }
 
 /* ================================================================== *
- * 5 — The 15 hazards
+ * 5 — The 15 hazards  [5:00 → 6:00]
  * ================================================================== */
 {
-  const s = lightSlide();
-  kicker(s, 'Coverage');
-  title(s, '15 hazard scenarios, all physically modelled', { size: 28, y: 0.78 });
+  const s = slide();
+  header(s, 'Coverage', '15 hazard scenarios, every one physically modelled', { titleSize: 27 });
 
   const hz = [
-    ['Forklift on a walkway', 'major'], ['Reversing blind spot', 'major'], ['Falling boxes', 'major'],
-    ['Damaged racking', 'major'], ['Unmarked spill', 'minor'], ['Blocked walkway', 'minor'],
-    ['Blocked fire exit', 'major'], ['Blocked extinguisher', 'minor'], ['Worker without PPE', 'minor'],
-    ['Open dock edge', 'major'], ['Trailing cable', 'minor'], ['Broken pallet', 'minor'],
-    ['Over-height stack', 'minor'], ['Unsafe ladder', 'major'], ['Blind corner', 'major'],
+    ['Forklift on a walkway', 1], ['Reversing blind spot', 1], ['Falling boxes', 1],
+    ['Damaged racking', 1], ['Unmarked spill', 0], ['Blocked walkway', 0],
+    ['Blocked fire exit', 1], ['Blocked extinguisher', 0], ['Worker without PPE', 0],
+    ['Open dock edge', 1], ['Trailing cable', 0], ['Broken pallet', 0],
+    ['Over-height stack', 0], ['Unsafe ladder', 1], ['Blind corner', 1],
   ];
-  const cols = 5, rows = 3;
+  const cols = 5;
   const cw = (W - M * 2 - (cols - 1) * 0.22) / cols;
-  const ch = 1.15;
-  hz.forEach(([name, sev], i) => {
-    const r = Math.floor(i / cols), c = i % cols;
-    const x = M + c * (cw + 0.22);
-    const y = 1.7 + r * (ch + 0.22);
-    const isMajor = sev === 'major';
-    card(s, x, y, cw, ch, { fill: isMajor ? 'FDF0F1' : C.mist, line: isMajor ? 'EFC9CE' : 'DFE3E7' });
-    badge(s, i + 1, x + 0.18, y + 0.18, 0.34, {
-      fill: isMajor ? C.red : C.amber, color: isMajor ? 'FFFFFF' : C.ink, size: 11,
+  const ch = 1.12;
+  hz.forEach(([name, major], i) => {
+    const x = M + (i % cols) * (cw + 0.22);
+    const y = 1.85 + Math.floor(i / cols) * (ch + 0.22);
+    card(s, x, y, cw, ch, { fill: major ? '241318' : C.panel, line: major ? '4A2028' : C.border });
+    disc(s, i + 1, x + 0.16, y + 0.16, 0.32, {
+      fill: major ? C.danger : C.accent, color: major ? C.white : C.ink, size: 10.5,
     });
-    s.addText(sev.toUpperCase(), {
-      x: x + cw - 0.95, y: y + 0.18, w: 0.78, h: 0.28, isTextBox: true, margin: 0,
-      fontFace: F.body, fontSize: 8, bold: true, color: isMajor ? C.red : C.orange,
-      align: 'right', valign: 'middle',
-    });
-    s.addText(name, {
-      x: x + 0.18, y: y + 0.6, w: cw - 0.36, h: 0.45, isTextBox: true, margin: 0,
-      fontFace: F.body, fontSize: 12, bold: true, color: C.ink, valign: 'top',
-    });
+    txt(s, major ? 'MAJOR' : 'MINOR', x + cw - 0.92, y + 0.18, 0.76, 0.26,
+      { size: 7.5, bold: true, color: major ? C.major : C.accent2, align: 'right', valign: 'middle' });
+    txt(s, name, x + 0.16, y + 0.58, cw - 0.32, 0.45, { size: 11.5, bold: true, lh: 1.15 });
   });
 
-  s.addText('8 major  ·  7 minor      Each carries a description, why it is dangerous, the correct control, and teaching text.', {
-    x: M, y: 6.15, w: W - M * 2, h: 0.4, isTextBox: true, margin: 0,
-    fontFace: F.body, fontSize: 13, color: C.muted, valign: 'middle',
-  });
-  s.addNotes(
-    'Do not read all fifteen aloud. Say "these are the fifteen the client specified, and every one is built as ' +
-    'geometry you can walk up to." Then pick two examples — falling boxes and blind corner — and describe how they ' +
-    'are staged. Major hazards are red; they score three times what a minor one does.',
-  );
+  txt(s, '8 major  ·  7 minor       Each carries a description, why it is dangerous, the correct control, and its teaching text.',
+    M, 6.25, W - M * 2, 0.4, { size: 12.5, color: C.dim, valign: 'middle' });
+
+  notes(s, '[5:00 – 6:00] Do NOT read fifteen names aloud. Say: "these are the fifteen the brief asked ' +
+    'for, and every one is geometry you can walk up to." Then pick two — falling boxes and blind corner — ' +
+    'and describe how each is staged. Red are major: worth three times a minor one.');
 }
 
 /* ================================================================== *
- * 6 — Decoys
+ * 6 — Decoys  [6:00 → 7:30]
  * ================================================================== */
 {
-  const s = lightSlide();
-  kicker(s, 'What makes it teach');
-  title(s, 'We also build the things that look wrong\nbut are actually right', { size: 27, y: 0.74, h: 1.25 });
+  const s = slide();
+  header(s, 'What makes it teach', 'We also build the things that look wrong\nbut are actually right',
+    { titleSize: 26, lines: 2 });
 
-  body(s, 'Real hazard spotting is discrimination, not detection. A trainee who flags everything has learned nothing — so the warehouse is seeded with correctly-controlled lookalikes. Flagging one is scored wrong, and the game explains why it is fine.',
-    M, 2.0, 7.2, 1.2, { size: 14 });
+  txt(s, 'Real hazard spotting is discrimination, not detection. A trainee who flags everything has learned nothing — so the warehouse is seeded with correctly-controlled lookalikes. Flagging one is scored wrong, and the game explains why it is fine.',
+    M, 2.25, 7.2, 1.0, { size: 13.5, color: C.dim, lh: 1.35 });
+
+  txt(s, 'HAZARD', M, 3.4, 3.3, 0.3, { size: 9.5, bold: true, color: C.major, spacing: 1.4, valign: 'middle' });
+  txt(s, 'CORRECTLY CONTROLLED  —  a wrong answer', M + 3.75, 3.4, 4.6, 0.3,
+    { size: 9.5, bold: true, color: C.success, spacing: 1.4, valign: 'middle' });
 
   const pairs = [
     ['Unmarked spill on the floor', 'A spill that IS coned and signed'],
-    ['Rack upright bent by an impact', 'A rack carrying a green inspection tag'],
+    ['Rack upright bent by an impact', 'A rack with a green inspection tag'],
     ['Open dock door, no barrier', 'A dock sealed by a parked trailer'],
     ['Forklift in the pedestrian lane', 'A truck parked in its charging bay'],
   ];
-  s.addText('HAZARD', {
-    x: M, y: 3.4, w: 3.4, h: 0.3, isTextBox: true, margin: 0,
-    fontFace: F.body, fontSize: 10, bold: true, color: C.red, charSpacing: 1.5, valign: 'middle',
-  });
-  s.addText('CORRECTLY CONTROLLED  (a wrong answer)', {
-    x: M + 3.8, y: 3.4, w: 4.5, h: 0.3, isTextBox: true, margin: 0,
-    fontFace: F.body, fontSize: 10, bold: true, color: C.green, charSpacing: 1.5, valign: 'middle',
-  });
   pairs.forEach(([bad, good], i) => {
     const y = 3.78 + i * 0.66;
-    card(s, M, y, 3.4, 0.55, { fill: 'FDF0F1', shadow: false });
-    body(s, bad, M + 0.18, y + 0.15, 3.05, 0.35, { size: 11.5, color: C.ink });
-    s.addText('vs', {
-      x: M + 3.45, y, w: 0.3, h: 0.55, isTextBox: true, margin: 0,
-      fontFace: F.body, fontSize: 10, italic: true, color: C.muted, align: 'center', valign: 'middle',
-    });
-    card(s, M + 3.8, y, 4.5, 0.55, { fill: 'E8F5EC', shadow: false });
-    body(s, good, M + 3.98, y + 0.15, 4.15, 0.35, { size: 11.5, color: C.ink });
+    card(s, M, y, 3.3, 0.55, { fill: '241318', line: null, r: 0.06 });
+    txt(s, bad, M + 0.18, y, 2.95, 0.55, { size: 11, valign: 'middle' });
+    txt(s, '→', M + 3.35, y, 0.32, 0.55, { size: 12, color: C.faint, align: 'center', valign: 'middle' });
+    card(s, M + 3.75, y, 4.6, 0.55, { fill: '10281A', line: null, r: 0.06 });
+    txt(s, good, M + 3.93, y, 4.25, 0.55, { size: 11, valign: 'middle' });
   });
 
-  card(s, 9.5, 2.0, 3.15, 4.5, { fill: C.ink, shadow: false });
-  s.addText('“', {
-    x: 9.75, y: 2.05, w: 1, h: 0.7, isTextBox: true, margin: 0,
-    fontFace: F.head, fontSize: 44, bold: true, color: C.amber, valign: 'top',
-  });
-  s.addText('This spill is already being managed — it is signed and coned off, which is exactly the correct control. The hazard is an UNMARKED spill.', {
-    x: 9.75, y: 2.75, w: 2.65, h: 2.2, isTextBox: true, margin: 0,
-    fontFace: F.body, fontSize: 12.5, color: 'FFFFFF', valign: 'top', lineSpacingMultiple: 1.25,
-  });
-  s.addText('Actual feedback shown when a trainee flags a decoy', {
-    x: 9.75, y: 5.6, w: 2.65, h: 0.7, isTextBox: true, margin: 0,
-    fontFace: F.body, fontSize: 10.5, italic: true, color: C.dimText, valign: 'top',
-  });
-  s.addNotes(
-    'This is the slide that differentiates us from a click-the-hotspot trainer, and clients respond to it. ' +
-    'Line to use: "we teach them what good looks like, not just what bad looks like." ' +
-    'Note that decoy count rises with difficulty — 0 on Simple, 12 on Hard.',
-  );
+  card(s, 9.55, 2.25, 3.1, 4.4, { fill: C.panel2 });
+  txt(s, '“', 9.8, 2.28, 1, 0.7, { size: 42, bold: true, headFont: true, color: C.accent });
+  txt(s, 'This spill is already being managed — it is signed and coned off, which is exactly the correct control. The hazard is an UNMARKED spill.',
+    9.8, 2.95, 2.6, 2.2, { size: 12.5, color: C.text, lh: 1.3 });
+  txt(s, 'Actual feedback when a trainee flags a decoy', 9.8, 5.75, 2.6, 0.7,
+    { size: 10.5, italic: true, color: C.faint, lh: 1.25 });
+
+  notes(s, '[6:00 – 7:30] This is the slide that separates us from a click-the-hotspot trainer. ' +
+    'The line to use: "we teach them what GOOD looks like, not just what bad looks like." ' +
+    'Mention decoy count scales with difficulty: 0 on Simple, 12 on Hard.');
 }
 
 /* ================================================================== *
- * 7 — Train vs Test
+ * 7 — Train → Test  [7:30 → 8:30]
  * ================================================================== */
 {
-  const s = lightSlide();
-  kicker(s, 'How a session runs');
-  title(s, 'Learn it, then prove it', { size: 32, y: 0.78 });
+  const s = slide();
+  header(s, 'How a session runs', 'Learn it, then prove it');
 
   const half = (W - M * 2 - 0.4) / 2;
 
-  card(s, M, 1.7, half, 4.15, { fill: C.mist });
-  badge(s, '1', M + 0.4, 2.0, 0.5, { size: 15 });
-  s.addText('TRAIN MODE', {
-    x: M + 1.05, y: 2.02, w: 3.5, h: 0.45, isTextBox: true, margin: 0,
-    fontFace: F.head, fontSize: 17, bold: true, color: C.ink, valign: 'middle',
-  });
-  body(s, 'Teaches. It gates everything else.', M + 0.4, 2.65, half - 0.8, 0.35, { size: 13, italic: true, color: C.muted });
+  card(s, M, 1.8, half, 3.9);
+  disc(s, '1', M + 0.35, 2.08, 0.48, { size: 14 });
+  txt(s, 'TRAIN MODE', M + 0.98, 2.08, 3.5, 0.48, { size: 16.5, bold: true, headFont: true, valign: 'middle' });
+  txt(s, 'Teaches. It gates everything else.', M + 0.35, 2.68, half - 0.7, 0.3,
+    { size: 12.5, italic: true, color: C.dim });
   bullets(s, [
     'Every hazard is ringed so it can be found',
-    'Each find opens a card: what it is, why it is dangerous, the correct control',
-    'No meaningful time pressure — nothing is being scored',
-    'Finishing a site unlocks testing on that site',
-  ], M + 0.4, 3.15, half - 0.8, 2.4, { size: 13 });
+    'Each find opens a card: what it is, why it is dangerous, the control',
+    'The location is named, so you know where to walk',
+    'No time pressure — nothing is being scored',
+    'Finishing a site unlocks testing there',
+  ], M + 0.35, 3.12, half - 0.7, 2.4, { size: 12.5 });
 
   const x2 = M + half + 0.4;
-  card(s, x2, 1.7, half, 4.15, { fill: C.ink, shadow: false });
-  badge(s, '2', x2 + 0.4, 2.0, 0.5, { size: 15 });
-  s.addText('TEST MODE', {
-    x: x2 + 1.05, y: 2.02, w: 3.5, h: 0.45, isTextBox: true, margin: 0,
-    fontFace: F.head, fontSize: 17, bold: true, color: 'FFFFFF', valign: 'middle',
-  });
-  body(s, 'Evaluates. No help.', x2 + 0.4, 2.65, half - 0.8, 0.35, { size: 13, italic: true, color: C.dimText });
+  card(s, x2, 1.8, half, 3.9, { fill: C.accent, line: null });
+  disc(s, '2', x2 + 0.35, 2.08, 0.48, { fill: C.ink, color: C.accent, size: 14 });
+  txt(s, 'TEST MODE', x2 + 0.98, 2.08, 3.5, 0.48, { size: 16.5, bold: true, headFont: true, color: C.ink, valign: 'middle' });
+  txt(s, 'Evaluates. No help.', x2 + 0.35, 2.68, half - 0.7, 0.3, { size: 12.5, italic: true, color: '5A4A12' });
   bullets(s, [
     'No rings, no hints — you find them by looking',
     'A reaction clock runs on every hazard',
     'Wrong flags break your combo and return a safety tip',
-    'Full breakdown at the end, with personalised coaching',
-  ], x2 + 0.4, 3.15, half - 0.8, 2.4, { size: 13, color: 'FFFFFF' });
+    'Decoys punish spraying flags at everything',
+    'Full breakdown with personalised coaching',
+  ], x2 + 0.35, 3.12, half - 0.7, 2.4, { size: 12.5, color: C.ink });
 
   const flow = ['Observe', 'Find', 'Flag', 'Validate', 'Result'];
-  const fw = 1.9;
+  const fw = 1.94;
   flow.forEach((t, i) => {
-    const x = M + i * (fw + 0.42);
-    card(s, x, 6.15, fw, 0.6, { fill: i === flow.length - 1 ? C.amber : C.mist, shadow: false });
-    s.addText(t, {
-      x, y: 6.15, w: fw, h: 0.6, isTextBox: true, margin: 0,
-      fontFace: F.body, fontSize: 13, bold: true, color: C.ink, align: 'center', valign: 'middle',
-    });
-    if (i < flow.length - 1) {
-      s.addText('→', {
-        x: x + fw, y: 6.15, w: 0.42, h: 0.6, isTextBox: true, margin: 0,
-        fontFace: F.body, fontSize: 15, color: C.muted, align: 'center', valign: 'middle',
-      });
-    }
+    const x = M + i * (fw + 0.44);
+    card(s, x, 6.0, fw, 0.62, { fill: i === 4 ? C.success : C.panel2, line: null, r: 0.08 });
+    txt(s, t, x, 6.0, fw, 0.62, { size: 13, bold: true, color: i === 4 ? C.ink : C.text, align: 'center', valign: 'middle' });
+    if (i < 4) txt(s, '→', x + fw, 6.0, 0.44, 0.62, { size: 15, color: C.faint, align: 'center', valign: 'middle' });
   });
-  s.addNotes(
-    'Stress the gate: you cannot be tested on a site you have not been trained on. That mirrors how a real site ' +
-    'induction works, and clients recognise it. The five-step flow at the bottom is the Test Mode loop.',
-  );
+
+  notes(s, '[7:30 – 8:30] Stress the gate: you cannot be tested on a site you have not been trained on — ' +
+    'that mirrors a real site induction and clients recognise it immediately. ' +
+    'The strip along the bottom is the Test Mode loop.');
 }
 
 /* ================================================================== *
- * 8 — Difficulty
+ * 8 — Difficulty  [8:30 → 9:30]
  * ================================================================== */
 {
-  const s = darkSlide({ image: SHOT('env03_highbay'), scrim: 78 });
-  kicker(s, 'Difficulty', { y: 0.42 });
-  title(s, 'Three difficulties that change the game,\nnot the label', { color: 'FFFFFF', size: 27, y: 0.74, h: 1.25 });
+  const s = slide({ image: SHOT('env03_highbay'), scrim: 80 });
+  header(s, 'Difficulty', 'Three difficulties that change the game,\nnot the label',
+    { titleSize: 26, lines: 2, color: C.white });
 
   const rows = [
     ['', 'SIMPLE', 'MID', 'HARD'],
@@ -462,55 +405,49 @@ function bullets(slide, items, x, y, w, h, { size = 14, color = C.body, space = 
     ['Decoys to reject', '0', '6', '12'],
     ['Moving hazards', 'No', 'Yes', 'Yes'],
     ['Ambient light', '0.85', '0.60', '0.40'],
+    ['Aim tolerance', '1.35', '1.00', '0.80'],
   ];
-  const tbl = rows.map((r, ri) =>
-    r.map((cell, ci) => ({
+  s.addTable(
+    rows.map((r, ri) => r.map((cell, ci) => ({
       text: cell,
       options: {
         fontFace: ri === 0 ? F.head : F.body,
-        fontSize: ri === 0 ? 12 : 12.5,
+        fontSize: ri === 0 ? 11 : 12,
         bold: ri === 0 || ci === 0,
-        color: ri === 0 ? C.ink : (ci === 3 && ri > 0 ? C.amber : 'FFFFFF'),
-        fill: { color: ri === 0 ? C.amber : (ri % 2 ? C.ink : C.slate) },
+        color: ri === 0 ? C.ink : (ci === 3 ? C.accent : C.white),
+        fill: { color: ri === 0 ? C.accent : (ri % 2 ? C.panel : C.panel2) },
         align: ci === 0 ? 'left' : 'center',
         valign: 'middle',
       },
-    })),
+    }))),
+    { x: M, y: 2.3, w: 7.5, colW: [3.0, 1.5, 1.5, 1.5], rowH: 0.4,
+      border: { type: 'solid', color: C.border, pt: 0.5 } },
   );
-  s.addTable(tbl, {
-    x: M, y: 2.2, w: 7.6, colW: [3.1, 1.5, 1.5, 1.5],
-    rowH: 0.42, border: { type: 'solid', color: '3A424A', pt: 0.5 },
-  });
 
-  card(s, 8.6, 2.2, 4.05, 3.4, { fill: C.ink, line: C.amber, shadow: false });
-  s.addText('On Hard', {
-    x: 8.9, y: 2.4, w: 3.4, h: 0.4, isTextBox: true, margin: 0,
-    fontFace: F.head, fontSize: 16, bold: true, color: C.amber, valign: 'middle',
-  });
+  card(s, 8.6, 2.3, 4.05, 3.6, { fill: C.panel2, line: C.accent });
+  txt(s, 'On Hard', 8.9, 2.52, 3.4, 0.4, { size: 16, bold: true, headFont: true, color: C.accent, valign: 'middle' });
   bullets(s, [
     'The building is genuinely darker and hazier',
     'Forklifts patrol; cartons actually fall',
     'Twelve safe lookalikes to reject',
     'You are not told how many hazards exist',
-  ], 8.9, 2.95, 3.5, 2.4, { size: 12.5, color: 'FFFFFF' });
+    'A tighter reticle — aim has to be deliberate',
+  ], 8.9, 3.05, 3.5, 2.7, { size: 12, color: C.white });
 
-  s.addText('Background: the High-Bay Annexe on Hard — five levels, narrow aisles, reduced lighting.', {
-    x: M, y: 6.5, w: W - M * 2, h: 0.35, isTextBox: true, margin: 0,
-    fontFace: F.body, fontSize: 11, italic: true, color: C.dimText, valign: 'middle',
-  });
-  s.addNotes(
-    'The point to make: difficulty is not a number we multiply the score by. Eight separate things change, including ' +
-    'the lighting in the building. The background image IS Hard difficulty — that is what the trainee actually sees.',
-  );
+  txt(s, 'Background: the High-Bay Annexe on Hard — five levels, narrow aisles, reduced lighting. Not a filter: that is the scene.',
+    M, 6.55, W - M * 2, 0.35, { size: 11, italic: true, color: C.dim, valign: 'middle' });
+
+  notes(s, '[8:30 – 9:30] The point: difficulty is not a number we multiply the score by. ' +
+    'EIGHT separate things change, including the lighting in the building. ' +
+    'The background image IS Hard difficulty — that is what the trainee actually sees.');
 }
 
 /* ================================================================== *
- * 9 — Scoring
+ * 9 — Scoring  [9:30 → 10:15]
  * ================================================================== */
 {
-  const s = lightSlide();
-  kicker(s, 'Measurement');
-  title(s, 'Scoring rewards the judgement that matters', { size: 30, y: 0.78 });
+  const s = slide();
+  header(s, 'Measurement', 'Scoring rewards the judgement that matters', { titleSize: 29 });
 
   const scoreRows = [
     ['', 'FAST', 'SLOW'],
@@ -522,331 +459,379 @@ function bullets(slide, items, x, y, w, h, { size = 14, color = C.body, space = 
     scoreRows.map((r, ri) => r.map((cell, ci) => ({
       text: cell,
       options: {
-        fontFace: ri === 0 ? F.head : F.body, fontSize: ri === 0 ? 11 : 14,
+        fontFace: ri === 0 ? F.head : F.body, fontSize: ri === 0 ? 10.5 : 14,
         bold: ri === 0 || ci === 0,
-        color: ri === 0 ? 'FFFFFF' : C.ink,
-        fill: { color: ri === 0 ? C.ink : (ri % 2 ? 'FFFFFF' : C.mist) },
+        color: ri === 0 ? C.ink : C.text,
+        fill: { color: ri === 0 ? C.accent : (ri % 2 ? C.panel : C.panel2) },
         align: ci === 0 ? 'left' : 'center', valign: 'middle',
       },
     }))),
-    { x: M, y: 1.75, w: 6.2, colW: [2.6, 1.8, 1.8], rowH: 0.5, border: { type: 'solid', color: 'DDE1E5', pt: 0.5 } },
+    { x: M, y: 1.85, w: 6.0, colW: [2.5, 1.75, 1.75], rowH: 0.5,
+      border: { type: 'solid', color: C.border, pt: 0.5 } },
   );
-  body(s, 'A major hazard is worth three times a minor one. A trainee who prioritises vehicles, racking and edges over housekeeping is prioritising correctly — and the score should say so.',
-    M, 4.0, 6.2, 1.0, { size: 13, color: C.muted });
+  txt(s, 'A major hazard is worth three times a minor one, deliberately. A trainee who prioritises vehicles, racking and edges over housekeeping is prioritising correctly — and the score should say so.',
+    M, 4.05, 6.0, 1.0, { size: 12.5, color: C.dim, lh: 1.35 });
 
-  card(s, 7.35, 1.75, 5.3, 1.5, { fill: C.mist });
-  s.addText('COMBO', {
-    x: 7.65, y: 1.95, w: 2, h: 0.3, isTextBox: true, margin: 0,
-    fontFace: F.body, fontSize: 10, bold: true, color: C.orange, charSpacing: 1.5, valign: 'middle',
-  });
-  s.addText('3 correct in a row  →  +3 on every find', {
-    x: 7.65, y: 2.3, w: 4.7, h: 0.4, isTextBox: true, margin: 0,
-    fontFace: F.head, fontSize: 15, bold: true, color: C.ink, valign: 'middle',
-  });
-  body(s, 'Broken by a wrong flag. Spraying flags becomes a losing strategy.',
-    7.65, 2.75, 4.7, 0.4, { size: 12, color: C.muted });
+  card(s, 7.3, 1.85, 5.35, 1.4, { fill: C.accent2, line: null });
+  txt(s, 'COMBO', 7.6, 2.02, 2, 0.28, { size: 9.5, bold: true, color: C.ink, spacing: 1.4 });
+  txt(s, '3 correct in a row  →  +3 on every find', 7.6, 2.32, 4.8, 0.4,
+    { size: 15, bold: true, headFont: true, color: C.ink });
+  txt(s, 'Broken by a wrong flag. Spraying flags becomes a losing strategy.', 7.6, 2.76, 4.8, 0.35,
+    { size: 11.5, color: '5A2C05' });
 
-  const ranks = [
-    ['Safety Champion', '50+', C.green],
-    ['Getting There', '30 – 49', C.amber],
-    ['Needs Practice', 'Below 30', C.red],
-  ];
-  s.addText('RANKS', {
-    x: 7.35, y: 3.5, w: 3, h: 0.3, isTextBox: true, margin: 0,
-    fontFace: F.body, fontSize: 10, bold: true, color: C.muted, charSpacing: 1.5, valign: 'middle',
-  });
-  ranks.forEach(([label, range, col], i) => {
-    const y = 3.9 + i * 0.72;
-    card(s, 7.35, y, 5.3, 0.6, { fill: C.mist, shadow: false });
-    s.addShape(pres.ShapeType.ellipse, { x: 7.6, y: y + 0.16, w: 0.28, h: 0.28, fill: { color: col } });
-    s.addText(label, {
-      x: 8.05, y, w: 3, h: 0.6, isTextBox: true, margin: 0,
-      fontFace: F.body, fontSize: 14, bold: true, color: C.ink, valign: 'middle',
+  txt(s, 'RANKS', 7.3, 3.5, 3, 0.28, { size: 9.5, bold: true, color: C.faint, spacing: 1.4 });
+  [['Safety Champion', '50+', C.success], ['Getting There', '30 – 49', C.accent], ['Needs Practice', 'Below 30', C.danger]]
+    .forEach(([label, range, col], i) => {
+      const y = 3.86 + i * 0.7;
+      card(s, 7.3, y, 5.35, 0.58, { fill: C.panel2, line: null, r: 0.06 });
+      s.addShape(pres.ShapeType.ellipse, { x: 7.55, y: y + 0.16, w: 0.26, h: 0.26, fill: { color: col }, line: { type: 'none' } });
+      txt(s, label, 7.98, y, 3, 0.58, { size: 13.5, bold: true, valign: 'middle' });
+      txt(s, range, 10.9, y, 1.5, 0.58, { size: 13.5, bold: true, mono: true, color: col, align: 'right', valign: 'middle' });
     });
-    s.addText(range, {
-      x: 11.0, y, w: 1.4, h: 0.6, isTextBox: true, margin: 0,
-      fontFace: F.head, fontSize: 14, bold: true, color: col, align: 'right', valign: 'middle',
-    });
-  });
 
-  body(s, 'Every value here lives in one configuration file and can be retuned to a client\'s own standards without touching game code.',
-    M, 6.3, 11.9, 0.5, { size: 12.5, italic: true, color: C.muted });
-  s.addNotes(
-    'The last line is a selling point for the client: their safety officer can change the thresholds, the timings ' +
-    'and the point values themselves. Mention that the results screen also gives written coaching based on how they ' +
-    'actually played — for example, "you missed 3 major hazards; those are the ones that kill".',
-  );
+  txt(s, 'Every value here lives in one configuration file — a safety officer can retune the thresholds to their own standard without touching game code.',
+    M, 6.35, 11.9, 0.5, { size: 12, italic: true, color: C.dim });
+
+  notes(s, '[9:30 – 10:15] Quick slide. The last line is the client-facing point: THEY can retune it. ' +
+    'Also mention the results screen writes coaching based on how they actually played, ' +
+    'e.g. "you missed 3 major hazards — those are the ones that kill".');
 }
 
 /* ================================================================== *
- * 10 — Environments
+ * 10 — Locations  [10:15 → 11:00]
  * ================================================================== */
 {
-  const s = lightSlide();
-  kicker(s, 'Content');
-  title(s, 'Three warehouses, three risk profiles', { size: 30, y: 0.78 });
+  const s = slide();
+  header(s, 'Added after playtesting', 'Knowing what to look for is not enough —\nyou need to know where',
+    { titleSize: 26, lines: 2 });
+
+  txt(s, 'A 62-metre building is a lot of floor. Every hazard now reports its position using the same aisle letters and dock numbers that are stencilled on the floor in-world.',
+    M, 2.3, 7.0, 0.8, { size: 13.5, color: C.dim, lh: 1.35 });
+
+  const locs = [
+    ['Aisle C, north end — high up', 'Falling boxes, on a level-3 beam'],
+    ['Dock door 3', 'Person on an unguarded dock edge'],
+    ['Run B, south end — at floor level', 'Unmarked spill in a dark aisle'],
+    ['Outbound bay 4', 'Broken pallet still carrying a load'],
+  ];
+  locs.forEach(([where, what], i) => {
+    const y = 3.3 + i * 0.78;
+    card(s, M, y, 7.0, 0.66, { fill: C.panel2, line: null, r: 0.07 });
+    txt(s, '📍  ' + where, M + 0.25, y, 3.7, 0.66, { size: 12.5, bold: true, color: C.accent, valign: 'middle' });
+    txt(s, what, M + 3.95, y, 2.85, 0.66, { size: 11.5, color: C.dim, valign: 'middle' });
+  });
+
+  card(s, 8.15, 2.3, 4.5, 4.1, { fill: C.panel });
+  txt(s, 'Where it shows up', 8.45, 2.55, 3.9, 0.4, { size: 15, bold: true, headFont: true, valign: 'middle' });
+  bullets(s, [
+    'The Train Mode panel, naming the next hazard',
+    'The feedback card when you find one',
+    'Beside every hazard you missed, on the results screen',
+  ], 8.45, 3.05, 3.9, 1.7, { size: 12.5 });
+  card(s, 8.45, 4.85, 3.9, 1.25, { fill: C.panel2, line: C.accent, r: 0.07 });
+  txt(s, 'Turn it off in Settings if you want the search to stay unaided.',
+    8.7, 4.85, 3.4, 1.25, { size: 12, color: C.accent, valign: 'middle', lh: 1.3 });
+
+  notes(s, '[10:15 – 11:00] Frame this as a playtest finding, not a feature we planned: ' +
+    '"we could find the hazards because we built them — a new trainee could not." ' +
+    'It shows the process, which is what a tutor wants to hear.');
+}
+
+/* ================================================================== *
+ * 11 — Environments  [11:00 → 12:00]
+ * ================================================================== */
+{
+  const s = slide();
+  header(s, 'Content', 'Three warehouses, three risk profiles', { titleSize: 29 });
 
   const envs = [
-    { n: '01', name: 'Main Storage Hall', size: '62 × 44 m', hz: '15 hazards', img: SHOT('env01_wide'),
-      d: 'General storage. Four racking runs, a central pedestrian spine, an active forklift aisle.' },
-    { n: '02', name: 'Loading & Dispatch Bay', size: '70 × 30 m', hz: '12 hazards', img: SHOT('env01_walkway'),
-      d: 'Cross-dock. Six dock doors, constant vehicle movement, marshalling housekeeping.' },
-    { n: '03', name: 'High-Bay Annexe', size: '54 × 40 m', hz: '15 hazards', img: SHOT('env03_aisle'),
-      d: 'Narrow aisle, five levels, poor light and heavy congestion. The hard site.' },
+    { n: '01', tag: 'GENERAL STORAGE', name: 'Main Storage Hall', img: SHOT('env01_wide'),
+      d: 'Four racking runs, a central pedestrian spine, an active forklift aisle.', m: ['15 hazards', '62×44 m'] },
+    { n: '02', tag: 'CROSS-DOCK', name: 'Loading & Dispatch Bay', img: SHOT('env01_walkway'),
+      d: 'Six dock doors and constant vehicle movement. Dock edges and marshalling.', m: ['12 hazards', '70×30 m'] },
+    { n: '03', tag: 'NARROW AISLE · LOW LIGHT', name: 'High-Bay Annexe', img: SHOT('env03_aisle'),
+      d: 'Five levels, poor light, heavy congestion. The hard site.', m: ['15 hazards', '54×40 m'] },
   ];
   const cw = (W - M * 2 - 0.5) / 3;
   envs.forEach((e, i) => {
     const x = M + i * (cw + 0.25);
-    card(s, x, 1.65, cw, 4.55);
-    s.addImage({ path: e.img, x: x + 0.001, y: 1.65, w: cw - 0.002, h: 1.85, sizing: { type: 'cover', w: cw, h: 1.85 } });
-    s.addText(e.n, {
-      x: x + 0.25, y: 3.6, w: 1, h: 0.4, isTextBox: true, margin: 0,
-      fontFace: F.head, fontSize: 20, bold: true, color: C.amber, valign: 'middle',
-    });
-    s.addText(e.name, {
-      x: x + 0.25, y: 4.0, w: cw - 0.5, h: 0.45, isTextBox: true, margin: 0,
-      fontFace: F.head, fontSize: 15, bold: true, color: C.ink, valign: 'top',
-    });
-    body(s, e.d, x + 0.25, 4.5, cw - 0.5, 1.05, { size: 12, color: C.muted });
-    s.addText(`${e.hz}   ·   ${e.size}`, {
-      x: x + 0.25, y: 5.65, w: cw - 0.5, h: 0.35, isTextBox: true, margin: 0,
-      fontFace: F.body, fontSize: 11, bold: true, color: C.orange, valign: 'middle',
-    });
+    card(s, x, 1.85, cw, 4.4);
+    s.addImage({ path: e.img, x: x + 0.002, y: 1.85, w: cw - 0.004, h: 1.75,
+      sizing: { type: 'cover', w: cw, h: 1.75 } });
+    txt(s, e.n, x + 0.25, 3.7, 1, 0.4, { size: 19, bold: true, headFont: true, color: C.accent });
+    txt(s, e.tag, x + 0.25, 4.08, cw - 0.5, 0.26, { size: 8.5, bold: true, color: C.accent2, spacing: 0.9 });
+    txt(s, e.name, x + 0.25, 4.34, cw - 0.5, 0.4, { size: 14.5, bold: true, headFont: true });
+    txt(s, e.d, x + 0.25, 4.78, cw - 0.5, 0.9, { size: 11.5, color: C.dim, lh: 1.3 });
+    let cx = x + 0.25;
+    for (const mm of e.m) cx += chip(s, cx, 5.72, mm) + 0.12;
   });
 
-  body(s, 'All three share one prop and scenario library — environments 2 and 3 are about 250 lines each, not copies of the application. A fourth site is one file plus one line.',
-    M, 6.45, W - M * 2, 0.5, { size: 13, color: C.body });
-  s.addNotes(
-    'The closing line is the commercial point: adding a new site is cheap because the hazard library is shared. ' +
-    'If the client asks "could you build OUR warehouse?" — yes, and this is why that is not a rewrite.',
-  );
+  txt(s, 'All three share one prop and scenario library — environments 2 and 3 are about 250 lines each, not copies of the application. A fourth site is one file plus one line.',
+    M, 6.45, W - M * 2, 0.5, { size: 12.5, color: C.text });
+
+  notes(s, '[11:00 – 12:00] The closing line is the commercial point: adding a site is cheap because ' +
+    'the hazard library is shared. If they ask "could you build OUR warehouse?" — yes, and this is ' +
+    'why that is not a rewrite.');
 }
 
 /* ================================================================== *
- * 11 — Built and proven
+ * 12 — Login & security  [12:00 → 13:30]
  * ================================================================== */
 {
-  const s = lightSlide();
-  kicker(s, 'Where the project stands');
-  title(s, 'Built, tested and running', { size: 32, y: 0.78 });
+  const s = slide();
+  header(s, 'Access', 'Four ways in, plus a second factor', { titleSize: 30 });
 
-  stat(s, '15', 'HAZARDS MODELLED', M, 1.75, 2.6, { sub: 'All physically built' });
-  stat(s, '3', 'ENVIRONMENTS', M + 2.9, 1.75, 2.6, { sub: 'Shared prop library' });
-  stat(s, '94', 'AUTOMATED TESTS', M + 5.8, 1.75, 2.6, { sub: 'All passing', color: C.green });
-  stat(s, '60', 'FRAMES PER SECOND', M + 8.7, 1.75, 2.9, { sub: 'Measured in-browser', color: C.green });
-
-  card(s, M, 3.5, 5.8, 2.9, { fill: C.mist });
-  s.addText('Verified by playing it, not by assuming', {
-    x: M + 0.35, y: 3.75, w: 5.1, h: 0.4, isTextBox: true, margin: 0,
-    fontFace: F.head, fontSize: 15, bold: true, color: C.ink, valign: 'middle',
-  });
-  body(s, 'A test harness walks the player around every hazard from 24 vantage points and confirms each one can actually be found and flagged.',
-    M + 0.35, 4.2, 5.1, 0.85, { size: 12.5, color: C.muted });
-  const res = [
-    ['Main Storage Hall — Mid', '15 / 15'],
-    ['Loading & Dispatch — Mid', '12 / 12'],
-    ['High-Bay Annexe — Hard', '15 / 15'],
+  const methods = [
+    ['🔐', 'Passkey', 'Fingerprint, face or device PIN — or your phone. Nothing typed.', C.accent],
+    ['🔵', 'Google / Facebook', 'One free Client ID and the button goes live. No secret needed.', C.info],
+    ['👤', 'Name only', 'The original zero-friction path. Still the default.', C.dim],
+    ['🔢', 'Authenticator app', 'A 6-digit code as a second step. Real RFC 6238.', C.success],
   ];
-  res.forEach(([label, val], i) => {
-    const y = 5.1 + i * 0.42;
-    s.addText(label, {
-      x: M + 0.35, y, w: 3.7, h: 0.38, isTextBox: true, margin: 0,
-      fontFace: F.body, fontSize: 12.5, color: C.body, valign: 'middle',
-    });
-    s.addText(val, {
-      x: M + 4.05, y, w: 1.4, h: 0.38, isTextBox: true, margin: 0,
-      fontFace: F.head, fontSize: 12.5, bold: true, color: C.green, align: 'right', valign: 'middle',
-    });
+  const cw = (W - M * 2 - 0.75) / 4;
+  methods.forEach(([icon, name, desc, col], i) => {
+    const x = M + i * (cw + 0.25);
+    card(s, x, 1.85, cw, 2.15);
+    txt(s, icon, x + 0.25, 2.08, 0.6, 0.45, { size: 20 });
+    txt(s, name, x + 0.25, 2.6, cw - 0.5, 0.4, { size: 14.5, bold: true, headFont: true, color: col, lh: 1.1 });
+    txt(s, desc, x + 0.25, 3.05, cw - 0.5, 0.85, { size: 11.5, color: C.dim, lh: 1.3 });
   });
 
-  card(s, M + 6.1, 3.5, 5.5, 2.9, { fill: C.ink, shadow: false });
-  s.addText('Engineering highlight', {
-    x: M + 6.45, y: 3.75, w: 4.8, h: 0.4, isTextBox: true, margin: 0,
-    fontFace: F.head, fontSize: 15, bold: true, color: C.amber, valign: 'middle',
-  });
-  body(s, 'A believable warehouse needs thousands of cartons. Drawn naively that is 9,587 draw calls per frame — unusable.',
-    M + 6.45, 4.2, 4.8, 0.7, { size: 12.5, color: 'FFFFFF' });
-  s.addText('9,587', {
-    x: M + 6.45, y: 4.95, w: 1.9, h: 0.6, isTextBox: true, margin: 0,
-    fontFace: F.head, fontSize: 26, bold: true, color: '8A939B', align: 'left', valign: 'middle',
-  });
-  s.addText('→', {
-    x: M + 8.3, y: 4.95, w: 0.6, h: 0.6, isTextBox: true, margin: 0,
-    fontFace: F.body, fontSize: 20, color: C.dimText, align: 'center', valign: 'middle',
-  });
-  s.addText('994', {
-    x: M + 8.9, y: 4.95, w: 1.9, h: 0.6, isTextBox: true, margin: 0,
-    fontFace: F.head, fontSize: 26, bold: true, color: C.amber, align: 'left', valign: 'middle',
-  });
-  body(s, 'Static geometry is merged into 74 batches at load — same picture, a fraction of the cost.',
-    M + 6.45, 5.6, 4.8, 0.6, { size: 11.5, color: C.dimText });
-  s.addNotes(
-    'For a classroom audience, the 9,587 → 994 number is the strongest technical story: a real problem, measured, ' +
-    'and solved with a specific technique. For a client audience, the three green rows on the left matter more — ' +
-    'it means every hazard is genuinely reachable, verified automatically.',
-  );
+  card(s, M, 4.25, 6.15, 2.3, { fill: C.panel2 });
+  txt(s, 'Built properly, proven properly', M + 0.35, 4.5, 5.4, 0.4,
+    { size: 15, bold: true, headFont: true, valign: 'middle' });
+  bullets(s, [
+    'TOTP checked against the official RFC 4226 and 6238 vectors',
+    'QR encoder written from scratch — the offline build needs no CDN',
+    'Every QR decoded back by an independent decoder, 100 random secrets',
+  ], M + 0.35, 5.0, 5.4, 1.4, { size: 12, color: C.text, gap: 7 });
+
+  card(s, 7.15, 4.25, 5.5, 2.3, { fill: C.panel2, line: C.accent2 });
+  txt(s, 'And stated honestly', 7.5, 4.5, 4.9, 0.4,
+    { size: 15, bold: true, headFont: true, color: C.accent2, valign: 'middle' });
+  txt(s, 'The game has no backend, so passkeys and 2FA are a local device gate — not server-verified identity. GitHub cannot work in a browser at all: its exchange needs a client secret. So its button is visibly disabled and says why, rather than failing silently.',
+    7.5, 5.0, 4.9, 1.45, { size: 12, color: C.dim, lh: 1.32 });
+
+  notes(s, '[12:00 – 13:30] Two beats. First: it is real — official test vectors, QR built from scratch. ' +
+    'Second, and more important for credibility: we say what it does NOT do. ' +
+    'No backend means these are local gates. GitHub is disabled ON PURPOSE with the reason shown. ' +
+    'A safety product that overstates its own security teaches the wrong lesson.');
 }
 
 /* ================================================================== *
- * 12 — Honest limitations
+ * 13 — How it is built  [13:30 → 14:15]
  * ================================================================== */
 {
-  const s = lightSlide();
-  kicker(s, 'Being straight with you', { color: C.orange });
-  title(s, 'What it does not do yet', { size: 32, y: 0.78 });
+  const s = slide();
+  header(s, 'Under the hood', 'How it is built', { titleSize: 30 });
 
-  body(s, 'A training tool that overstates itself is worse than one that does not. These are stated plainly in the project documentation.',
-    M, 1.6, 8.5, 0.5, { size: 14, color: C.muted });
+  const stack = [
+    ['Three.js', '3D rendering', 'Direct control of the scene graph and the frame loop.'],
+    ['Vite', 'Build & dev server', 'Instant reload, ES-module output, almost no config.'],
+    ['Vanilla JS', 'No framework', 'A canvas game owns its own loop; a virtual DOM would fight it.'],
+    ['Vitest', 'Testing', 'Gameplay logic is pure, so it tests in Node with no browser.'],
+    ['Custom', 'Collision', '~60 lines. A physics engine is 500 kB for a flat floor.'],
+    ['Procedural', 'All art & audio', 'Every mesh, texture and sound generated in code.'],
+  ];
+  const cw = (W - M * 2 - 0.5) / 3;
+  stack.forEach(([name, role, why], i) => {
+    const x = M + (i % 3) * (cw + 0.25);
+    const y = 1.9 + Math.floor(i / 3) * 1.75;
+    card(s, x, y, cw, 1.55);
+    txt(s, name, x + 0.28, y + 0.22, cw - 0.56, 0.35, { size: 15, bold: true, headFont: true, color: C.accent });
+    txt(s, role.toUpperCase(), x + 0.28, y + 0.58, cw - 0.56, 0.24, { size: 8.5, bold: true, color: C.faint, spacing: 0.9 });
+    txt(s, why, x + 0.28, y + 0.85, cw - 0.56, 0.6, { size: 11.5, color: C.dim, lh: 1.3 });
+  });
+
+  card(s, M, 5.45, W - M * 2, 1.15, { fill: C.panel2, line: null });
+  txt(s, 'Zero third-party assets. No downloaded models, stock textures, sound files or web fonts — which means no licences to track and nothing to attribute. It also keeps the whole game to one 716 kB file.',
+    M + 0.4, 5.45, W - M * 2 - 0.8, 1.15, { size: 13, color: C.text, valign: 'middle', lh: 1.35 });
+
+  notes(s, '[13:30 – 14:15] Keep it brisk — this is credibility, not the story. ' +
+    'The line that matters is the box at the bottom: everything is generated in code, ' +
+    'so there is no licensing overhead and the whole game fits in one file.');
+}
+
+/* ================================================================== *
+ * 14 — Performance  [14:15 → 15:15]
+ * ================================================================== */
+{
+  const s = slide();
+  header(s, 'Engineering highlight', 'A believable warehouse needs thousands of boxes', { titleSize: 28 });
+
+  txt(s, 'Drawn naively, Environment 1 was 9,587 draw calls per frame. Unusable on any machine.',
+    M, 1.85, 8.5, 0.4, { size: 14, color: C.dim });
+
+  card(s, M, 2.5, 5.4, 2.0, { fill: '241318', line: '4A2028' });
+  txt(s, 'BEFORE', M + 0.35, 2.72, 2, 0.28, { size: 9.5, bold: true, color: C.major, spacing: 1.4 });
+  txt(s, '9,587', M + 0.35, 3.02, 4.7, 0.85, { size: 46, bold: true, mono: true, color: C.major });
+  txt(s, 'individual meshes, one draw call each', M + 0.35, 3.92, 4.7, 0.35, { size: 12, color: C.dim });
+
+  txt(s, '→', 6.32, 2.5, 0.9, 2.0, { size: 34, color: C.accent, align: 'center', valign: 'middle' });
+
+  card(s, 7.25, 2.5, 5.4, 2.0, { fill: '10281A', line: '235E38' });
+  txt(s, 'AFTER', 7.6, 2.72, 2, 0.28, { size: 9.5, bold: true, color: C.success, spacing: 1.4 });
+  txt(s, '994', 7.6, 3.02, 4.7, 0.85, { size: 46, bold: true, mono: true, color: C.success });
+  txt(s, 'objects in 74 merged batches — same picture', 7.6, 3.92, 4.7, 0.35, { size: 12, color: C.dim });
+
+  card(s, M, 4.75, W - M * 2, 1.05, { fill: C.panel2, line: null });
+  txt(s, 'Static geometry is merged by material at load. Anything animated — forklifts, workers, the falling carton — is excluded so it still moves.',
+    M + 0.4, 4.75, W - M * 2 - 0.8, 1.05, { size: 13, color: C.text, valign: 'middle', lh: 1.35 });
+
+  hudChip(s, M, 6.05, 2.6, 'Frame rate', '60 fps', { color: C.success });
+  hudChip(s, M + 2.75, 6.05, 2.6, 'Draw calls', '1,520');
+  hudChip(s, M + 5.5, 6.05, 2.6, 'Triangles', '272k');
+  hudChip(s, M + 8.25, 6.05, 2.6, 'Bundle (gzip)', '183 kB');
+
+  notes(s, '[14:15 – 15:15] For a technical audience this is the strongest story in the deck: ' +
+    'a real problem, measured, and solved with a specific named technique. ' +
+    'Say the number out loud — nine and a half thousand down to under a thousand.');
+}
+
+/* ================================================================== *
+ * 15 — Testing  [15:15 → 16:15]
+ * ================================================================== */
+{
+  const s = slide();
+  header(s, 'Quality', 'Proven, not assumed', { titleSize: 30 });
+
+  hudChip(s, M, 1.85, 2.85, 'Automated tests', '165', { color: C.success, h: 1.05 });
+  hudChip(s, M + 3.0, 1.85, 2.85, 'Passing', '100%', { color: C.success, h: 1.05 });
+  hudChip(s, M + 6.0, 1.85, 2.85, 'Hazards reachable', '42/42', { color: C.success, h: 1.05 });
+  hudChip(s, M + 9.0, 1.85, 2.9, 'Console errors', '0', { color: C.success, h: 1.05 });
+
+  card(s, M, 3.15, 6.0, 3.2);
+  txt(s, 'What the tests lock down', M + 0.35, 3.4, 5.3, 0.4, { size: 15, bold: true, headFont: true });
+  bullets(s, [
+    'Scoring, combo, ranks — the exact rules from the brief',
+    'The reaction clock, including its warning bands',
+    'All 15 hazards present, with complete teaching text',
+    'Difficulty genuinely differs — not just a label',
+    'Profile progression, gates and every achievement',
+    'TOTP against the official RFC test vectors',
+  ], M + 0.35, 3.9, 5.3, 2.3, { size: 12.5, gap: 7 });
+
+  card(s, 7.15, 3.15, 5.5, 3.2, { fill: C.panel2 });
+  txt(s, 'And a robot that plays the game', 7.5, 3.4, 4.9, 0.4, { size: 15, bold: true, headFont: true, color: C.accent });
+  txt(s, 'A harness walks the player to 24 vantage points around every hazard, aims the camera and tries a real flag. It reports anything unreachable.',
+    7.5, 3.9, 4.9, 0.9, { size: 12, color: C.dim, lh: 1.32 });
+  [['Main Storage Hall — Mid', '15 / 15'], ['Loading & Dispatch — Mid', '12 / 12'], ['High-Bay Annexe — Hard', '15 / 15']]
+    .forEach(([label, val], i) => {
+      const y = 4.95 + i * 0.44;
+      txt(s, label, 7.5, y, 3.6, 0.4, { size: 12, valign: 'middle' });
+      txt(s, val, 11.1, y, 1.3, 0.4, { size: 12, bold: true, mono: true, color: C.success, align: 'right', valign: 'middle' });
+    });
+
+  notes(s, '[15:15 – 16:15] The right-hand box is the one to dwell on: we did not just unit-test the ' +
+    'maths, we wrote something that plays the game and proves every hazard can actually be found. ' +
+    'That is what caught the biggest bug — next slide.');
+}
+
+/* ================================================================== *
+ * 16 — What went wrong  [16:15 → 17:15]
+ * ================================================================== */
+{
+  const s = slide();
+  header(s, 'What we tried, and what broke', 'The bugs are the interesting part', { titleSize: 29 });
+
+  txt(s, 'Every one of these looked fine on screen. They were only found by driving the real game — unit tests could not have caught any of them.',
+    M, 1.85, 9.5, 0.4, { size: 13, color: C.dim });
+
+  const bugs = [
+    ['Hazards could not be clicked', 'Proxies never had their world matrix updated, so for raycasting they all sat at the origin. 14 of 15 unflaggable — and the 15th was a false positive.'],
+    ['A wall in every warehouse', 'The spawn angle faced a blank wall, with the whole building behind the player.'],
+    ['Invisible interface', 'The DOM helper did not parse "#id", so the HUD had no CSS applied at all.'],
+    ['The timer blamed the wrong hazard', 'On expiry it penalised an arbitrary hazard the player was nowhere near.'],
+    ['Settings that did nothing', '"Invert look" and "Reduce motion" were saved but never applied.'],
+    ['A QR nothing could scan', 'Format bits were written transposed. The matrix looked perfect; no scanner could read it.'],
+  ];
+  const cw = (W - M * 2 - 0.45) / 2;
+  bugs.forEach(([title, body], i) => {
+    const x = M + (i % 2) * (cw + 0.45);
+    const y = 2.42 + Math.floor(i / 2) * 1.38;
+    card(s, x, y, cw, 1.2, { fill: C.panel2, line: null });
+    s.addShape(pres.ShapeType.rect, { x, y, w: 0.055, h: 1.2, fill: { color: C.danger }, line: { type: 'none' } });
+    txt(s, title, x + 0.3, y + 0.16, cw - 0.6, 0.32, { size: 13, bold: true, headFont: true, color: C.text });
+    txt(s, body, x + 0.3, y + 0.5, cw - 0.6, 0.66, { size: 10.5, color: C.dim, lh: 1.28 });
+  });
+
+  card(s, M, 6.5, W - M * 2, 0.5, { fill: C.accent, line: null });
+  txt(s, 'All nine found and fixed. This is why we tested by playing it, not by reading it.',
+    M + 0.4, 6.5, W - M * 2 - 0.8, 0.5, { size: 13, bold: true, color: C.ink, valign: 'middle' });
+
+  notes(s, '[16:15 – 17:15] Do not rush past this and do not apologise for it — a tutor or client ' +
+    'rates a team that finds its own bugs far above one that claims it had none. ' +
+    'The strongest example is the first: fourteen of fifteen hazards were unclickable and it LOOKED fine.');
+}
+
+/* ================================================================== *
+ * 17 — Limitations  [17:15 → 18:00]
+ * ================================================================== */
+{
+  const s = slide();
+  header(s, 'Being straight with you', 'What it does not do yet', { titleSize: 30 });
 
   const lims = [
-    ['Not photorealistic', 'Stylised, procedurally generated geometry. Built for believable scale and hazard readability, not for a rendered CAD walkthrough.'],
-    ['No VR', 'No headset was available to test on, so rather than ship untested VR code we left it out. Desktop play never depended on it.'],
-    ['Google sign-in unconfigured', 'The code path exists but has never been run against Google. The app says so instead of pretending. Local sign-in is used.'],
-    ['Limited device testing', 'Touch controls are built and the layout is responsive, but they have not been tested on a real phone or tablet. Chromium only so far.'],
+    ['Not photorealistic', 'Stylised procedural geometry, built for believable scale and hazard readability — not a rendered CAD walkthrough.'],
+    ['No VR', 'No headset was available to test on. Shipping untested VR and calling it done would be dishonest.'],
+    ['Social login unconfigured', 'Google and Facebook work the moment you add a free Client ID. GitHub needs a small server, and says so.'],
+    ['Limited device testing', 'Touch controls are built and the layout is responsive, but untested on a real phone. Chromium only so far.'],
   ];
   const cw = (W - M * 2 - 0.45) / 2;
   lims.forEach(([t, d], i) => {
     const x = M + (i % 2) * (cw + 0.45);
-    const y = 2.35 + Math.floor(i / 2) * 1.75;
-    card(s, x, y, cw, 1.5, { fill: C.mist });
-    s.addShape(pres.ShapeType.ellipse, { x: x + 0.3, y: y + 0.32, w: 0.3, h: 0.3, fill: { color: C.orange } });
-    s.addText(t, {
-      x: x + 0.75, y: y + 0.22, w: cw - 1.05, h: 0.45, isTextBox: true, margin: 0,
-      fontFace: F.head, fontSize: 14, bold: true, color: C.ink, valign: 'middle',
-    });
-    body(s, d, x + 0.75, y + 0.7, cw - 1.05, 0.7, { size: 11.5, color: C.muted });
+    const y = 2.0 + Math.floor(i / 2) * 1.85;
+    card(s, x, y, cw, 1.6);
+    s.addShape(pres.ShapeType.ellipse, { x: x + 0.3, y: y + 0.34, w: 0.3, h: 0.3, fill: { color: C.accent2 }, line: { type: 'none' } });
+    txt(s, t, x + 0.75, y + 0.24, cw - 1.05, 0.42, { size: 14, bold: true, headFont: true, valign: 'middle' });
+    txt(s, d, x + 0.75, y + 0.72, cw - 1.05, 0.75, { size: 11.5, color: C.dim, lh: 1.3 });
   });
 
-  card(s, M, 5.95, W - M * 2, 0.85, { fill: C.ink, shadow: false });
-  s.addText('Everything above is written into the repository documentation — not discovered later.', {
-    x: M + 0.35, y: 5.95, w: 11.2, h: 0.85, isTextBox: true, margin: 0,
-    fontFace: F.body, fontSize: 14, bold: true, color: C.amber, valign: 'middle',
-  });
-  s.addNotes(
-    'Do not skip this slide, and do not apologise through it. Presenting limitations confidently is what makes the ' +
-    'rest of the claims credible — especially in front of a client. If asked "why no VR?", the answer is: we had no ' +
-    'headset to test on, and untested VR is worse than no VR.',
-  );
+  card(s, M, 5.85, W - M * 2, 0.95, { fill: C.panel2, line: C.accent });
+  txt(s, 'All of this is written into the repository documentation — found by us, not discovered later by you.',
+    M + 0.4, 5.85, W - M * 2 - 0.8, 0.95, { size: 13.5, bold: true, color: C.accent, valign: 'middle' });
+
+  notes(s, '[17:15 – 18:00] Present this confidently, do not apologise through it. ' +
+    'Stating limits clearly is what makes every other claim in the deck believable. ' +
+    'If asked "why no VR?": we had no headset to test on, and untested VR is worse than no VR.');
 }
 
 /* ================================================================== *
- * 13 — Access / deployment
+ * 18 — Close & demo  [18:00 → 20:00]
  * ================================================================== */
 {
-  const s = lightSlide();
-  kicker(s, 'Getting it in front of people');
-  title(s, 'Three ways to run it today', { size: 32, y: 0.78 });
+  const s = slide({ image: SHOT('hz_exit2'), scrim: 78 });
+  txt(s, 'Thank you', M, 1.5, 9, 1.0, { size: 44, bold: true, headFont: true, color: C.accent, valign: 'middle' });
+  txt(s, 'Live demo — and then your questions.', M, 2.55, 9, 0.5,
+    { size: 19, color: C.white, valign: 'middle' });
+  rule(s, M, 3.25);
 
-  const ways = [
-    ['Open a link', 'Hosted online. Nothing to install — it runs in the browser the trainee already has.', C.amber],
-    ['Open one file', 'The entire game is also a single 677 kB HTML file. Double-click it. No server, no internet.', C.orange],
-    ['Host it yourself', 'A plain static site. Drops onto the client\'s own intranet or any web host.', C.green],
-  ];
-  const cw = (W - M * 2 - 0.5) / 3;
-  ways.forEach(([t, d, col], i) => {
-    const x = M + i * (cw + 0.25);
-    card(s, x, 1.7, cw, 2.5);
-    badge(s, i + 1, x + 0.35, 2.0, 0.46, { fill: col, color: i === 2 ? 'FFFFFF' : C.ink });
-    s.addText(t, {
-      x: x + 0.35, y: 2.6, w: cw - 0.7, h: 0.45, isTextBox: true, margin: 0,
-      fontFace: F.head, fontSize: 16, bold: true, color: C.ink, valign: 'top',
+  card(s, M, 3.6, 6.0, 2.6, { fill: C.panel2 });
+  txt(s, 'Two-minute demo route', M + 0.35, 3.85, 5.3, 0.4, { size: 15, bold: true, headFont: true, color: C.accent });
+  [['1', 'Walk the Main Storage Hall'], ['2', 'Find the falling boxes'],
+   ['3', 'Flag a decoy on purpose — watch it teach'], ['4', 'Show the results screen']]
+    .forEach(([n, t], i) => {
+      const y = 4.35 + i * 0.45;
+      disc(s, n, M + 0.35, y, 0.32, { size: 10.5 });
+      txt(s, t, M + 0.8, y, 4.9, 0.32, { size: 12.5, valign: 'middle' });
     });
-    body(s, d, x + 0.35, 3.1, cw - 0.7, 1.1, { size: 12.5, color: C.muted });
-  });
 
-  card(s, M, 4.5, W - M * 2, 1.85, { fill: C.mist });
-  s.addText('Works offline, on the machines they already have', {
-    x: M + 0.4, y: 4.75, w: 7.5, h: 0.4, isTextBox: true, margin: 0,
-    fontFace: F.head, fontSize: 16, bold: true, color: C.ink, valign: 'middle',
-  });
-  body(s, 'No server, no database and no account are required for the core training. That matters on a warehouse site, where network coverage on the floor is often poor and IT approval for new software is slow.',
-    M + 0.4, 5.2, 8.2, 0.9, { size: 13, color: C.body });
+  card(s, 7.15, 3.6, 5.5, 2.6, { fill: C.panel2 });
+  txt(s, 'Play it yourself', 7.5, 3.85, 4.9, 0.4, { size: 15, bold: true, headFont: true, color: C.accent });
+  txt(s, 'kushalthewave.github.io/interprize-project', 7.5, 4.35, 4.9, 0.4,
+    { size: 13, bold: true, mono: true, color: C.info });
+  txt(s, 'Source, documentation and tests:', 7.5, 4.9, 4.9, 0.3, { size: 11.5, color: C.dim });
+  txt(s, 'github.com/kushalthewave/interprize-project', 7.5, 5.2, 4.9, 0.4,
+    { size: 12, bold: true, mono: true, color: C.info });
+  txt(s, 'Also ships as one 716 kB file that runs offline.', 7.5, 5.7, 4.9, 0.35,
+    { size: 11.5, italic: true, color: C.faint });
 
-  s.addText('677 kB', {
-    x: 9.3, y: 4.8, w: 3.2, h: 0.65, isTextBox: true, margin: 0,
-    fontFace: F.head, fontSize: 32, bold: true, color: C.amber, align: 'right', valign: 'middle',
-  });
-  s.addText('the whole game, one file', {
-    x: 9.3, y: 5.45, w: 3.2, h: 0.35, isTextBox: true, margin: 0,
-    fontFace: F.body, fontSize: 12, color: C.muted, align: 'right', valign: 'middle',
-  });
-  s.addNotes(
-    'The offline point is a genuine client benefit — say it plainly. Warehouse floors have bad wifi and slow IT ' +
-    'approval; a single file that runs from a USB stick sidesteps both. If you are demoing live, this is the moment ' +
-    'to switch to the game.',
-  );
-}
+  txt(s, 'BEAT THE HAZARD   ·   Kushal Neupane', M, 6.7, 9, 0.35,
+    { size: 12, bold: true, color: C.dim, valign: 'middle' });
 
-/* ================================================================== *
- * 14 — Roadmap
- * ================================================================== */
-{
-  const s = lightSlide();
-  kicker(s, 'Where it goes next');
-  title(s, 'Roadmap', { size: 32, y: 0.78 });
-
-  const items = [
-    ['Near term', ['Real-device testing for touch controls', 'Firefox and Safari verification', 'Further draw-call optimisation'], C.amber],
-    ['Client value', ['The client\'s own warehouse as a fourth site', 'Instructor dashboard for cohort results', 'Multi-language UI (signage is already bilingual)'], C.orange],
-    ['Longer term', ['VR support, once a headset is available', 'Round replay showing what was missed and where', 'Optional server-backed record keeping'], C.green],
-  ];
-  const cw = (W - M * 2 - 0.5) / 3;
-  items.forEach(([head, list, col], i) => {
-    const x = M + i * (cw + 0.25);
-    card(s, x, 1.75, cw, 3.9);
-    s.addShape(pres.ShapeType.ellipse, { x: x + 0.35, y: 2.05, w: 0.32, h: 0.32, fill: { color: col } });
-    s.addText(head, {
-      x: x + 0.8, y: 1.98, w: cw - 1.1, h: 0.45, isTextBox: true, margin: 0,
-      fontFace: F.head, fontSize: 16, bold: true, color: C.ink, valign: 'middle',
-    });
-    bullets(s, list, x + 0.35, 2.65, cw - 0.7, 2.7, { size: 12.5, color: C.body, space: 10 });
-  });
-
-  body(s, 'The data layer is already behind a swappable adapter, so record keeping can move to a server without rewriting the game.',
-    M, 5.95, W - M * 2, 0.5, { size: 13, italic: true, color: C.muted });
-  s.addNotes(
-    'The middle column is the one the client cares about. If there is appetite in the room, the natural next step to ' +
-    'propose is building their own site as environment four — and slide 10 already explained why that is cheap.',
-  );
-}
-
-/* ================================================================== *
- * 15 — Close
- * ================================================================== */
-{
-  const s = darkSlide({ image: SHOT('hz_exit2'), scrim: 74 });
-  s.addText('Thank you', {
-    x: M, y: 2.3, w: 9, h: 1.0, isTextBox: true, margin: 0,
-    fontFace: F.head, fontSize: 46, bold: true, color: C.amber, valign: 'middle',
-  });
-  s.addText('Questions — and a live demo whenever you are ready.', {
-    x: M, y: 3.4, w: 9, h: 0.5, isTextBox: true, margin: 0,
-    fontFace: F.body, fontSize: 19, color: 'FFFFFF', valign: 'middle',
-  });
-  s.addShape(pres.ShapeType.rect, { x: M, y: 4.15, w: 1.5, h: 0.035, fill: { color: C.amber } });
-
-  const facts = [['15', 'hazards'], ['3', 'environments'], ['94', 'tests passing'], ['60', 'fps']];
-  facts.forEach(([v, l], i) => {
-    const x = M + i * 2.6;
-    s.addText(v, {
-      x, y: 4.6, w: 2.4, h: 0.6, isTextBox: true, margin: 0,
-      fontFace: F.head, fontSize: 30, bold: true, color: 'FFFFFF', valign: 'middle',
-    });
-    s.addText(l, {
-      x, y: 5.2, w: 2.4, h: 0.35, isTextBox: true, margin: 0,
-      fontFace: F.body, fontSize: 12, color: C.dimText, valign: 'middle',
-    });
-  });
-
-  s.addText('BEAT THE HAZARD   ·   Kushal Neupane', {
-    x: M, y: 6.6, w: 9, h: 0.35, isTextBox: true, margin: 0,
-    fontFace: F.body, fontSize: 12, bold: true, color: C.dimText, valign: 'middle',
-  });
-  s.addNotes(
-    'Close on the demo, not on the slide. Have the game already loaded in another window so you can switch instantly. ' +
-    'Suggested demo order: (1) walk the main hall, (2) find the falling boxes, (3) flag a decoy on purpose so they see ' +
-    'the game teach, (4) show the results screen. Keep it under three minutes.',
-  );
+  notes(s, '[18:00 – 20:00] Two minutes. Have the game ALREADY LOADED in another window — do not ' +
+    'load it in front of them. Follow the four steps on the left and resist exploring. ' +
+    'Step 3 is the one that sells it: flag the coned-off spill on purpose and let the game explain ' +
+    'why that is a wrong answer. Finish on the results screen and take questions.');
 }
 
 /* ------------------------------------------------------------------ */
