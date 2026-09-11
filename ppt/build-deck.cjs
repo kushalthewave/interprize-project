@@ -158,7 +158,7 @@ const notes = (s, t) => s.addNotes(t);
 
   hudChip(s, M, 5.5, 1.9, 'Hazards', '15');
   hudChip(s, M + 2.05, 5.5, 1.9, 'Sites', '3');
-  hudChip(s, M + 4.1, 5.5, 1.9, 'Tests', '165', { color: C.success });
+  hudChip(s, M + 4.1, 5.5, 1.9, 'Tests', '204', { color: C.success });
   hudChip(s, M + 6.15, 5.5, 1.9, 'Frame rate', '60', { color: C.success });
 
   txt(s, 'Kushal Neupane', M, 6.75, 6, 0.32, { size: 12.5, bold: true, color: C.white });
@@ -351,24 +351,24 @@ const notes = (s, t) => s.addNotes(t);
   card(s, M, 1.8, half, 3.9);
   disc(s, '1', M + 0.35, 2.08, 0.48, { size: 14 });
   txt(s, 'TRAIN MODE', M + 0.98, 2.08, 3.5, 0.48, { size: 16.5, bold: true, headFont: true, valign: 'middle' });
-  txt(s, 'Teaches. It gates everything else.', M + 0.35, 2.68, half - 0.7, 0.3,
+  txt(s, 'Teaches. Optional — never a gate.', M + 0.35, 2.68, half - 0.7, 0.3,
     { size: 12.5, italic: true, color: C.dim });
   bullets(s, [
-    'Every hazard is ringed so it can be found',
-    'Each find opens a card: what it is, why it is dangerous, the control',
-    'The location is named, so you know where to walk',
-    'No time pressure — nothing is being scored',
-    'Finishing a site unlocks testing there',
+    'No clock at all — the trainee sets the pace',
+    'A guide arrow and distance point to the nearest hazard',
+    'Its location is named: “Aisle B, south end — at eye level”',
+    'A column of light marks the spot, visible through racking',
+    'Each find opens a card: what it is, why, and the control',
   ], M + 0.35, 3.12, half - 0.7, 2.4, { size: 12.5 });
 
   const x2 = M + half + 0.4;
   card(s, x2, 1.8, half, 3.9, { fill: C.accent, line: null });
   disc(s, '2', x2 + 0.35, 2.08, 0.48, { fill: C.ink, color: C.accent, size: 14 });
   txt(s, 'TEST MODE', x2 + 0.98, 2.08, 3.5, 0.48, { size: 16.5, bold: true, headFont: true, color: C.ink, valign: 'middle' });
-  txt(s, 'Evaluates. No help.', x2 + 0.35, 2.68, half - 0.7, 0.3, { size: 12.5, italic: true, color: '5A4A12' });
+  txt(s, 'Evaluates. Open from the start.', x2 + 0.35, 2.68, half - 0.7, 0.3, { size: 12.5, italic: true, color: '5A4A12' });
   bullets(s, [
-    'No rings, no hints — you find them by looking',
-    'A reaction clock runs on every hazard',
+    'Five minutes on the clock, whatever the difficulty',
+    'No guide and no locations — you find them by looking',
     'Wrong flags break your combo and return a safety tip',
     'Decoys punish spraying flags at everything',
     'Full breakdown with personalised coaching',
@@ -383,8 +383,9 @@ const notes = (s, t) => s.addNotes(t);
     if (i < 4) txt(s, '→', x + fw, 6.0, 0.44, 0.62, { size: 15, color: C.faint, align: 'center', valign: 'middle' });
   });
 
-  notes(s, '[7:30 – 8:30] Stress the gate: you cannot be tested on a site you have not been trained on — ' +
-    'that mirrors a real site induction and clients recognise it immediately. ' +
+  notes(s, '[7:30 – 8:30] Train Mode has no clock: an arrow, a distance and a named location lead the trainee ' +
+    'to the nearest hazard, and a column of light marks the spot. It is optional — an experienced operative ' +
+    'can go straight to Test Mode, which is five minutes with no guide and no locations. ' +
     'The strip along the bottom is the Test Mode loop.');
 }
 
@@ -398,7 +399,8 @@ const notes = (s, t) => s.addNotes(t);
 
   const rows = [
     ['', 'SIMPLE', 'MID', 'HARD'],
-    ['Time per hazard', '90 s', '60 s', '38 s'],
+    ['Test length', '5:00', '5:00', '5:00'],
+    ['Fast bonus if found within', '45 s', '30 s', '19 s'],
     ['Score multiplier', '×1.0', '×1.25', '×1.6'],
     ['Hazards highlighted', 'Yes', 'No', 'No'],
     ['Hazard count shown', 'Yes', 'Yes', 'No'],
@@ -643,7 +645,7 @@ const notes = (s, t) => s.addNotes(t);
   });
 
   card(s, M, 5.45, W - M * 2, 1.15, { fill: C.panel2, line: null });
-  txt(s, 'Zero third-party assets. No downloaded models, stock textures, sound files or web fonts — which means no licences to track and nothing to attribute. It also keeps the whole game to one 716 kB file.',
+  txt(s, 'Zero third-party assets. No downloaded models, stock textures, sound files or web fonts — which means no licences to track and nothing to attribute. It also keeps the whole game to one 738 kB file.',
     M + 0.4, 5.45, W - M * 2 - 0.8, 1.15, { size: 13, color: C.text, valign: 'middle', lh: 1.35 });
 
   notes(s, '[13:30 – 14:15] Keep it brisk — this is credibility, not the story. ' +
@@ -694,7 +696,7 @@ const notes = (s, t) => s.addNotes(t);
   const s = slide();
   header(s, 'Quality', 'Proven, not assumed', { titleSize: 30 });
 
-  hudChip(s, M, 1.85, 2.85, 'Automated tests', '165', { color: C.success, h: 1.05 });
+  hudChip(s, M, 1.85, 2.85, 'Automated tests', '204', { color: C.success, h: 1.05 });
   hudChip(s, M + 3.0, 1.85, 2.85, 'Passing', '100%', { color: C.success, h: 1.05 });
   hudChip(s, M + 6.0, 1.85, 2.85, 'Hazards reachable', '42/42', { color: C.success, h: 1.05 });
   hudChip(s, M + 9.0, 1.85, 2.9, 'Console errors', '0', { color: C.success, h: 1.05 });
@@ -822,7 +824,7 @@ const notes = (s, t) => s.addNotes(t);
   txt(s, 'Source, documentation and tests:', 7.5, 4.9, 4.9, 0.3, { size: 11.5, color: C.dim });
   txt(s, 'github.com/kushalthewave/interprize-project', 7.5, 5.2, 4.9, 0.4,
     { size: 12, bold: true, mono: true, color: C.info });
-  txt(s, 'Also ships as one 716 kB file that runs offline.', 7.5, 5.7, 4.9, 0.35,
+  txt(s, 'Also ships as one 738 kB file that runs offline.', 7.5, 5.7, 4.9, 0.35,
     { size: 11.5, italic: true, color: C.faint });
 
   txt(s, 'BEAT THE HAZARD   ·   Kushal Neupane', M, 6.7, 9, 0.35,

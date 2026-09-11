@@ -264,3 +264,70 @@ overhangs a beam above head height, or whether you are inside a forklift's blind
 spot, depends on being at eye level in the space. A third-person camera actively
 harms that, and would have cost rigging and animation work that the brief
 explicitly said must not block the core game.
+
+
+---
+
+## Training is optional; Test Mode is never locked
+
+**Context.** Test Mode was gated behind completing Train Mode on the same site,
+and Mid and Hard behind scores of 30+.
+
+**Decision.** All gates off by default. The logic stays in
+`Profile.isUnlocked()` and is still tested with the gates switched on.
+
+**Why.** The gate stopped an experienced operative proving what they already
+knew, and stopped a supervisor running a quick assessment. A site that wants a
+mandatory path flips three booleans in `PROGRESSION`.
+
+---
+
+## A test is five minutes on every difficulty
+
+**Context.** The test budget was seconds-per-hazard × hazard count: 22.5 minutes
+on Simple, 15 on Mid, 9.5 on Hard.
+
+**Decision.** One fixed five-minute round. The per-hazard clock keeps running
+underneath at the difficulty's pace, because it decides the fast/slow tier.
+
+**Why.** Fifteen or more minutes does not fit a gap in a shift, and a fixed
+length makes scores comparable across difficulties. Difficulty still changes the
+fast threshold (45/30/19 s), lighting, decoys and guidance.
+
+---
+
+## Train Mode guides to the nearest hazard, not the next in a fixed order
+
+**Decision.** After every find, the guide picks the nearest unfound hazard to
+where the trainee is standing, and shows an arrow, a distance, the location in
+words and a column of light over the spot.
+
+**Why.** The old "majors first" order sent the trainee back and forth across a
+62 m building. And the location was only named *after* the first find — so at
+the start, when a trainee most needs directions, the panel said "Explore the
+warehouse".
+
+**Trade-off.** Hazards are no longer taught in severity order. The severity is
+still shown on every guide target and every teaching card.
+
+---
+
+## Sign-in is identity first, commit second
+
+**Decision.** Every route returns an identity; the profile is only written after
+the second factor passes.
+
+**Why.** Writing first meant a failed or abandoned 2FA prompt had already renamed
+the owner's profile.
+
+---
+
+## Avatars are drawn as inline SVG, not shipped as images
+
+**Decision.** The five team leads are generated as SVG strings in
+`src/ui/avatars.js`, from data in `src/data/avatars.js`.
+
+**Why.** It keeps the no-third-party-assets rule, keeps the single-file offline
+build self-contained, and the portraits stay sharp from a 44 px HUD chip to a
+170 px website tile. The same code produces the portraits on the company
+website, so the product and the site show the same five people.

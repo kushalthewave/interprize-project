@@ -149,26 +149,47 @@ on-screen **FLAG** and **MENU** buttons.
 
 ## Train Mode
 
-Train Mode teaches. It is the intended starting point and it gates Test Mode.
+Train Mode teaches. It is **optional** — nothing is locked behind it.
 
-- Every hazard is ringed so you can find it
+- **No clock at all.** The trainee sets the pace.
+- **A guide leads you to every hazard**, nearest first:
+  - a compass arrow and a distance in the HUD — *"8 m"*, then *"Right here — look around"*
+  - the hazard's **location in words** — *"Aisle B, south end — at eye level"* — from the very first frame
+  - a **column of light** over the spot, drawn through racking so it can be seen across the building
+- Every hazard is ringed; the one you are being guided to is drawn larger
 - Finding one opens a card with what it is, **why it is dangerous**, the correct
   control, and the safety keywords
-- The clock is effectively unlimited — nothing is being measured
-- Finding all of them completes the module and unlocks testing for that site
 
 ## Test Mode
 
-Test Mode evaluates.
+Test Mode evaluates. It is **open from the start** — every environment and
+every difficulty.
 
 ```
 Observe → Find → Flag → Validate → Result
 ```
 
-No rings (except on Simple), no hints. A reaction clock runs per hazard. Wrong
-flags cost you your combo and return a safety tip explaining what you actually
-looked at. The round ends when every hazard is found or the clock expires, and
-you get a full breakdown with coaching notes.
+- **Five minutes on the clock**, whatever the difficulty, counting down in the HUD
+  (amber at 1:00, red at 0:30)
+- **No guide and no locations** — not during the round, not on the results screen
+- No rings except on Simple
+- Wrong flags cost you your combo and return a safety tip explaining what you
+  actually looked at
+- The round ends when every hazard is found or the five minutes run out, and you
+  get a full breakdown with coaching notes
+
+## Avatars
+
+Five warehouse safety team leads — **Sarah** (First Aider), **David** (Safety
+Inspector), **Maria** (Emergency Response), **James** (Fire Warden) and **Aisha**
+(Radio & Comms Lead). Each is drawn as an inline SVG portrait in full hi-vis with
+the kit their role carries, so nothing is downloaded and they stay sharp at any
+size.
+
+The one you pick is you, everywhere: the login preview (*"You are Aisha"*), the
+menu, the profile, the results screen, and a player card in the corner of the HUD
+for the whole round. Change it any time from **Profile**. Profiles saved with the
+earlier two avatars are migrated automatically.
 
 ## Difficulty
 
@@ -176,7 +197,8 @@ Difficulty changes **real gameplay parameters**, not a label:
 
 | | Simple | Mid | Hard |
 |---|---|---|---|
-| Time per hazard | 90 s | 60 s | 38 s |
+| Test length | 5:00 | 5:00 | 5:00 |
+| Fast bonus if found within | 45 s | 30 s | 19 s |
 | Score multiplier | ×1.0 | ×1.25 | ×1.6 |
 | Hazards highlighted | ✅ | ❌ | ❌ |
 | Hazard count shown | ✅ | ✅ | ❌ |
@@ -282,7 +304,7 @@ diagrams in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 npm test
 ```
 
-**94 automated tests, all passing** — scoring rules, combo, ranks, the reaction
+**204 automated tests, all passing** — scoring rules, combo, ranks, the reaction
 clock, hazard-data integrity, difficulty configuration, profile progression and
 achievements.
 

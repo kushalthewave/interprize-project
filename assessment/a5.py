@@ -35,7 +35,7 @@ PHASES = [
      "Playable vertical slice, then feature-complete build"),
     ("Harden", "9–11", "Performance, accessibility, defect triage, deployment and the "
      "offline build. The point at which claims are checked against the running product.",
-     "Deployed build, defect log, 165 passing tests"),
+     "Deployed build, defect log, 204 passing tests"),
     ("Deliver", "11–12", "Deck, rehearsal, assessment pack, client presentation.",
      "A7 presentation and prototype demonstration"),
 ]

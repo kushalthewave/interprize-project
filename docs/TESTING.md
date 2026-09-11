@@ -37,8 +37,8 @@ npm test
 ✓ tests/score.test.js     (26 tests)
 ✓ tests/profile.test.js   (30 tests)
 
-Test Files  4 passed (4)
-     Tests  94 passed (94)
+Test Files  8 passed (8)
+     Tests  204 passed (204)
   Duration  625ms
 ```
 
@@ -47,9 +47,11 @@ Test Files  4 passed (4)
 | File | Tests | What it locks down |
 |---|---|---|
 | `score.test.js` | 26 | Exact scoring table (15/7/5/2), the fast/slow threshold including both boundary sides, combo start at exactly 3, combo bonus accumulation, combo breaking on wrong flags and on expiry, best-streak retention, difficulty multiplier applied to final not raw score, accuracy, average reaction time, perfect-round detection, score never negative, reset |
-| `timer.test.js` | 15 | Budget = seconds × hazards, countdown, expiry fires once and only once, pause/resume, no resume after finish, per-hazard clock independent of the round clock, `nextHazard()` reset, warning band, critical band including the 10 s cap, `mm:ss` formatting, negative clamping |
+| `timer.test.js` | 20 | Fixed five-minute Test round overriding seconds × hazards, the per-hazard clock still running underneath at the difficulty pace, round warning at 1:00 and critical at 0:30, reset keeping the fixed length; plus budget = seconds × hazards, countdown, expiry fires once and only once, pause/resume, no resume after finish, per-hazard clock independent of the round clock, `nextHazard()` reset, warning band, critical band including the 10 s cap, `mm:ss` formatting, negative clamping |
+| `auth.test.js` | 14 | An identity is committed only after the second factor — a failed 2FA leaves the owner's profile untouched; passkeys record their owner and restore name and avatar after a sign-out; a passkey skips TOTP because it is already two factors; unregistered and cancelled passkeys refuse cleanly; the login screen learns who signed out last |
+| `avatars.test.js` | 12 | Exactly five avatars, in order, each with a name, role and prop; legacy ids mapped; unknown ids — including `constructor` and `__proto__` — fall back to the default; every SVG self-contained with no external reference, labelled for screen readers, and given unique gradient and clip ids so two copies on one page do not collide |
 | `hazards.test.js` | 23 | All 15 required hazard ids present, unique, every teaching field non-empty and of substantial length, valid severities, valid categories, life-threatening scenarios classified major, difficulty monotonicity across six parameters, the three difficulties genuinely distinct, scoring constants match the brief, rank thresholds |
-| `profile.test.js` | 30 | Sign-in and name sanitisation, persistence round-trip, recovery from a corrupt save, all progression gates, best-score-never-regresses, stat accumulation, history cap and ordering, each achievement condition and its boundary, no duplicate unlocks, completion percentage, reset preserving identity |
+| `profile.test.js` | 38 | Sign-in and name sanitisation, default and legacy avatar migration (`male`→David, `female`→Maria), the remembered identity after sign-out and through a reset, persistence round-trip, recovery from a corrupt save, every gate open by default, every gate still enforced when a site switches it on, best-score-never-regresses, stat accumulation, history cap and ordering, each achievement condition and its boundary, no duplicate unlocks, completion percentage, reset preserving identity |
 
 ### A failure that was found and fixed
 
@@ -191,3 +193,14 @@ Manual pass:
 6. Flag something safe (a coned spill) → confirm it is wrong and explains why
 7. Finish or wait out the clock → confirm the results breakdown
 8. Progress screen → confirm scores, achievements and history
+
+
+### Two bugs the new tests caught before they shipped
+
+- **`normaliseAvatar('constructor')` returned `'constructor'`.** A plain
+  `AVATARS[id]` lookup finds `Object.prototype.constructor`, so an unknown id
+  could slip through as a "valid" avatar. Fixed with own-property checks.
+- **`lockReason()` still said "Score 30+ on Simple to unlock"** with the gate
+  switched off, because it never checked the flag that `isUnlocked()` checks.
+  Not visible in the UI today — the message only shows when locked — but it
+  would have surfaced the moment a site turned one gate on and another off.

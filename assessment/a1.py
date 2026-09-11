@@ -24,8 +24,8 @@ FIG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "_figures")
 # ══════════════════════════════════════════════════════════════════════
 # (id, requirement, MoSCoW, source, state)
 FUNCTIONAL = [
-    ("FR-01", "A trainee can sign in with a display name and an avatar, with no account "
-              "and no password.", "Must", "Client brief", "Built"),
+    ("FR-01", "A trainee can sign in with a display name and one of five avatars, with no "
+              "account and no password.", "Must", "Client brief", "Built"),
     ("FR-02", "A trainee can sign in with a passkey (WebAuthn) when the browser and device "
               "support one, including a phone or a security key.", "Should", "Team", "Built"),
     ("FR-03", "A trainee can sign in with Google or Facebook once a client ID is configured, "
@@ -39,19 +39,21 @@ FUNCTIONAL = [
               "between sessions on the same browser.", "Must", "Client brief", "Built"),
     ("FR-07", "Resetting progress clears scores and history but preserves enrolled "
               "passkeys and 2FA.", "Should", "Heuristic review", "Built"),
-    ("FR-08", "A trainee can sign out, returning to the login screen.", "Must", "Team", "Built"),
+    ("FR-08", "A trainee can sign out; the login screen then welcomes them back with their "
+              "name and avatar pre-filled, and a passkey restores the same person.",
+     "Must", "Defect DEF-17", "Built"),
 
     ("FR-09", "The system offers two modes: Training (guided) and Test (assessed).",
      "Must", "Client brief", "Built"),
     ("FR-10", "The system offers three distinct warehouse environments.",
      "Must", "Client brief", "Built"),
     ("FR-11", "Test mode offers three difficulty levels — Simple, Mid and Hard — which "
-              "change the clock, the decoy count, the lighting, the guidance and the "
-              "aim tolerance, not merely a label.", "Must", "Client brief", "Built"),
-    ("FR-12", "Training mode runs without a countdown so a trainee can explore at their "
-              "own pace.", "Must", "Client brief", "Built"),
-    ("FR-13", "Test mode runs a countdown budget of the difficulty's seconds-per-hazard "
-              "multiplied by the number of hazards in the round.", "Must", "Client brief", "Built"),
+              "change the fast-bonus threshold, the decoy count, the lighting, the guidance "
+              "and the aim tolerance, not merely a label.", "Must", "Client brief", "Built"),
+    ("FR-12", "Training mode has no clock at all, and is optional: every Test environment "
+              "and difficulty is open without it.", "Must", "Client feedback", "Built"),
+    ("FR-13", "Test mode is one fixed five-minute round on every difficulty, counting down "
+              "in the HUD and warning at one minute and thirty seconds.", "Must", "Client feedback", "Built"),
 
     ("FR-14", "The trainee moves in first person — walk, run and crouch — and is stopped "
               "by racking, walls, stock and equipment.", "Must", "Client brief", "Built"),
@@ -71,7 +73,7 @@ FUNCTIONAL = [
     ("FR-21", "On Mid and Hard, hazards animate: forklifts patrol and unstable cartons "
               "fall and reset.", "Should", "Client brief", "Built"),
     ("FR-22", "The round pauses on Esc, on P, and automatically when the browser tab is "
-              "hidden, so a reaction clock never runs unattended.",
+              "hidden, so a test clock never runs unattended.",
      "Must", "Heuristic review", "Built"),
 
     ("FR-23", "Scoring follows the published table: major +15 found in time / +7 late; "
@@ -80,8 +82,8 @@ FUNCTIONAL = [
     ("FR-24", "Three correct finds in a row activates a combo, adding +3 to every "
               "subsequent find until it is broken.", "Must", "Client brief", "Built"),
     ("FR-25", "The results screen names every hazard in the round — found and missed — "
-              "with its severity, its location on the floor and the keywords a safety "
-              "officer would use.", "Must", "Client brief", "Built"),
+              "with its severity and the control. After training it also gives each "
+              "hazard's location; after a test it deliberately does not.", "Must", "Client brief", "Built"),
     ("FR-26", "The round awards a rank: 50 or more Safety Champion, 30–49 Getting There, "
               "below 30 Needs Practice.", "Must", "Client brief", "Built"),
     ("FR-27", "Each completed round is written to the profile's session history with "
@@ -105,6 +107,14 @@ FUNCTIONAL = [
      "Should", "Client brief", "Built"),
     ("FR-35", "Session results can be exported for record-keeping outside the browser.",
      "Won't (this release)", "Client brief", "Not built — needs a backend, see §7.3"),
+    ("FR-36", "In training, a guide leads to the nearest unfound hazard: an arrow and a "
+              "distance in the HUD, the location in words from the first frame, and a "
+              "column of light over the spot.", "Must", "Client feedback", "Built"),
+    ("FR-37", "The trainee's chosen avatar is visible to them throughout: the login "
+              "preview, the menu, the profile, the results and a player card in the HUD.",
+     "Should", "Client feedback", "Built"),
+    ("FR-38", "An unconfigured social provider can be set up from the login screen itself, "
+              "without signing in first.", "Should", "Defect DEF-18", "Built"),
 ]
 
 NON_FUNCTIONAL = [
@@ -118,7 +128,7 @@ NON_FUNCTIONAL = [
     ("NFR-04", "Portability", "The offline build issues no network request after load.",
      "Browser network panel, count of requests", "Met — zero requests"),
     ("NFR-05", "Portability", "The offline build is a single file of 1 MB or less.",
-     "File size on disk", "Met — 716 kB"),
+     "File size on disk", "Met — 738 kB"),
     ("NFR-06", "Legal", "No third-party art, model, texture or audio asset is used.",
      "Dependency and asset audit (docs/ASSET_CREDITS.md)",
      "Met — geometry, textures and audio are generated at run time"),
@@ -146,7 +156,7 @@ NON_FUNCTIONAL = [
      "Met — 70 vector tests pass; see the limits stated in §7.2"),
     ("NFR-14", "Maintainability", "Core logic is covered by automated tests that run in "
                "CI on every push.", "Test count and CI status",
-     "Met — 165 tests across 6 suites, all passing"),
+     "Met — 204 tests across 8 suites, all passing"),
     ("NFR-15", "Deployability", "Hosting requires no server, no database and no paid "
                "service.", "Deployment procedure", "Met — static files on GitHub Pages"),
     ("NFR-16", "Content", "Every hazard maps to a recognised warehouse risk category and "
@@ -296,7 +306,7 @@ USE_CASES = [
             "The trainee selects an environment and a difficulty.",
             "The system builds the environment, merges its static geometry, places 15 "
             "hazards and the difficulty's decoys, and spawns the trainee.",
-            "The system starts the countdown and the per-hazard reaction clock.",
+            "The system starts the five-minute countdown.",
             "The trainee walks the floor and flags hazards (see UC-03).",
             "The system ends the round when all 15 are found or the budget expires.",
             "The system computes the total, the combo bonus, the accuracy and the rank.",
@@ -393,11 +403,16 @@ STATES = [
 
 TRACE = [
     ("FR-13, FR-23, FR-24", "gameplay/Timer.js, gameplay/ScoreManager.js",
-     "tests/timer.test.js (15), tests/score.test.js (27)"),
+     "tests/timer.test.js (20), tests/score.test.js (27)"),
     ("FR-17, FR-18, FR-19, FR-20", "hazards/HazardSystem.js, environment/Scenarios.js",
      "tests/hazards.test.js (23) + the 24-vantage-point reachability harness"),
-    ("FR-06, FR-07, FR-27, FR-28, FR-30", "services/Profile.js",
-     "tests/profile.test.js (30)"),
+    ("FR-06, FR-07, FR-12, FR-27, FR-28, FR-30", "services/Profile.js",
+     "tests/profile.test.js (38)"),
+    ("FR-01, FR-02, FR-08", "services/auth/AuthManager.js",
+     "tests/auth.test.js (14) — identity-then-commit, passkey restores its owner"),
+    ("FR-37", "data/avatars.js, ui/avatars.js", "tests/avatars.test.js (12)"),
+    ("FR-36", "gameplay/GameManager.js, hazards/HazardSystem.js",
+     "Manual — bearing checked at 0°, ±90° and 180°; guide advances after a find"),
     ("FR-05", "services/auth/totp.js, base32.js",
      "tests/totp.test.js (53) — RFC 4226, 6238 and 4648 vectors"),
     ("FR-05 (enrolment QR)", "services/auth/qr.js",
@@ -478,7 +493,8 @@ def build(out_dir):
                        ("2.3  Movement and hazard reporting", (13, 22)),
                        ("2.4  Scoring and feedback", (22, 28)),
                        ("2.5  Settings and accessibility", (28, 31)),
-                       ("2.6  Delivery and resilience", (31, 35))):
+                       ("2.6  Delivery and resilience", (31, 35)),
+                       ("2.7  Added after client feedback", (35, 38))):
         h2(doc, title)
         table(doc, ["ID", "Requirement", "Priority", "Source", "State"],
               [[r[0], r[1], r[2], r[3], r[4]] for r in FUNCTIONAL[rng[0]:rng[1]]],
@@ -645,7 +661,7 @@ def build(out_dir):
     para(doc,
          "Five layers with a strict rule: no layer imports the layer above it. Gameplay "
          "publishes events and the UI subscribes, which is why the game logic can be unit "
-         "tested with no DOM at all — the 165 tests in §8 need no browser.")
+         "tested with no DOM at all — the 204 tests in §8 need no browser.")
     figure(doc, os.path.join(FIG, "fig_architecture.png"), 16.0,
            "Figure 6 — Layered module architecture.")
 
@@ -693,12 +709,14 @@ def build(out_dir):
     h2(doc, "8.1  Verification summary")
     table(doc, ["Suite", "Tests", "Covers"], [
         ["tests/score.test.js", "27", "Scoring table, combo, accuracy, rank boundaries"],
-        ["tests/timer.test.js", "15", "Budget, per-hazard clock, warning states, expiry"],
+        ["tests/timer.test.js", "20", "Five-minute round, per-hazard clock, warning states, expiry"],
         ["tests/hazards.test.js", "23", "Registration, severity, targeting, decoys"],
-        ["tests/profile.test.js", "30", "Persistence, migration, history, reset semantics"],
+        ["tests/profile.test.js", "38", "Persistence, avatar migration, open-by-default gates, history, reset"],
+        ["tests/auth.test.js", "14", "Sign-in commits only after 2FA; passkeys restore their owner"],
+        ["tests/avatars.test.js", "12", "Five avatars, legacy mapping, self-contained SVG"],
         ["tests/totp.test.js", "53", "RFC 4226, RFC 6238 and RFC 4648 test vectors"],
         ["tests/qr.test.js", "17", "QR encoding, round-tripped through an independent decoder"],
-        ["**Total**", "**165**", "All passing; run in CI on every push to main"],
+        ["**Total**", "**204**", "All passing; run in CI on every push to main"],
     ], widths=[4.6, 2.0, 9.4], size=9, align_center=(1,))
 
     para(doc,

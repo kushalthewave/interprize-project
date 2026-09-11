@@ -36,12 +36,48 @@ The in-game UI repeats these limits where a user would otherwise assume more.
 
 ---
 
+## How a sign-in actually happens
+
+Every route produces an **identity** first and **commits** it second:
+
+```
+passkey / Google / Facebook / GitHub / name
+            │
+            ▼
+      identity { name, avatar, provider, method }
+            │
+   2FA enrolled and not a passkey? ── yes ──► 6-digit code ──✗──► back to login,
+            │ no                                  │ ✓            profile untouched
+            ▼                                     ▼
+                     commit → profile → menu
+```
+
+The gap between the two is where the second factor sits. This fixed a real
+defect: the name used to be written *before* the code was checked, so somebody
+who typed their own name and then failed or abandoned the 2FA prompt had already
+renamed the owner's profile.
+
+**A passkey skips the TOTP prompt.** It already requires the device *and* a
+fingerprint, face or PIN — two factors on its own. Asking for a code on top
+added friction and no protection.
+
+**Signing out remembers who you were.** The login screen then says *"Welcome
+back, Kushal"*, pre-fills the name and avatar, and labels the passkey button
+*"Sign in as Kushal with your passkey"*.
+
+---
+
 ## 1. Passkeys (WebAuthn)
 
 Sign in with Windows Hello, Touch ID, Face ID or a security key. Nothing typed.
 
 **Where:** the top button on the login screen; enrol from **Settings →
 Security**.
+
+**Whose passkey it is.** Each passkey records its owner's name and avatar when it
+is enrolled. Signing in with it restores that person. Previously a passkey
+sign-in verified the credential and then left the profile nameless and signed
+out — the menu said "Trainee" and a reload returned to the login screen.
 
 **How it works here.** The full WebAuthn ceremony runs: a random challenge, a
 credential created inside the platform authenticator (TPM / Secure Enclave), and
@@ -76,9 +112,10 @@ unavailable and says why. Use the online version for passkeys.
 
 ### Google — works today, no backend
 
-> **You do not need to edit `.env` or redeploy.** Open **Settings → Security →
-> Social sign-in** in the running game, paste the Client ID, press *Save &
-> enable*, and the button works immediately. The panel also shows the exact
+> **You do not need to edit `.env` or redeploy — or even sign in first.** Press
+> **Set up** on the Google button on the login screen, paste the Client ID, press
+> *Save & enable*, and the button works immediately. (The same form is also in
+> **Settings → Security → Social sign-in**.) The panel also shows the exact
 > origin URL to paste into Google's console. `.env` still works and is the
 > better choice for a shared deployment; the in-app route is per-browser.
 
@@ -219,6 +256,13 @@ Tests: `tests/totp.test.js` (53), `tests/qr.test.js` (17).
 | Check | Result |
 |---|---|
 | Login screen offers all four routes with honest availability | ✅ |
+| Name sign-in → menu shows name and chosen avatar | ✅ |
+| Sign-out → "Welcome back", name and avatar pre-filled | ✅ |
+| Wrong 2FA code after typing a different name leaves the owner's profile untouched | ✅ |
+| Passkey sign-in restores the owner's name and avatar, survives reload (mocked authenticator) | ✅ |
+| Passkey sign-in does not ask for a TOTP code | ✅ |
+| Returning user's 2FA screen offers "Use my passkey instead" | ✅ |
+| Unconfigured provider opens its setup form on the login screen; saving enables the button | ✅ |
 | Unconfigured providers disabled with the reason shown | ✅ |
 | TOTP enrolment: QR renders, secret shown for manual entry | ✅ |
 | Wrong enrolment code rejected | ✅ |

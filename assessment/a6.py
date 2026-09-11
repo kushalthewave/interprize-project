@@ -351,7 +351,7 @@ def website(out_dir):
          "it. Nothing we can write beats ninety seconds of playing it."],
         ["Proof band immediately after the hero",
          "Five real numbers — 15 hazards, 3 environments, 60 fps, 0 third-party assets, "
-         "716 kB offline. Credibility before persuasion, and every figure is measured."],
+         "738 kB offline. Credibility before persuasion, and every figure is measured."],
         ["All fifteen hazards listed in full",
          "A visitor evaluating training wants to know the scope. A vague “many hazards” "
          "reads as though there are four."],

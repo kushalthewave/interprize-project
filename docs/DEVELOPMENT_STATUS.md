@@ -1,6 +1,6 @@
 # Development Status
 
-**Last updated:** 2026-09-07
+**Last updated:** 2026-09-11
 **Overall:** ✅ **COMPLETE and working** for the specified scope, with the
 limitations below stated honestly.
 
@@ -11,11 +11,55 @@ limitations below stated honestly.
 | Check | Status |
 |---|---|
 | Build (`npm run build`) | ✅ passing, 2.6 s |
-| Tests (`npm test`) | ✅ **94 / 94 passing** |
-| Syntax gate | ✅ 34 files, 0 errors |
+| Tests (`npm test`) | ✅ **204 / 204 passing** (8 suites) |
+| Syntax gate | ✅ 47 files, 0 errors |
 | App boots | ✅ no console errors |
 | Playthrough, all 3 environments | ✅ every hazard reachable |
 | Performance | ✅ 60 fps, 1,520 draw calls |
+
+---
+
+## Latest changes (2026-09-11)
+
+### Sign-in — every route re-tested and fixed
+- **Passkey sign-in did not sign you in.** It checked the passkey, then left the
+  profile nameless — the menu said "Trainee" and a reload went back to login.
+  Passkeys now record whose they are and restore that name and avatar.
+- **A failed 2FA code renamed the owner's profile.** The name was written before
+  the code was checked. Sign-in is now *identity first, commit after the code*.
+- **Social buttons were dead ends.** Unconfigured Google / Facebook / GitHub
+  buttons were greyed out, and the only place to configure them was behind a
+  sign-in. They now open their setup form on the login screen.
+- The login screen says **"Welcome back, Kushal"** and pre-fills the name and
+  avatar after a sign-out.
+- A passkey no longer triggers a TOTP prompt (it is already two factors); the
+  2FA screen for a returning user offers **"Use my passkey instead"**.
+- Removed a dead second login screen in `Screens.js` that called actions which
+  no longer existed.
+
+### Train Mode — no clock, a guide to every hazard
+- The clock is gone from Train Mode entirely.
+- The first hazard and its location are named from the first frame.
+- A HUD compass (arrow + distance), the location in words, and a column of light
+  over the spot lead to the **nearest** unfound hazard.
+
+### Test Mode — five minutes, no locations, never locked
+- One fixed **5:00** round on every difficulty; amber at 1:00, red at 0:30.
+- No guide and no locations, in the round or on the results screen.
+- Test Mode is open from the start: training is optional.
+
+### Avatars — five team leads, and you can see yourself
+- Sarah, David, Maria, James and Aisha, drawn as inline SVG.
+- Your avatar appears in the login preview, the menu, the profile, the results
+  screen and a player card in the HUD for the whole round.
+
+### Verification
+- Every sign-in route driven in the running app, including a mocked
+  authenticator for the passkey path.
+- Train guide bearing checked at 0°, ±90° and 180°; guide moves to the
+  next-nearest hazard after a find.
+- Test clock run to expiry: ends at exactly 5:00 with no locations shown.
+- 204 / 204 tests; production and single-file builds pass.
 
 ---
 
