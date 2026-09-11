@@ -76,9 +76,10 @@ export function initOffline({ onOnlineChange } = {}) {
   offline.isFromDisk = location.protocol === 'file:';
   offline.isFileBuild = offline.isFromDisk ||
     document.querySelector('meta[name="bth-build"]')?.getAttribute('content') === 'offline-single-file';
-  offline.isInstalled = matchMedia?.('(display-mode: standalone)').matches ||
-    matchMedia?.('(display-mode: fullscreen)').matches ||
-    navigator.standalone === true;
+  // Installed means "not an ordinary browser tab": standalone, fullscreen,
+  // minimal-ui and window-controls-overlay all count, and so does iOS's flag.
+  const inTab = matchMedia?.('(display-mode: browser)').matches;
+  offline.isInstalled = inTab === false || navigator.standalone === true;
 
   window.addEventListener('beforeinstallprompt', (e) => {
     // Keep the browser's prompt so the menu can show it when the player asks.

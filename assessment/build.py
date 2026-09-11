@@ -78,7 +78,7 @@ STATUS = [
     ("A7", "Presentation with notes", "Complete",
      "18 slides with speaker notes; every note opens with a cumulative time marker."),
     ("A7", "Prototype with instructions", "Complete",
-     "The offline single-file build, the full source, and operating instructions."),
+     "The offline single-file game and its operating instructions."),
 ]
 
 
@@ -89,7 +89,7 @@ def contents_doc(out_dir):
           "and what still needs your team's own information.",
           extra=[("Live product", CFG.LIVE_URL),
                  ("Company website", CFG.LIVE_URL.rstrip('/') + '/company/'),
-                 ("Source", CFG.REPO_URL)])
+                 ("Built by", CFG.BUILT_BY)])
 
     h1(doc, "1  How this pack is organised")
     para(doc,
@@ -124,7 +124,6 @@ def contents_doc(out_dir):
         ["**Offline build**", "`A7/Prototype/beat-the-hazard.html` — one file, 828 kB, "
                               "no network needed"],
         ["**Company website**", CFG.LIVE_URL.rstrip("/") + "/company/"],
-        ["**Source and history**", CFG.REPO_URL],
     ], widths=[4.0, 12.0], size=9.6, zebra=None)
 
     h1(doc, "3  State of each deliverable")

@@ -30,7 +30,7 @@ function brand(sub = 'Warehouse Forklift & Pedestrian Safety Training') {
   return el('div.brand', {}, [
     el('h1', { text: 'BEAT THE HAZARD' }),
     el('p', { text: sub }),
-    el('div.flagline', {}, ['🇳🇵', 'Himalaya Logistics · Birgunj Distribution Centre']),
+    el('div.flagline', {}, [el('span.fl-team', { text: 'The Code Crafters' }), el('span.fl-dot', { text: '·' }), el('span', { text: 'Built by Kushal Neupane' })]),
   ]);
 }
 

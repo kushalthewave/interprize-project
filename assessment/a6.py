@@ -75,10 +75,6 @@ CHANNELS = [
      "One static page on GitHub Pages. No CMS, no host, no domain fee.",
      "The destination for every link we publish.",
      "Repository traffic; direct questions referencing the page"),
-    ("Public source repository", "£0",
-     "The whole build, with honest documentation of what is and is not tested.",
-     "Credibility with technical and academic audiences; also our portfolio.",
-     "Stars, forks, and referrals from people who read it"),
     ("LinkedIn — five personal networks", "£0",
      "A short post per member at each milestone, with the demo link and one screenshot. "
      "Written as a build log, not as an advert.",
@@ -451,16 +447,17 @@ def identity(out_dir):
 
     h2(doc, "1.1  Why this name")
     para(doc,
-         "*Himal* is the Nepali word for a snow mountain. It was chosen for three "
-         "reasons: it is short and pronounceable in English without being an invented "
-         "word; it carries the team's own background without becoming decoration; and it "
-         "says something true about the work — the product is about the thing in front of "
-         "you that you have stopped noticing. *Interactive* is deliberately plain. It "
-         "says what the company makes.")
+         "*The Code Crafters* says what the team does and how it does it. *Code* is the "
+         "material: everything in the product — the warehouse, the textures, the sound, "
+         "the sign-in — is written rather than bought in. *Crafters* is the attitude: "
+         "work made carefully, by hand, and checked before it is called finished. It is "
+         "plain English, easy to say to a client, and it cannot be mistaken for anything "
+         "else.")
     para(doc,
-         "The Nepali identity runs through the product in the same restrained way: "
-         "bilingual signage in the warehouse, a flag on the wall, local place names on "
-         "the company board. It is present because it is ours, not as a theme.")
+         f"The product is built by {CFG.BUILT_BY}. The team's Nepali background runs "
+         "through the product in a restrained way — bilingual signage in the warehouse "
+         "and local place names on the company board — present because it is ours, not "
+         "as a theme.")
 
     h1(doc, "2  Mission, vision and values")
     h2(doc, "2.1  Mission")
@@ -554,7 +551,6 @@ def identity(out_dir):
         ["Company website", f"Live — {SITE_URL}"],
         ["Presentation deck", "Built — palette imported from the same source"],
         ["Assessment documents", "This document set"],
-        ["Repository README", "Applied"],
         ["Favicon and avatars", "The mark alone"],
     ], widths=[6.0, 10.0], size=9.4)
 
