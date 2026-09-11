@@ -50,6 +50,8 @@ export function forkliftOnWalkway(world, { at = [0, 0, 0], heading = 0, laneZ = 
   });
 
   // moving version: the truck creeps down the lane, the pedestrian walks back
+  let laneSpeed = 0.08;
+  world.sound({ id: 'forklift-walkway', object: truck, speed: () => laneSpeed });
   if (patrol && world.opts.movingHazards) {
     const t0 = truck.position.z;
     const p0 = ped.position.z;
@@ -57,6 +59,7 @@ export function forkliftOnWalkway(world, { at = [0, 0, 0], heading = 0, laneZ = 
       const s = Math.sin(t * 0.32);
       truck.position.z = t0 + s * 3.4;
       const speed = Math.abs(Math.cos(t * 0.32)) * 0.55;
+      laneSpeed = speed;
       for (const w of truck.userData.wheels) w.rotation.x -= dt * 6 * (speed + 0.2);
       ped.position.z = p0 - Math.sin(t * 0.32 + 0.9) * 2.6;
       ped.rotation.y = Math.PI + (Math.cos(t * 0.32 + 0.9) > 0 ? 0 : Math.PI);
@@ -121,6 +124,14 @@ export function reversingForklift(world, { at = [0, 0, 0], heading = 0 }) {
   world.collider(at[0], at[2], 0.7, 1.4, 2.2);
 
   const z0 = truck.position.z;
+  // The reversing alarm sounds whenever the reversing lights are on — it is
+  // the cue a pedestrian is supposed to react to.
+  world.sound({
+    id: 'forklift-reversing',
+    object: truck,
+    speed: () => (world.opts.movingHazards ? 0.3 : 0.1),
+    reversing: () => true,
+  });
   world.animate((dt, t) => {
     const reversing = world.opts.movingHazards;
     if (reversing) {
@@ -216,7 +227,7 @@ export function fallingBoxes(world, { rack, bay = 1, level = 2, side = 0 }) {
         } else {
           phase = 2;
           fallT = 0;
-          world.onBoxImpact?.();
+          world.onBoxImpact?.(falling.getWorldPosition(new THREE.Vector3()));
         }
       }
     } else if (phase === 2) {
@@ -681,9 +692,12 @@ export function blindCorner(world, { at = [0, 0, 0], heading = 0, cornerRack = n
 
   world.collider(at[0] - 1.6, at[2] - 1.4, 1.0, 0.6, 1.8);
 
+  let cornerSpeed = 0.08;
+  world.sound({ id: 'forklift-blind-corner', object: truck, speed: () => cornerSpeed });
   world.animate((dt, t) => {
     if (world.opts.movingHazards) {
       truck.position.x = -4.6 + Math.sin(t * 0.4) * 1.7;
+      cornerSpeed = Math.abs(Math.cos(t * 0.4)) * 0.5;
       for (const w of truck.userData.wheels) w.rotation.x -= dt * 3;
       ped.position.z = 3.4 - (Math.sin(t * 0.4 + 1.2) * 0.5 + 0.5) * 1.8;
       animateWorker(ped, t, 0.7);

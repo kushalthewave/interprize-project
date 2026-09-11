@@ -143,6 +143,22 @@ export class World {
     return this.hazards.registerDecoy({ center: c, size: s, reason });
   }
 
+  /**
+   * Register a continuous sound source — a forklift engine, a reversing
+   * alarm. GameManager drives each one every frame from the listener's
+   * distance, so the alarm really does get louder as you walk towards it.
+   *
+   * @param {{id:string, object:THREE.Object3D, speed?:()=>number, reversing?:()=>boolean}} src
+   */
+  sound(src) {
+    (this.soundSources ??= []).push({
+      speed: () => 0,
+      reversing: () => false,
+      ...src,
+    });
+    return src;
+  }
+
   /** Register a per-frame updater (patrols, falling boxes, flashing beacons). */
   animate(fn) {
     this.updaters.push(fn);

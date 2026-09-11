@@ -115,7 +115,12 @@ export class GameManager {
       : { ...diff };
 
     this.world = new World(this.engine.scene, this.hazards, opts);
-    this.world.onBoxImpact = () => this.audio?.boxImpact();
+    // A carton landing: louder and a bigger jolt the closer you are.
+    this.world.onBoxImpact = (pos) => {
+      const d = pos ? pos.distanceTo(this.engine.camera.position) : 12;
+      this.audio?.boxImpact(d);
+      this.player.addShake?.(Math.max(0, 1 - d / 11));
+    };
 
     bus.emit(EV.LOADING, { active: true, label: 'Building the warehouse…', progress: 0.25 });
     this._loadStep = 'world-created';
@@ -140,6 +145,8 @@ export class GameManager {
 
     const spawn = this.world.markers.spawn ?? env.meta.spawn;
     this.player.teleport(spawn.x, spawn.z, spawn.yaw ?? 0);
+
+    this.onWorldLoaded?.(this.world);
 
     bus.emit(EV.LOADING, { active: true, label: 'Ready.', progress: 1 });
     this._loadStep = 'spawned';
@@ -378,6 +385,7 @@ export class GameManager {
   update(dt, t) {
     this.world?.update(dt, t);
     this.hazards.update(dt, t);
+    this._updateSounds(dt);
 
     if (this.state !== STATE.PLAYING || !this.timer) return;
 
@@ -437,6 +445,72 @@ export class GameManager {
     });
 
     if (expired) this.end('timeout');
+  }
+
+  /**
+   * Drive every forklift engine and reversing alarm from the listener's
+   * distance. Silent whenever a round is not actually being played.
+   */
+  _updateSounds(dt) {
+    const sources = this.world?.soundSources;
+    if (!sources?.length || !this.audio?.ready) return;
+    const live = this.state === STATE.PLAYING;
+    const cam = this.engine.camera.position;
+    for (const src of sources) {
+      src.emitter ??= this.audio.createForkliftEmitter(src.id);
+      if (!src.emitter) continue;
+      if (!live) { src.emitter.update(1e3, 0, false, dt); continue; }
+      src.object.getWorldPosition(_tmp);
+      src.emitter.update(_tmp.distanceTo(cam), src.speed(), src.reversing(), dt);
+    }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Checkpoints (Train Mode only)
+   * ---------------------------------------------------------------- */
+
+  /**
+   * A snapshot of a training round, so closing the tab does not lose it.
+   * Tests are never checkpointed: resuming one would let a trainee stop the
+   * five-minute clock by closing the page.
+   */
+  snapshot() {
+    if (this.mode !== MODE.TRAIN) return null;
+    if (this.state !== STATE.PLAYING && this.state !== STATE.PAUSED) return null;
+    const found = this.hazards.instances.filter((i) => i.found);
+    return {
+      v: 1,
+      environment: this.environmentId,
+      mode: this.mode,
+      found: found.map((i) => ({ id: i.id, reactionTime: i.reactionTime ?? 0 })),
+      total: this.hazards.instances.length,
+      score: this.score.toJSON(),
+      player: {
+        x: this.player.position.x, z: this.player.position.z,
+        yaw: this.player.yaw, pitch: this.player.pitch,
+      },
+      savedAt: Date.now(),
+    };
+  }
+
+  /** Put a loaded-and-started training round back where the snapshot was. */
+  restore(snap) {
+    if (!snap || snap.mode !== MODE.TRAIN || snap.environment !== this.environmentId) return false;
+    for (const f of snap.found ?? []) {
+      const inst = this.hazards.byId(f.id);
+      if (!inst) continue;
+      inst.found = true;
+      inst.foundAt = snap.savedAt;
+      inst.reactionTime = f.reactionTime;
+      if (inst.marker) inst.marker.visible = false;
+    }
+    this.score.restore(snap.score);
+    if (snap.player) {
+      this.player.teleport(snap.player.x, snap.player.z, snap.player.yaw);
+      this.player.pitch = snap.player.pitch ?? 0;
+    }
+    this._advanceTrain(null);
+    return true;
   }
 
   /* ---------------------------------------------------------------- *
@@ -560,6 +634,8 @@ export class GameManager {
  * user switches away mid-load. Racing it against a timeout guarantees the load
  * always completes, and still yields on the real frame boundary when visible.
  */
+const _tmp = new THREE.Vector3();
+
 function frame(timeout = 60) {
   return new Promise((resolve) => {
     let done = false;

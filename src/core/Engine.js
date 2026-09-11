@@ -5,15 +5,23 @@
  */
 import * as THREE from 'three';
 import { RENDER } from '../data/config.js';
+import { shouldRenderFrame } from '../data/settings.js';
 
 export class Engine {
-  /** @param {HTMLCanvasElement} canvas */
-  constructor(canvas) {
+  /**
+   * @param {HTMLCanvasElement} canvas
+   * @param {object} [o]
+   * @param {boolean} [o.antialias] MSAA is a property of the WebGL context and
+   *   cannot be changed after it is created, so it is read from the saved
+   *   setting here and a change to it takes effect on the next start.
+   */
+  constructor(canvas, { antialias = true } = {}) {
     this.canvas = canvas;
+    this.msaa = !!antialias;
 
     this.renderer = new THREE.WebGLRenderer({
       canvas,
-      antialias: true,
+      antialias: this.msaa,
       powerPreference: 'high-performance',
       stencil: false,
     });
@@ -41,6 +49,17 @@ export class Engine {
     this.running = false;
     this.paused = false;
     this._raf = null;
+
+    /** Frames per second limit; 0 = match the display. */
+    this.fpsCap = 0;
+    this._lastFrame = 0;
+    /** When false the resolution is fixed by the player and never auto-lowered. */
+    this.adaptive = true;
+    /** Replaced by Graphics so post-processing can take over the draw. */
+    this.renderFn = null;
+    /** Metres per second the camera moved last frame (drives motion blur). */
+    this.cameraSpeed = 0;
+    this._lastCamPos = new THREE.Vector3();
 
     // rolling FPS estimate for the perf overlay / adaptive quality
     this.fps = 60;
@@ -93,15 +112,20 @@ export class Engine {
     this.camera.aspect = aspect;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h, false);
+    this.onResize?.();
   }
 
   start() {
     if (this.running) return;
     this.running = true;
     this.clock.start();
-    const loop = () => {
+    const loop = (now = performance.now()) => {
       if (!this.running) return;
       this._raf = requestAnimationFrame(loop);
+      // Frame-rate cap: skip this display refresh entirely. The clock is only
+      // read on frames that are drawn, so dt still covers the skipped time.
+      if (!shouldRenderFrame(now, this._lastFrame, this.fpsCap)) return;
+      this._lastFrame = now;
       // Clamp dt so a background tab does not teleport the player.
       const dt = Math.min(this.clock.getDelta(), 0.1);
       const elapsed = this.clock.elapsedTime;
@@ -117,7 +141,12 @@ export class Engine {
           }
         }
       }
-      this.renderer.render(this.scene, this.camera);
+      if (dt > 0) {
+        this.cameraSpeed = this.camera.position.distanceTo(this._lastCamPos) / dt;
+        this._lastCamPos.copy(this.camera.position);
+      }
+      if (this.renderFn) this.renderFn();
+      else this.renderer.render(this.scene, this.camera);
     };
     this._raf = requestAnimationFrame(loop);
   }
@@ -149,18 +178,24 @@ export class Engine {
    * Recovers when headroom returns.
    */
   _adaptiveQuality() {
+    // A resolution the player chose is respected, even if it is slow.
+    if (!this.adaptive) return;
     if (this._adaptiveCooldown > 0) {
       this._adaptiveCooldown--;
       return;
     }
     const cur = this.renderer.getPixelRatio();
     const target = Math.min(window.devicePixelRatio || 1, RENDER.maxPixelRatio);
-    if (this.fps < 40 && cur > 1) {
+    // A frame cap below 40 would otherwise read as "too slow" forever.
+    const floor = this.fpsCap && this.fpsCap < 45 ? this.fpsCap * 0.85 : 40;
+    if (this.fps < floor && cur > 1) {
       this.renderer.setPixelRatio(Math.max(1, cur - 0.25));
       this._adaptiveCooldown = 8;
+      this.onResize?.();
     } else if (this.fps > 58 && cur < target) {
       this.renderer.setPixelRatio(Math.min(target, cur + 0.25));
       this._adaptiveCooldown = 8;
+      this.onResize?.();
     }
   }
 

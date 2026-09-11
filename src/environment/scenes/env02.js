@@ -234,6 +234,7 @@ export function build(world) {
     world.add(t, [x, 0, z], ry);
     world.collider(x, z, 0.8, 1.4, 2.2);
     busy.push(t);
+    world.sound({ id: `idle-${x}-${z}`, object: t, speed: () => 0.05 });
     world.decoy({
       object: t,
       reason: 'This truck is inside the marked vehicle aisle with its beacon on and no pedestrian in its path. Operating correctly.',

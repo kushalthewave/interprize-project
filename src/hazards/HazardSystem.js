@@ -19,6 +19,7 @@
  * return a teaching tip.
  */
 import * as THREE from 'three';
+import { severityHex } from '../data/palette.js';
 import { getHazard } from '../data/hazards.js';
 import { bus, EV } from '../core/EventBus.js';
 import { PLAYER } from '../data/config.js';
@@ -175,8 +176,51 @@ export class HazardSystem {
     }
   }
 
+  /**
+   * How forgiving aiming is. Each difficulty sets a tolerance (1.35 on Simple,
+   * 1.0 on Mid, 0.8 on Hard) and Aim Assist multiplies it.
+   *
+   * This used to be stored and never read: every difficulty aimed exactly the
+   * same. It now scales each hazard's invisible target volume, so a bigger
+   * tolerance really is a bigger target. Clamped so Hard plus no assist can
+   * never shrink a target below 85% — the reachability harness proved every
+   * hazard can be flagged at full size, and a target that is too small
+   * behind racking stops being "precise" and starts being unfair.
+   */
   setFlagRadius(r) {
     this.flagRadius = r;
+    this._applyProxyScale();
+  }
+
+  setAimAssist(multiplier = 1) {
+    this.aimAssist = multiplier;
+    this._applyProxyScale();
+  }
+
+  get effectiveTolerance() {
+    return Math.max(0.85, Math.min(2.2, (this.flagRadius ?? 1) * (this.aimAssist ?? 1)));
+  }
+
+  _applyProxyScale() {
+    const k = this.effectiveTolerance;
+    for (const p of this.proxies) {
+      p.scale.setScalar(k);
+      // Mesh.raycast reads matrixWorld, not scale — see registration.
+      p.updateMatrixWorld(true);
+    }
+  }
+
+  /** Recolour markers and the guide beam after the colour-blind mode changes. */
+  refreshColours() {
+    for (const i of this.instances) {
+      const c = severityHex(i.severity);
+      i.marker?.traverse((o) => o.material?.color?.setHex?.(c));
+    }
+    if (this.guideTarget && this.beacon) {
+      const c = severityHex(this.guideTarget.severity);
+      this.beacon.userData.beam.material.color.setHex(c);
+      this.beacon.userData.base.material.color.setHex(c);
+    }
   }
 
   /** Total hazards, and how many have been found. */
@@ -200,7 +244,7 @@ export class HazardSystem {
     g.position.copy(inst.center);
     g.position.y = inst.center.y + inst.size.y / 2 + 0.5;
 
-    const color = inst.severity === 'major' ? 0xff4d4d : 0xffc14d;
+    const color = severityHex(inst.severity);
 
     // A ring + a pulsing halo reads clearly at distance without hiding the object.
     const ring = new THREE.Mesh(
@@ -245,7 +289,7 @@ export class HazardSystem {
       return;
     }
     if (!this.beacon) this.beacon = this._makeBeacon();
-    const colour = inst.severity === 'major' ? 0xff4d4d : 0xffc14d;
+    const colour = severityHex(inst.severity);
     this.beacon.userData.beam.material.color.setHex(colour);
     this.beacon.userData.base.material.color.setHex(colour);
     this.beacon.position.set(inst.center.x, 0, inst.center.z);

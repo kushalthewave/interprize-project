@@ -262,7 +262,7 @@ export class HUD {
       // Where to go, in words, from the very first frame.
       d.next?.where && !complete &&
         el('div.tp-where', {}, [el('span.tp-pin', { text: '📍' }), d.next.where]),
-      el('p', {
+      el('p.tp-hint', {
         text: complete
           ? 'You found every hazard in this warehouse. When you are ready, try Test Mode — five minutes, no guide and no locations.'
           : d.next
@@ -301,6 +301,24 @@ export class HUD {
     );
   }
 
+  /**
+   * Crosshair style, size and colour, and whether hints are shown. Applied
+   * as data attributes and CSS variables so the reticle stays pure CSS.
+   */
+  applySettings({ crosshairStyle = 'crossdot', crosshairSize = 1, crosshairColour = 'white', showHints = true, hudScale = 1 } = {}) {
+    const colours = {
+      white: 'rgba(255, 255, 255, 0.88)', amber: '#f2b90c', green: '#4ade80',
+      cyan: '#22d3ee', magenta: '#e879f9',
+    };
+    this.el.dataset.xh = crosshairStyle;
+    this.el.style.setProperty('--xh-size', String(crosshairSize));
+    this.el.style.setProperty('--xh-colour', colours[crosshairColour] ?? colours.white);
+    this.el.style.setProperty('--hud-scale', String(hudScale));
+    this.showHints = showHints;
+    this.hint.hidden = !showHints || this._touchMode;
+    this.trainPanel.classList.toggle('no-hints', !showHints);
+  }
+
   show() { this.el.hidden = false; }
   hide() {
     this.el.hidden = true;
@@ -310,7 +328,8 @@ export class HUD {
   }
 
   setTouchMode(on) {
-    this.hint.style.display = on ? 'none' : '';
+    this._touchMode = on;
+    this.hint.hidden = on || this.showHints === false;
   }
 
   dispose() {

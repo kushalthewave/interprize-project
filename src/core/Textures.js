@@ -13,6 +13,16 @@ import * as THREE from 'three';
 
 const cache = new Map();
 
+/**
+ * Anisotropic filtering for textures created from now on. The Texture
+ * Quality setting changes this, and Graphics also updates the textures that
+ * already exist in the scene.
+ */
+let defaultAniso = 8;
+export function setDefaultAnisotropy(n) {
+  defaultAniso = Math.max(1, n | 0);
+}
+
 function makeCanvas(size = 512, h = size) {
   const c = document.createElement('canvas');
   c.width = size;
@@ -20,7 +30,7 @@ function makeCanvas(size = 512, h = size) {
   return c;
 }
 
-function toTexture(canvas, { repeat = [1, 1], srgb = true, aniso = 8 } = {}) {
+function toTexture(canvas, { repeat = [1, 1], srgb = true, aniso = defaultAniso } = {}) {
   const tex = new THREE.CanvasTexture(canvas);
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
   tex.repeat.set(repeat[0], repeat[1]);
@@ -129,7 +139,7 @@ export function concreteFloor() {
     ctx.stroke();
 
     noiseOverlay(ctx, S, S, { seed: 3, amount: 0.05, scale: 2 });
-    return toTexture(c, { repeat: [1, 1], aniso: 16 });
+    return toTexture(c, { repeat: [1, 1], aniso: Math.max(defaultAniso, 16) });
   });
 }
 

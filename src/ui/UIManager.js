@@ -8,6 +8,7 @@ import { bus, EV } from '../core/EventBus.js';
 import { HUD } from './HUD.js';
 import * as Screens from './Screens.js';
 import * as Auth from './AuthScreens.js';
+import * as SettingsScreen from './SettingsScreen.js';
 import { ACHIEVEMENTS } from '../data/config.js';
 
 const LOADING_TIPS = [
@@ -75,6 +76,7 @@ export class UIManager {
         el('h2', { text: 'Paused' }),
         el('button.btn.btn-primary.btn-block', { text: 'Resume', on: { click: () => this.ctx.actions.resume() } }),
         el('button.btn.btn-block', { text: 'Restart round', on: { click: () => this.ctx.actions.retry() } }),
+        el('button.btn.btn-block', { text: '⚙️ Settings', on: { click: () => this.openSettingsFromPause() } }),
         el('button.btn.btn-block', { text: 'End round & see results', on: { click: () => this.ctx.actions.endRound() } }),
         el('button.btn.btn-ghost.btn-block', { text: 'Quit to menu', on: { click: () => this.ctx.actions.quitToMenu() } }),
         el('div.faint.center', { text: 'Press Esc again to resume' }),
@@ -91,7 +93,58 @@ export class UIManager {
       hidden: true,
     });
 
-    this.root.append(this.clickPrompt, this.loading, this.pause, this.fps);
+    // Subtitles and closed captions, bottom centre, above everything but toasts.
+    this.captions = el('div#captions', { 'aria-live': 'polite', role: 'log' });
+
+    this.root.append(this.clickPrompt, this.loading, this.pause, this.fps, this.captions);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Captions
+   * ---------------------------------------------------------------- */
+
+  /**
+   * Show a line of caption text. `speech` lines are subtitles (what was
+   * said); anything else is a closed caption for a sound, shown in brackets.
+   */
+  caption(text, { speech = false } = {}) {
+    const s = this.ctx.profile.settings;
+    if (speech ? s.subtitles === false : !s.soundCaptions) return;
+    // The same caption twice in a row just refreshes its timer.
+    const last = this.captions.lastElementChild;
+    if (last && last.dataset.text === text) {
+      clearTimeout(Number(last.dataset.timer));
+      last.dataset.timer = String(setTimeout(() => last.remove(), speech ? 5200 : 3600));
+      return;
+    }
+    const line = el(`div.cap${speech ? '.speech' : '.sound'}`, { text });
+    line.dataset.text = text;
+    this.captions.append(line);
+    while (this.captions.children.length > 3) this.captions.firstElementChild.remove();
+    line.dataset.timer = String(setTimeout(() => line.remove(), speech ? 5200 : 3600));
+  }
+
+  setCaptionSize(size) {
+    this.captions.dataset.size = size;
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Settings from the pause menu
+   * ---------------------------------------------------------------- */
+
+  /** Open Settings over a paused round; Back returns to the pause menu. */
+  openSettingsFromPause() {
+    this.pause.hidden = true;
+    this.inPauseSettings = true;
+    this.go('settings', { fromPause: true });
+  }
+
+  closeSettingsToPause() {
+    this.inPauseSettings = false;
+    mount(this.screenHost);
+    this.screenHost.hidden = true;
+    this.current = 'game';
+    this.pause.hidden = false;
   }
 
   /* ---------------------------------------------------------------- *
@@ -196,6 +249,8 @@ export class UIManager {
         this.loadLabel.textContent = d.label ?? 'Loading…';
         this.loadFill.style.width = `${Math.round((d.progress ?? 0) * 100)}%`;
         if (!this._tipShown) {
+          const hints = this.ctx.profile?.settings?.showHints !== false;
+          this.loadTip.hidden = !hints;
           this.loadTip.textContent = `💡 ${LOADING_TIPS[Math.floor(Math.random() * LOADING_TIPS.length)]}`;
           this._tipShown = true;
         }
@@ -206,8 +261,17 @@ export class UIManager {
     });
 
     on(EV.GAME_PAUSE, () => { this.pause.hidden = false; this.clickPrompt.hidden = true; });
-    on(EV.GAME_RESUME, () => { this.pause.hidden = true; });
+    on(EV.GAME_RESUME, () => {
+      this.pause.hidden = true;
+      if (this.inPauseSettings) {
+        this.inPauseSettings = false;
+        mount(this.screenHost);
+        this.screenHost.hidden = true;
+        this.current = 'game';
+      }
+    });
     on(EV.GAME_END, (summary) => {
+      this.inPauseSettings = false;
       this.pause.hidden = true;
       this.clickPrompt.hidden = true;
       this.setTouchVisible(false);
@@ -244,7 +308,7 @@ export class UIManager {
       case 'profile': node = Screens.profileScreen(c); break;
       case 'progress': node = Screens.progressScreen(c); break;
       case 'guide': node = Screens.guideScreen(c); break;
-      case 'settings': node = Screens.settingsScreen(c); break;
+      case 'settings': node = SettingsScreen.settingsScreen(c, params); break;
       case 'game': node = null; break;
       default:
         console.warn('[UI] unknown screen', screen);

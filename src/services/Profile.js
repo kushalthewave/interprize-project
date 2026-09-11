@@ -11,6 +11,7 @@
 import { ACHIEVEMENTS, DIFFICULTY_ORDER, PROGRESSION } from '../data/config.js';
 import { bus, EV } from '../core/EventBus.js';
 import { DEFAULT_AVATAR, normaliseAvatar } from '../data/avatars.js';
+import { defaultSettings, migrateSettings, sanitise } from '../data/settings.js';
 
 const KEY = 'beat-the-hazard:profile:v1';
 
@@ -104,19 +105,8 @@ function blankProfile() {
     history: [],
     /** Credentials: passkeys and TOTP. Managed by services/auth/AuthManager. */
     security: { passkeys: [], totp: null, lastMethod: null },
-    settings: {
-      audio: true,
-      volume: 0.7,
-      invertY: false,
-      showFps: false,
-      reducedMotion: false,
-      /** Look-speed multiplier, 0.25 - 3.0. */
-      lookSensitivity: 1,
-      /** Run Test Mode against the reaction clock. Off = untimed practice. */
-      timedTest: true,
-      /** Show each hazard's location in Train Mode and on the results screen. */
-      showLocations: true,
-    },
+    /** Every player setting; see data/settings.js for the schema. */
+    settings: defaultSettings(),
   };
 }
 
@@ -131,7 +121,8 @@ export class Profile {
     const base = blankProfile();
     this.data = { ...base, ...this.data };
     this.data.stats = { ...base.stats, ...(this.data.stats ?? {}) };
-    this.data.settings = { ...base.settings, ...(this.data.settings ?? {}) };
+    // Fill new settings, repair invalid ones, drop unknown ones.
+    this.data.settings = migrateSettings(this.data.settings);
     this.data.progress ??= {};
     this.data.achievements ??= [];
     this.data.history ??= [];
@@ -189,7 +180,18 @@ export class Profile {
   }
 
   setSetting(k, v) {
-    this.data.settings[k] = v;
+    const clean = sanitise(k, v);
+    if (clean === undefined) return;
+    this.data.settings[k] = clean;
+    this.save();
+  }
+
+  /** Change several settings with one save. */
+  setSettings(patch) {
+    for (const [k, v] of Object.entries(patch)) {
+      const clean = sanitise(k, v);
+      if (clean !== undefined) this.data.settings[k] = clean;
+    }
     this.save();
   }
 
