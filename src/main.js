@@ -7,6 +7,7 @@
 import './ui/styles.css';
 import { Engine } from './core/Engine.js';
 import { PlayerController } from './player/PlayerController.js';
+import { AvatarRig } from './player/PlayerAvatar.js';
 import { GameManager, MODE, STATE } from './gameplay/GameManager.js';
 import { Profile } from './services/Profile.js';
 import { AuthManager } from './services/auth/AuthManager.js';
@@ -14,7 +15,8 @@ import { AudioManager } from './audio/AudioManager.js';
 import { UIManager } from './ui/UIManager.js';
 import { bus, EV } from './core/EventBus.js';
 import { Graphics } from './core/Graphics.js';
-import { actionForKey, presetPatch, detectPreset, isPresetKey } from './data/settings.js';
+import { actionForKey, presetPatch, detectPreset, isPresetKey, keyLabel } from './data/settings.js';
+import { getAvatar } from './data/avatars.js';
 import { setColourMode, palette } from './data/palette.js';
 import { initOffline, onOfflineChange } from './services/offline.js';
 
@@ -58,6 +60,8 @@ function boot() {
     music: s0.musicVolume, voice: s0.voiceVolume, sfx: s0.sfxVolume,
   });
   const player = new PlayerController(engine.camera, canvas);
+  // The trainee's own avatar, standing in the warehouse (third-person view).
+  const avatarRig = new AvatarRig(engine.scene);
   const game = new GameManager({ engine, player, profile, audio });
   game.onWorldLoaded = () => graphics.onWorldLoaded();
 
@@ -301,6 +305,8 @@ function boot() {
     player.invertY = !!s.invertY;
     player.lookSensitivity = s.lookSensitivity ?? 1;
     player.keybinds = s.keybinds;
+    player.setView(s.cameraView);
+    avatarRig.setAvatar(profile.avatar);
     if (s.reducedMotion || !s.headBob) player._bob = 0;
     game.hazards.setAimAssist((AIM_ASSIST[s.aimAssist] ?? AIM_ASSIST.off).size);
 
@@ -422,6 +428,10 @@ function boot() {
       e.preventDefault();
       game.flag();
     }
+    if (action === 'view' && !e.repeat && game.state === STATE.PLAYING) {
+      e.preventDefault();
+      switchView();
+    }
     if (action === 'pause' && !e.repeat) {
       if (game.state === STATE.PLAYING) { e.preventDefault(); game.pause(); }
       else if (game.state === STATE.PAUSED && !ui.inPauseSettings) { e.preventDefault(); actions.resume(); }
@@ -432,6 +442,14 @@ function boot() {
    * Controller, aim assist, depth-of-field focus, footsteps
    * ---------------------------------------------------------------- */
   player.onPadFlag = () => { if (game.state === STATE.PLAYING) game.flag(); };
+  player.onPadView = () => { if (game.state === STATE.PLAYING) switchView(); };
+
+  /** V / controller Y: third person (see your avatar) or first person. Remembered. */
+  function switchView() {
+    const v = player.toggleView();
+    profile.setSetting('cameraView', v);
+    ui.toast(v === 'third' ? 'Third person — this is you.' : 'First person.', 'ok');
+  }
   player.onPadPause = () => {
     if (game.state === STATE.PLAYING) game.pause();
     else if (game.state === STATE.PAUSED) actions.resume();
@@ -441,6 +459,9 @@ function boot() {
 
   engine.addUpdater((dt) => {
     player.pollGamepad(dt);
+    // The avatar stands wherever the trainee is, whenever a warehouse is loaded.
+    avatarRig.update(player, dt, !!game.world && player.showsAvatar, game.state === STATE.PLAYING);
+    game.hazards.extraRange = player.boomLength;
     const current = game.hazards.current;
     const assist = AIM_ASSIST[profile.settings.aimAssist] ?? AIM_ASSIST.off;
     player.aimFriction = current ? assist.friction : 1;
@@ -455,6 +476,12 @@ function boot() {
   let warned30 = false;
   bus.on(EV.GAME_START, (d) => {
     warned60 = warned30 = false;
+    // Show the trainee who they are: the camera opens on their avatar's face.
+    avatarRig.setAvatar(profile.avatar);
+    if (profile.settings.avatarIntro !== false && !d.resumed) player.playIntro();
+    const me = getAvatar(profile.avatar);
+    const viewKey = profile.settings.keybinds.view?.[0];
+    ui.toast(`This is you — ${me.name}, ${me.role}. ${viewKey ? `Press ${keyLabel(viewKey)} to switch view.` : 'Switch view in Settings → Controls.'}`, 'ok');
     audio.setMusicDuck(true);
     audio.say(d.mode === 'train'
       ? 'Training. Follow the arrow to the first hazard.'

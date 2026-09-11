@@ -53,6 +53,7 @@ describe('Settings - schema', () => {
       'keybinds', 'lookSensitivity', 'invertY', 'aimAssist',
       'defaultDifficulty', 'crosshairStyle', 'crosshairSize', 'crosshairColour', 'showHints', 'autosave',
       'subtitles', 'soundCaptions', 'colourblind', 'uiScale', 'hudScale', 'headBob', 'cameraShake',
+      'cameraView', 'avatarIntro',
     ]) expect(keys).toContain(k);
   });
 });
@@ -207,6 +208,28 @@ describe('Settings - key rebinding', () => {
     const b = kb();
     rebind(b, 'flag', 0, 'KeyW');
     expect(b.forward[0]).toBe('KeyW');
+  });
+
+  it('gives a profile saved before the view key existed the V key', () => {
+    const old = kb();
+    delete old.view;
+    expect(sanitise('keybinds', old).view).toEqual(['KeyV', null]);
+  });
+
+  it('does not take V for the view key when the trainee already uses it', () => {
+    const old = kb();
+    delete old.view;
+    old.flag = ['KeyV', null];
+    const out = sanitise('keybinds', old);
+    expect(out.flag).toEqual(['KeyV', null]);
+    expect(out.view).toEqual([null, null]);
+  });
+
+  it('shows the avatar in third person by default', () => {
+    expect(DEFAULTS.cameraView).toBe('third');
+    expect(DEFAULTS.avatarIntro).toBe(true);
+    expect(sanitise('cameraView', 'sideways')).toBe('third');
+    expect(sanitise('cameraView', 'first')).toBe('first');
   });
 
   it('has a default for every action', () => {

@@ -25,6 +25,7 @@ export const ACTIONS = [
   { id: 'crouch', label: 'Crouch (hold)' },
   { id: 'flag', label: 'Flag a hazard' },
   { id: 'pause', label: 'Pause' },
+  { id: 'view', label: 'Switch camera view' },
 ];
 
 /** Two slots per action: a primary and an alternative. */
@@ -37,6 +38,7 @@ export const DEFAULT_KEYBINDS = {
   crouch: ['KeyC', 'ControlLeft'],
   flag: ['KeyE', null],
   pause: ['KeyP', null],
+  view: ['KeyV', null],
 };
 
 /**
@@ -271,6 +273,11 @@ export const SCHEMA = [
   { key: 'aimAssist', tab: 'controls', group: 'Look', type: 'select', default: 'off',
     label: 'Aim assist', desc: 'Makes each hazard easier to land the crosshair on, and slows the camera slightly when it is over one. Works with mouse, touch and controller.',
     options: [opt('off', 'Off'), opt('low', 'Low'), opt('high', 'High')] },
+  { key: 'cameraView', tab: 'controls', group: 'Camera', type: 'select', default: 'third',
+    label: 'Camera view', desc: 'Third person shows your own avatar in the warehouse, from over the shoulder. First person sees through their eyes. Press V (or Y on a controller) during a round to switch.',
+    options: [opt('third', 'Third person — see your avatar'), opt('first', 'First person')] },
+  { key: 'avatarIntro', tab: 'controls', group: 'Camera', type: 'toggle', default: true,
+    label: 'Show my avatar when a round starts', desc: 'The camera starts in front of your avatar so you see their face, then swings round behind them. Moving or looking skips it.' },
   { key: 'keybinds', tab: 'controls', group: 'Key bindings', type: 'keybinds', default: DEFAULT_KEYBINDS,
     label: 'Key bindings', desc: 'Click a key, then press the new one. Esc always pauses.' },
 
@@ -371,15 +378,26 @@ export function sanitise(key, value) {
       if (!value || typeof value !== 'object') return cloneBinds(DEFAULT_KEYBINDS);
       const out = {};
       for (const a of ACTIONS) {
-        const slots = Array.isArray(value[a.id]) ? value[a.id] : DEFAULT_KEYBINDS[a.id];
+        if (!Array.isArray(value[a.id])) continue;
         out[a.id] = [0, 1].map((i) => {
-          const c = slots[i];
+          const c = value[a.id][i];
           return typeof c === 'string' && c && !RESERVED_KEYS.includes(c) ? c : null;
         });
       }
+      // An action added since the profile was saved gets its default keys,
+      // minus any the trainee has already given to something else.
+      const taken = new Set(Object.values(out).flat().filter(Boolean));
+      for (const a of ACTIONS) {
+        if (out[a.id]) continue;
+        out[a.id] = DEFAULT_KEYBINDS[a.id].map((c) => (c && !taken.has(c) ? c : null));
+      }
       promoteAll(out);
-      // A profile with an action left completely unbound falls back to its default.
-      for (const id of unboundActions(out)) out[id] = [...DEFAULT_KEYBINDS[id]];
+      // A profile with an action left completely unbound falls back to its
+      // default — but never by taking a key that already does something else.
+      for (const id of unboundActions(out)) {
+        const used = new Set(Object.values(out).flat().filter(Boolean));
+        out[id] = promoteAll({ x: DEFAULT_KEYBINDS[id].map((c) => (c && !used.has(c) ? c : null)) }).x;
+      }
       return out;
     }
     case 'device':

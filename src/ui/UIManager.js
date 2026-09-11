@@ -354,6 +354,7 @@ export class UIManager {
       el('span', { html: '<kbd>Shift</kbd> Run' }),
       el('span', { html: '<kbd>C</kbd> Crouch' }),
       el('span', { html: '<kbd>E</kbd> / <kbd>Click</kbd> Flag hazard' }),
+      el('span', { html: '<kbd>V</kbd> Switch view' }),
       el('span', { html: '<kbd>Esc</kbd> Pause' }),
     );
   }

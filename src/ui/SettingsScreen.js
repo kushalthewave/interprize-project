@@ -327,7 +327,7 @@ function controllerStatus(ctx) {
 function controllerLayout() {
   const map = [
     ['Left stick', 'Move'], ['Right stick', 'Look'], ['A', 'Flag a hazard'],
-    ['LB or L3', 'Run (hold)'], ['B or R3', 'Crouch (hold)'], ['Start', 'Pause / resume'],
+    ['LB or L3', 'Run (hold)'], ['B or R3', 'Crouch (hold)'], ['Start', 'Pause / resume'], ['Y', 'Switch camera view'],
   ];
   return el('div.card.set-group', {}, [
     el('h3', { text: 'Controller layout' }),

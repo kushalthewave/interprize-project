@@ -23,6 +23,18 @@ const dz = (v) => (Math.abs(v) < DEADZONE ? 0 : (v - Math.sign(v) * DEADZONE) / 
 const FORWARD = new THREE.Vector3();
 const RIGHT = new THREE.Vector3();
 const UP = new THREE.Vector3(0, 1, 0);
+const EYE = new THREE.Vector3();
+const BOOM = new THREE.Vector3();
+const EULER = new THREE.Euler(0, 0, 0, 'YXZ');
+
+/**
+ * Third-person camera: over the right shoulder, far enough back to see the
+ * whole avatar, close enough that the crosshair still lands where you aim.
+ */
+const THIRD = { back: 2.35, right: 0.5, up: 0.22 };
+/** The opening shot: the camera starts in front of the avatar, then swings behind. */
+const INTRO = { hold: 1.8, sweep: 2.2, back: 1.3 };
+const easeInOut = (x) => (x < 0.5 ? 2 * x * x : 1 - (-2 * x + 2) ** 2 / 2);
 
 export class PlayerController {
   /**
@@ -90,6 +102,21 @@ export class PlayerController {
     this._shake = 0;
     this._stepT = 0;
 
+    /**
+     * 'third' shows the trainee's own avatar from over the shoulder; 'first'
+     * looks through its eyes. _viewK blends between them so a switch glides.
+     */
+    this.view = 'third';
+    this._viewK = 1;
+    /** How far the boom is allowed out before it hits a wall (0-1), smoothed. */
+    this._boomFrac = 1;
+    /** Distance from the eyes to the camera this frame, for hazard ray range. */
+    this.boomLength = 0;
+    /** Opening shot state: seconds elapsed, or -1 when not playing. */
+    this._introT = -1;
+    this._introK = 0;
+    this._orbit = 0;
+
     this._bind();
   }
 
@@ -124,6 +151,7 @@ export class PlayerController {
       const mx = e.movementX ?? 0;
       const my = e.movementY ?? 0;
       if (this.dragging) this.dragMoved += Math.abs(mx) + Math.abs(my);
+      if (Math.abs(mx) + Math.abs(my) > 2) this.skipIntro();
       const base = this.locked ? PLAYER.lookSensitivity : PLAYER.lookSensitivity * 1.4;
       const sens = base * this.lookSensitivity * this.aimFriction;
       this.yaw -= mx * sens;
@@ -229,6 +257,7 @@ export class PlayerController {
    *   Left stick   move          Right stick   look
    *   A            flag hazard   Start         pause / resume
    *   LB / L3      run (hold)    B / R3        crouch (hold)
+   *   Y            switch between third- and first-person view
    */
   pollGamepad(dt) {
     const pads = typeof navigator !== 'undefined' && navigator.getGamepads ? navigator.getGamepads() : [];
@@ -247,6 +276,7 @@ export class PlayerController {
 
     if (edge(PAD.START)) this.onPadPause?.();
     if (this.enabled && edge(PAD.A)) this.onPadFlag?.();
+    if (this.enabled && edge(PAD.Y)) this.onPadView?.();
 
     if (this.enabled) {
       this.pad.move.x = dz(gp.axes[0] ?? 0);
@@ -256,6 +286,7 @@ export class PlayerController {
 
       const rx = dz(gp.axes[2] ?? 0);
       const ry = dz(gp.axes[3] ?? 0);
+      if (rx || ry || this.pad.move.x || this.pad.move.y) this.skipIntro();
       // Squared response gives fine control near the centre of the stick.
       const curve = (v) => Math.sign(v) * v * v;
       const sens = 2.6 * this.lookSensitivity * this.aimFriction;
@@ -265,6 +296,53 @@ export class PlayerController {
     }
 
     this._padPrev = gp.buttons.map((b) => b.pressed);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Camera view
+   * ---------------------------------------------------------------- */
+
+  /** 'third' (see your avatar) or 'first' (see through its eyes). */
+  setView(v) {
+    this.view = v === 'first' ? 'first' : 'third';
+  }
+
+  toggleView() {
+    this.setView(this.view === 'third' ? 'first' : 'third');
+    this.skipIntro();
+    return this.view;
+  }
+
+  /**
+   * The opening shot of a round: the camera starts in front of the avatar so
+   * the trainee sees their own face, then swings round behind them.
+   */
+  playIntro() {
+    // Open on the front view straight away; with reduced motion it then cuts
+    // behind instead of sweeping.
+    this._introT = 0;
+    this._introK = 1;
+    this._orbit = Math.PI;
+    this._viewK = 1;
+    this._boomFrac = 1;
+  }
+
+  /** Any movement or look cuts the opening shot short. */
+  skipIntro() {
+    if (this._introT >= 0) this._introT = -1;
+  }
+
+  get introPlaying() {
+    return this._introT >= 0;
+  }
+
+  /**
+   * Should the avatar figure be drawn? Not when the camera is inside its head:
+   * in first person, or with the trainee's back pressed against racking and
+   * the boom pulled right in.
+   */
+  get showsAvatar() {
+    return (this._viewK > 0.4 || this._introK > 0.05) && this.boomLength > 0.55;
   }
 
   /** A jolt (0–1), e.g. a carton landing nearby. Ignored when shake is off. */
@@ -282,6 +360,9 @@ export class PlayerController {
     this.yaw = yaw;
     this.pitch = 0;
     this.velocity.set(0, 0, 0);
+    // A new spot: settle the camera at once instead of gliding in from the last one.
+    this._viewK = this.view === 'third' ? 1 : 0;
+    this._boomFrac = 1;
     this._applyCamera();
   }
 
@@ -320,6 +401,7 @@ export class PlayerController {
     if (wantCrouch !== this.crouching) this.setCrouch(wantCrouch);
 
     const mag = Math.hypot(fwd, strafe);
+    if (mag > 0.01) this.skipIntro();
     if (mag > 1) {
       fwd /= mag;
       strafe /= mag;
@@ -390,7 +472,37 @@ export class PlayerController {
       this._bob = (this._bob ?? 0) + (bob - (this._bob ?? 0)) * (1 - Math.exp(-12 * dt));
     }
 
+    this._updateView(dt);
     this._applyCamera();
+  }
+
+  /** Advance the view blend and the opening shot. */
+  _updateView(dt) {
+    let orbitTarget = 0;
+    let introTarget = 0;
+    if (this._introT >= 0) {
+      this._introT += dt;
+      const t = this._introT;
+      introTarget = 1;
+      if (this.reducedMotion) {
+        orbitTarget = t < INTRO.hold + INTRO.sweep ? Math.PI : 0;
+      } else if (t < INTRO.hold) {
+        orbitTarget = Math.PI;
+      } else {
+        orbitTarget = Math.PI * (1 - easeInOut(Math.min(1, (t - INTRO.hold) / INTRO.sweep)));
+      }
+      if (t >= INTRO.hold + INTRO.sweep) this._introT = -1;
+    }
+
+    const snap = this.reducedMotion;
+    const ease = (rate) => (snap ? 1 : 1 - Math.exp(-rate * dt));
+    // The sweep itself is already eased; the extra smoothing only matters when it is cut short.
+    this._orbit += (orbitTarget - this._orbit) * (this._introT >= 0 ? 1 : ease(5));
+    if (Math.abs(this._orbit) < 0.001) this._orbit = 0;
+    this._introK += (introTarget - this._introK) * ease(4);
+    if (this._introK < 0.002) this._introK = 0;
+    const third = this.view === 'third' || this._introK > 0.05;
+    this._viewK += ((third ? 1 : 0) - this._viewK) * ease(7);
   }
 
   /**
@@ -422,14 +534,72 @@ export class PlayerController {
     const k = this._shake * this._shake;
     const jx = k ? (Math.random() - 0.5) * 0.05 * k : 0;
     const jy = k ? (Math.random() - 0.5) * 0.05 * k : 0;
-    this.camera.position.set(
-      this.position.x,
-      this.height + (this._bob ?? 0) + jy * 0.6,
-      this.position.z,
-    );
-    this.camera.rotation.set(0, 0, 0);
-    this.camera.rotateY(this.yaw + jx);
-    this.camera.rotateX(this.pitch + jy);
+    // Head bob belongs to the eyes; in third person the camera is not the head.
+    const bob = (this._bob ?? 0) * (1 - this._viewK);
+    EYE.set(this.position.x, this.height + bob + jy * 0.6, this.position.z);
+
+    const vk = this._viewK;
+    const ik = this._introK;
+    const yaw = this.yaw + this._orbit + jx;
+    // The opening shot is level with the avatar's face, centred on them.
+    const pitch = this.pitch * (1 - ik) - 0.14 * ik + jy;
+    EULER.set(pitch, yaw, 0);
+    this.camera.quaternion.setFromEuler(EULER);
+
+    if (vk < 0.001) {
+      this.boomLength = 0;
+      this.camera.position.copy(EYE);
+      return;
+    }
+
+    // Over-the-shoulder boom, in the camera's own frame, then out into the world.
+    BOOM.set(
+      THIRD.right * (1 - ik),
+      THIRD.up * (1 - ik),
+      THIRD.back + (INTRO.back - THIRD.back) * ik,
+    ).multiplyScalar(vk).applyQuaternion(this.camera.quaternion);
+
+    // Pull the camera in rather than let it pass through racking or a wall.
+    const free = this._boomClear(EYE, BOOM);
+    this._boomFrac = free < this._boomFrac ? free : this._boomFrac + (free - this._boomFrac) * 0.12;
+    BOOM.multiplyScalar(this._boomFrac);
+    this.camera.position.copy(EYE).add(BOOM);
+    // Never under the floor, and never above the ceiling beams.
+    this.camera.position.y = THREE.MathUtils.clamp(this.camera.position.y, 0.3, 6);
+    this.boomLength = BOOM.length();
+  }
+
+  /**
+   * How much of the boom (0-1) is clear of colliders, from the eyes outwards.
+   * A slab test per box, with a margin so the near plane never clips a face.
+   */
+  _boomClear(o, d) {
+    const m = 0.22;
+    let tMin = 1;
+    for (const c of this.colliders) {
+      if (c.h !== undefined && c.h < 0.35) continue;
+      const top = (c.h ?? 3) + m;
+      const minX = c.cx - c.hx - m, maxX = c.cx + c.hx + m;
+      const minZ = c.cz - c.hz - m, maxZ = c.cz + c.hz + m;
+      // Standing inside a box's margin (pressed against it): it cannot block.
+      if (o.x > minX && o.x < maxX && o.z > minZ && o.z < maxZ && o.y < top) continue;
+      let t0 = 0;
+      let t1 = tMin;
+      for (const [p, v, lo, hi] of [[o.x, d.x, minX, maxX], [o.y, d.y, -1, top], [o.z, d.z, minZ, maxZ]]) {
+        if (Math.abs(v) < 1e-9) {
+          if (p < lo || p > hi) { t0 = 2; break; }
+          continue;
+        }
+        let a = (lo - p) / v;
+        let b = (hi - p) / v;
+        if (a > b) [a, b] = [b, a];
+        if (a > t0) t0 = a;
+        if (b < t1) t1 = b;
+        if (t0 > t1) break;
+      }
+      if (t0 <= t1 && t0 < tMin) tMin = t0;
+    }
+    return Math.max(0.08, tMin);
   }
 
   dispose() {
