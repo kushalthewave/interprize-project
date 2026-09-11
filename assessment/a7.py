@@ -43,10 +43,11 @@ RUNNING_ORDER = [
      "★ What separates this from a click-the-hotspot trainer. The signed-and-coned "
      "spill is the example to use."),
     (7, "Train then Test", "1:00", "8:30", "ux",
-     "Learning and assessment are deliberately separated."),
+     "Train has no clock — a guide arrow, the location and a column of light lead to "
+     "each hazard. Test is five minutes with no help. Training is optional."),
     (8, "Difficulty", "1:00", "9:30", "ux",
-     "Each level changes the clock, the decoys, the lighting and the guidance — not a "
-     "label."),
+     "Every test is five minutes. Each level changes the fast-bonus threshold, the "
+     "decoys, the lighting and the guidance — not a label."),
     (9, "Scoring, combo and ranks", "0:45", "10:15", "ux",
      "The numbers are on screen. Say why speed is scored, not what the numbers are."),
     (10, "Hazard locations", "0:45", "11:00", "ux",
@@ -61,7 +62,7 @@ RUNNING_ORDER = [
      "★ A real measured problem solved with a named technique. The strongest technical "
      "moment in the talk."),
     (15, "Proven, not assumed", "1:00", "16:15", "qa",
-     "165 tests, and the two that caught bugs nothing else would have."),
+     "204 tests, and the ones that caught bugs nothing else would have."),
     (16, "What went wrong", "1:00", "17:15", "qa",
      "★ Finding your own defects reads as competence. Do not apologise through it."),
     (17, "Honest limitations", "0:45", "18:00", "qa",
@@ -138,14 +139,14 @@ RESPONSIBILITIES = {
 
 QA_PREP = [
     ("How long does it take a trainee?",
-     "A round is 15 hazards. On Mid the budget is 60 seconds per hazard, so the ceiling "
-     "is 15 minutes and most rounds finish well inside that. Training mode is untimed."),
+     "A test is exactly five minutes on every difficulty, so it fits in a gap in a "
+     "shift and scores compare. Training has no clock, and it is optional."),
     ("Can we see who has completed it?",
      "On the machine they used, yes — every session is recorded against their profile. "
      "Centrally, no, and that is the honest limitation. It is a small backend, and we "
      "would rather agree it with you than assume it."),
     ("What if the site has no Wi-Fi?",
-     "Then use the offline build. One HTML file, 716 kB, runs from a USB stick with no "
+     "Then use the offline build. One HTML file, 738 kB, runs from a USB stick with no "
      "network at all. We can demonstrate that now if you would like."),
     ("Is it accurate to our site?",
      "The hazards are generic warehouse hazards across seven recognised categories. "
@@ -382,7 +383,7 @@ def prototype_instructions(out_dir):
     h1(doc, "2  With no internet at all")
     para(doc,
          "The submission contains `Prototype/beat-the-hazard.html`. It is one file of "
-         "716 kB containing the entire product — code, geometry, textures and audio. "
+         "738 kB containing the entire product — code, geometry, textures and audio. "
          "Copy it anywhere, double-click it, and it runs with the network disconnected.")
     callout(doc, "One limitation of the offline file",
             "Browsers only allow passkeys in a secure context, so opening the file "
@@ -396,7 +397,7 @@ def prototype_instructions(out_dir):
     table(doc, ["Step", "Command"], [
         ["Install dependencies", "`npm ci`"],
         ["Run the development server", "`npm run dev`"],
-        ["Run the test suite (165 tests)", "`npm test`"],
+        ["Run the test suite (204 tests)", "`npm test`"],
         ["Build for production", "`npm run build`"],
         ["Build the single offline file", "`npm run build:single`"],
     ], widths=[6.0, 10.0], size=9.6)
@@ -418,13 +419,14 @@ def prototype_instructions(out_dir):
     h1(doc, "5  A five-minute route through it")
     numbered(doc, [
         "Enter a name and continue.",
-        "Choose **Training** and the **Main Storage Hall**. Training is untimed and "
+        "Choose **Training** and the **Main Storage Hall**. There is no clock, and it "
         "cannot be failed.",
-        "Walk the aisles. Centre the reticle on anything that looks wrong and press **E**.",
+        "Follow the arrow at the top of the screen and the column of light. The panel on "
+        "the left names the hazard and where it is. When you can see it, aim and press **E**.",
         "Read a find panel: the hazard's name, its location on the floor, why it is a "
         "hazard, and the keywords to remember.",
-        "Return to the menu, choose **Test** and **Mid**, and run the same warehouse "
-        "against the clock. Six decoys are now present.",
+        "Return to the menu, choose **Test** and **Mid**, and run the same warehouse in "
+        "five minutes — no guide, no locations. Six decoys are now present.",
         "Deliberately flag the spill that has cones and a warning sign, and read what the "
         "game says. That contrast is the point of the product.",
         "Finish the round and read the results screen — every hazard is named, including "

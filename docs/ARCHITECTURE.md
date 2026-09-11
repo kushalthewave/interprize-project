@@ -131,7 +131,7 @@ loadEnvironment(envId, difficulty, mode)
                 ▼
 start(mode)
     ├── new ScoreManager(multiplier)
-    ├── new Timer(secondsPerHazard × hazardCount)
+    ├── new Timer(secondsPerHazard, totalSeconds = 300 in a timed test)
     ├── hazards.reset() + activate
     └── emit game:start
                 │
@@ -231,5 +231,5 @@ Measured: **60 fps, 1,520 draw calls, 272k triangles, 35 textures.**
 | Pointer lock refused | Falls back to click-and-drag look |
 | Environment fails to build | Caught, toast shown, returns to menu |
 | Event handler throws | Caught per handler; one bad listener cannot kill the bus |
-| Tab hidden mid-round | Auto-pause (a running reaction clock would be unfair) |
+| Tab hidden mid-round | Auto-pause (a running test clock would be unfair) |
 | Tab hidden mid-load | Loader races rAF against a timeout so it cannot stall |

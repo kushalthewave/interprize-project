@@ -25,13 +25,14 @@ can walk around and look at from your own eyeline.
                         │
         ┌───────────────┴───────────────┐
         ▼                               ▼
-   TRAIN MODE                      TEST MODE
+   TRAIN MODE (optional)           TEST MODE (always open)
    learn what a hazard             find them yourself
-   looks like                      against the clock
+   looks like                      in five minutes
         │                               │
-   hazards ringed                  no rings, no hints
-   teaching card each find         reaction clock per hazard
-   no time pressure                combo streaks
+   no clock at all                 5:00 countdown
+   guide: arrow, distance,         no guide, no locations
+   location, light column          combo streaks
+   teaching card each find
         │                               │
         └───────────────┬───────────────┘
                         ▼
@@ -97,8 +98,8 @@ that strategy fail.
 
 ### 4. Difficulty must change the game
 
-Eight parameters change across Simple / Mid / Hard: reaction clock, score
-multiplier, highlighting, whether the hazard count is shown, decoy count,
+Eight parameters change across Simple / Mid / Hard: the fast-bonus
+threshold, score multiplier, highlighting, whether the hazard count is shown, decoy count,
 whether hazards move, ambient light, fog, and aim tolerance. On Hard the
 building is genuinely darker, trucks patrol, and you are not told how many
 hazards exist.
@@ -108,24 +109,39 @@ silently regress into a label.
 
 ### 5. Never punish with a hard stop
 
-When a hazard's reaction clock expires the round continues — you are told time
-ran out and the hazard is still there. Training tools should not end the lesson
-as a penalty. Only the whole-round budget ends a round.
+When a single search runs long the round continues — your combo resets and you
+are told how many hazards are left. Only the five-minute round clock ends a test,
+and Train Mode has no clock at all.
+
+### 6. Test length is fixed, so results compare
+
+Every test is five minutes, on every difficulty. Difficulty changes how fast a
+find must be to earn the bonus (45 s / 30 s / 19 s since the last find), the
+lighting, the decoys and the guidance — but not the length of the assessment, so
+a score on Mid can be read against a score on Hard.
 
 ## Train Mode
 
 **Goal:** the trainee leaves knowing what each hazard *looks like* and what the
 correct control is.
 
-- Every unfound hazard is ringed (red = major, amber = minor)
+- **No clock.** Nothing is timed, so nothing is shown.
+- **A guide to the nearest unfound hazard**, chosen from where the trainee is
+  standing. The old fixed "majors first" order sent people from one end of a
+  62 m building to the other and back; nearest-first keeps the next hazard a
+  short walk away.
+  - HUD compass: an arrow that turns as you turn, and the floor distance
+  - The **location in words** — "Aisle B, south end — at eye level" — shown from
+    the first frame. Previously the panel said "Explore the warehouse" until
+    something had been found, so the moment a trainee most needed directions
+    was the one moment they got none.
+  - A **column of light** over the hazard, drawn through racking
+- Every unfound hazard is ringed (red = major, amber = minor); the guided one
+  is drawn larger
 - Finding one opens a card: what it is, why it is dangerous, the control, the
   longer teaching text, and the safety keywords
 - Cards linger longer than in Test Mode — this is the teaching moment
-- Hazards are taught **major first**, on the reasoning that the things that kill
-  people should be learned first
-- A side panel tracks progress and names the next hazard with a hint
-- No meaningful time pressure
-- Completing a site unlocks Test Mode there
+- **Optional.** It never gates Test Mode.
 
 ## Test Mode
 
@@ -148,12 +164,15 @@ performance:
 
 ## Progression
 
-```
-TRAIN COMPLETE  →  SIMPLE  →  MID (needs 30+)  →  HARD (needs 30+)
-```
+**Everything is open.** Training is optional and every environment and
+difficulty can be tested straight away.
 
-Per environment. You cannot be tested on a site you have not been trained on —
-which mirrors how site inductions actually work.
+The original design gated it — train, then Simple, then Mid at 30+, then Hard at
+30+ — on the reasoning that it mirrors a site induction. In practice it stopped
+an experienced operative proving what they already knew, and stopped a
+supervisor running a quick assessment. The gate logic is kept in
+`Profile.isUnlocked()` and still tested; a site that wants a mandatory path can
+switch it back on in `PROGRESSION` in `src/data/config.js`.
 
 ## Achievements
 
