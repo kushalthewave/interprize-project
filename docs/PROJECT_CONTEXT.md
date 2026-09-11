@@ -10,7 +10,7 @@ of truth, not chat history.
 **Beat The Hazard** — a browser-based 3D interactive health & safety training
 game for warehouse forklift and pedestrian safety.
 
-A trainee walks a working warehouse in first person, learns what each hazard
+A trainee walks a working warehouse as the avatar they chose, learns what each hazard
 physically looks like in Train Mode, then identifies hazards unaided in a timed,
 scored Test Mode. Set at a fictional Nepali distribution centre (Himalaya
 Logistics, Birgunj).
@@ -36,7 +36,7 @@ See [`DEVELOPMENT_STATUS.md`](DEVELOPMENT_STATUS.md) for the live task list and
 
 | Requirement | Status |
 |---|---|
-| Browser-based 3D game | ✅ Three.js, first person, walkable |
+| Browser-based 3D game | ✅ Three.js, walkable, third person (your avatar) or first person |
 | 15 specified hazards, physically modelled | ✅ all 15, geometry not icons |
 | Train Mode (teaches) | ✅ highlights, teaching cards, gates testing |
 | Test Mode (evaluates) | ✅ timed, scored, ranked |

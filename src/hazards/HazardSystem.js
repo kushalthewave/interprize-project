@@ -85,6 +85,8 @@ export class HazardSystem {
 
     this.raycaster = new THREE.Raycaster();
     this.raycaster.far = PLAYER.interactRange;
+    /** Extra ray length for a camera behind the player (third-person boom). */
+    this.extraRange = 0;
     this.center = new THREE.Vector2(0, 0);
 
     this.current = null; // hazard instance currently under the reticle
@@ -371,7 +373,9 @@ export class HazardSystem {
 
   _pick() {
     this.raycaster.setFromCamera(this.center, this.camera);
-    this.raycaster.far = PLAYER.interactRange;
+    // In third person the camera sits behind the trainee, so reach is
+    // measured from where they stand, not from the camera.
+    this.raycaster.far = PLAYER.interactRange + this.extraRange;
 
     const hits = this.raycaster.intersectObjects([...this.proxies, ...this.decoyProxies], false);
     for (const h of hits) {

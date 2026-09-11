@@ -4,7 +4,7 @@
 
 Himalaya Logistics Distribution Centre · Birgunj, Nepal 🇳🇵
 
-You walk a working warehouse in first person, learn what a hazard physically
+You walk a working warehouse as the avatar you chose, learn what a hazard physically
 looks like, then prove you can spot them on your own against the clock.
 
 ---
@@ -61,7 +61,7 @@ what "good" looks like is half of hazard spotting.
 
 ## Features
 
-- **Real-time 3D warehouse** you walk around in first person
+- **Real-time 3D warehouse** you walk around as your own avatar — third person over the shoulder, or first person with **V**
 - **15 physical hazard scenarios**, each modelled as geometry, not a marker
 - **Three environments** — general storage, cross-dock dispatch, high-bay annexe
 - **Train Mode** — guided, highlighted, with a teaching card for every hazard
@@ -136,6 +136,7 @@ or opened through a plain file server.
 | `Shift` | Run |
 | `C` / `Ctrl` | Crouch |
 | `E` or **left click** | Flag the hazard under the reticle |
+| `V` | Switch between third person (see your avatar) and first person |
 | `Esc` or `P` | Pause |
 
 Click once to capture the mouse. If your browser refuses pointer lock (an
@@ -219,7 +220,7 @@ something real and applies immediately:
 |---|---|
 | **Video** | Quality preset (Low / Medium / High / Ultra / Custom), resolution scale (Auto or 50–150%), windowed / fullscreen, frame-rate cap, field of view, texture quality (anisotropic filtering), shadow quality, anti-aliasing (MSAA / FXAA / off), lighting quality, motion blur, lens flare, depth of field, performance overlay |
 | **Audio** | Master, music, voice and sound-effects volume; audio output device |
-| **Controls** | Look sensitivity, invert Y, aim assist, and fully rebindable keys; any standard controller works |
+| **Controls** | Camera view (third or first person) and the opening shot of your avatar, look sensitivity, invert Y, aim assist, and fully rebindable keys; any standard controller works |
 | **Gameplay** | Default difficulty, the five-minute limit, Train Mode locations, tutorials & hints, auto-save, crosshair style / size / colour |
 | **Accessibility** | Subtitles, closed captions for sounds, caption size, colour-blind modes (protanopia, deuteranopia, tritanopia), menu & HUD size, head bob, camera shake, reduce all motion |
 | **Account & data** | Passkeys, authenticator app, social sign-in setup, reset progress, sign out |
@@ -322,7 +323,7 @@ in [`docs/ENVIRONMENTS.md`](docs/ENVIRONMENTS.md).
 ```
 src/
 ├── core/          Engine (render loop), EventBus, procedural Textures
-├── player/        First-person controller + collision
+├── player/        Camera controller (third/first person) + collision, your 3D avatar
 ├── environment/   World build context, Scenarios (the 15 hazards),
 │                  props/ (racking, forklifts, workers, signage, structure),
 │                  scenes/ (env01, env02, env03)

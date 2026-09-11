@@ -254,7 +254,7 @@ export PATH="/c/Users/acer/AppData/Local/nvm/v24.20.0:$PATH"
 
 ## D12 — First-person only
 
-**Date:** 2026-09-06 · **Status:** Adopted
+**Date:** 2026-09-06 · **Status:** Superseded by "Third person by default, first person one key away" below
 
 **Decision.** First-person camera. The Nepali avatars appear in the profile and
 as in-world colleagues, not as a controllable third-person character.
@@ -265,6 +265,40 @@ spot, depends on being at eye level in the space. A third-person camera actively
 harms that, and would have cost rigging and animation work that the brief
 explicitly said must not block the core game.
 
+
+---
+
+## Third person by default, first person one key away
+
+**Date:** 2026-09-11 · **Status:** Adopted (supersedes D12)
+
+**Context.** Trainees choose one of five avatars, but only ever saw it as a
+portrait in the menu and the HUD. The feedback was direct: they want to see
+the avatar they chose, in the game, and see how they look.
+
+**Decision.** The chosen avatar is a 3D figure in the warehouse
+(`src/player/PlayerAvatar.js`), dressed to match its portrait — skin tone,
+hard-hat colour, hair or hijab, beard, goggles, orange hi-vis jacket and the
+kit of their role. The camera defaults to over-the-shoulder third person, and
+every round opens with the camera in front of the avatar before it swings
+behind. **V** (or **Y** on a controller) switches to first person at any time,
+and the choice is remembered in Settings → Controls → Camera view.
+
+**Why D12's objection no longer decides it.** D12 was right that hazard
+judgement depends on eyeline, which is why first person stays one key away and
+the third-person camera sits close (2.35 m) and just above head height, over the
+shoulder rather than high behind. The rigging cost D12 worried about did not
+apply: the figure reuses the procedural worker and its walk cycle.
+
+**Consequences.**
+- The camera boom is collision-tested against the same boxes as the player, so
+  it pulls in rather than looking through racking; when pulled right in, the
+  avatar is hidden so it never fills the screen.
+- Hazard reach is measured from where the trainee stands: the flag ray is
+  lengthened by the boom so third person does not shorten it.
+- Head bob applies only in first person; the third-person camera is not the head.
+- The opening shot is skipped by any movement or look, can be turned off in
+  Settings, and cuts instead of sweeping under "Reduce all motion".
 
 ---
 
