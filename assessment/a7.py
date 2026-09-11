@@ -392,17 +392,7 @@ def prototype_instructions(out_dir):
             "normally, and everything else is identical. Use the online version if you "
             "want to see passkeys.")
 
-    h1(doc, "3  From source")
-    para(doc, "Requires Node.js 20 or newer.")
-    table(doc, ["Step", "Command"], [
-        ["Install dependencies", "`npm ci`"],
-        ["Run the development server", "`npm run dev`"],
-        ["Run the test suite (266 tests)", "`npm test`"],
-        ["Build for production", "`npm run build`"],
-        ["Build the single offline file", "`npm run build:single`"],
-    ], widths=[6.0, 10.0], size=9.6)
-
-    h1(doc, "4  Controls")
+    h1(doc, "3  Controls")
     table(doc, ["Action", "Keyboard and mouse", "Touch"], [
         ["Move", "W A S D", "Left stick"],
         ["Look", "Move the mouse (click once to capture it)", "Drag anywhere"],
@@ -416,7 +406,7 @@ def prototype_instructions(out_dir):
          "frames and some managed environments — the product says so and switches to "
          "click-and-drag look. Nothing is lost.")
 
-    h1(doc, "5  A five-minute route through it")
+    h1(doc, "4  A five-minute route through it")
     numbered(doc, [
         "Enter a name and continue.",
         "Choose **Training** and the **Main Storage Hall**. There is no clock, and it "
@@ -433,7 +423,7 @@ def prototype_instructions(out_dir):
         "the ones you walked past.",
     ])
 
-    h1(doc, "6  If something goes wrong")
+    h1(doc, "5  If something goes wrong")
     table(doc, ["Symptom", "Cause and remedy"], [
         ["A written message saying WebGL is unavailable",
          "The browser has no WebGL 2, usually because hardware acceleration is off. "
@@ -451,12 +441,10 @@ def prototype_instructions(out_dir):
          "machine. A private window, or a different browser, starts empty by design."],
     ], widths=[5.0, 11.0], size=9.4)
 
-    h1(doc, "7  What is in the Prototype folder")
+    h1(doc, "6  What is in the Prototype folder")
     table(doc, ["Item", "What it is"], [
         ["`beat-the-hazard.html`", "The complete product in one file. Double-click it."],
         ["`README.txt`", "The two-line version of this document."],
-        ["`source/`", "The full source, if you want to build or read it. Also at "
-                      f"{CFG.REPO_URL}"],
     ], widths=[5.0, 11.0], size=9.4)
 
     return save(doc, out_dir, "Prototype_Instructions.docx")
@@ -499,30 +487,14 @@ def assets(out_dir):
             "  because passkeys require a secure context. The product says so rather than\n"
             "  failing silently. Sign in with a name instead, or use the online version.\n\n"
             "  Full instructions: Prototype_Instructions.docx in the folder above.\n"
-            f"  Source: {CFG.REPO_URL}\n"
+            f"  Built by {CFG.BUILT_BY} — {CFG.COMPANY}\n"
         )
     print("  · A7/Prototype/README.txt")
 
-    # The source, minus everything that should never be shipped.
-    src_dst = os.path.join(proto, "source")
-    if os.path.isdir(src_dst):
-        shutil.rmtree(src_dst)
-    ignore = shutil.ignore_patterns(
-        "node_modules", ".git", "dist", "dist-single", "*.zip", "__pycache__",
-        "_figures", "_build", "_out_test", ".env", "shots", "assessment",
-    )
-    for item in ("src", "tests", "scripts", "docs", "public", "design",
-                 "index.html", "package.json", "package-lock.json",
-                 "vite.config.js", "vite.single.config.js", "README.md",
-                 ".env.example"):
-        s = os.path.join(REPO, item)
-        d = os.path.join(src_dst, item)
-        if os.path.isdir(s):
-            shutil.copytree(s, d, ignore=ignore)
-        elif os.path.isfile(s):
-            os.makedirs(src_dst, exist_ok=True)
-            shutil.copyfile(s, d)
-    print("  · A7/Prototype/source/")
+    # The source code is not part of the submission: the prototype is the game.
+    stale = os.path.join(proto, "source")
+    if os.path.isdir(stale):
+        shutil.rmtree(stale)
 
 
 def build(out_dir):

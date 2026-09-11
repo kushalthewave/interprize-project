@@ -1172,3 +1172,6 @@ a.btn { text-decoration: none; }
 .offline-ways { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 0.6rem; }
 .offline-ways .ow { display: flex; flex-direction: column; gap: 0.35rem; align-items: flex-start; padding: 0.8rem; border-radius: var(--radius-sm); background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border); }
 @media (max-width: 720px) { .offline-ways { grid-template-columns: 1fr; } }
+.brand .flagline .fl-team { color: var(--accent); font-weight: 800; }
+.brand .flagline .fl-dot { opacity: 0.6; }
+.offline-strip[hidden] { display: none; }

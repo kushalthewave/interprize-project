@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Beat The Hazard — 3D warehouse safety training in the browser</title>
-<meta name="description" content="Beat The Hazard is browser-based 3D warehouse safety training. It puts a trainee on the floor and scores whether they can spot forklift and pedestrian hazards under a clock. No install, no headset, works offline. Built by Himal Interactive.">
+<meta name="description" content="Beat The Hazard is browser-based 3D warehouse safety training. It puts a trainee on the floor and scores whether they can spot forklift and pedestrian hazards under a clock. No install, no headset, works offline. Built by The Code Crafters.">
 <meta name="theme-color" content="#0b0f14">
 <link rel="icon" href="img/logo-mark.png">
 
@@ -16,7 +16,7 @@
 
 <style>
 /* ==================================================================
-   Beat The Hazard — product site, published by Himal Interactive.
+   Beat The Hazard — product site, by The Code Crafters. Built by Kushal Neupane.
    The palette, type scale and the HUD-chip motif are lifted from
    src/ui/styles.css so the site and the product read as one thing.
    Everything is inline: no build step, no CDN, no tracking.
@@ -182,6 +182,11 @@ header.stuck{border-bottom-color:var(--border);background:rgba(11,15,20,.93)}
 .tbl td:last-child{text-align:right;font-family:var(--mono);color:var(--accent);font-weight:700}
 .tbl tr:last-child td{border-bottom:none}
 
+/* ---------- built by ---------- */
+.built-by{display:inline-flex;align-items:center;gap:12px;margin:0 0 26px;padding:10px 16px;border-radius:999px;background:var(--panel);border:1px solid rgba(242,185,12,.35)}
+.built-by .bb-k{font-family:var(--mono);font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+.built-by .bb-v{font-weight:800;color:var(--accent)}
+
 /* ---------- offline play ---------- */
 .offline-how{margin-top:28px;padding:28px;border-radius:16px;background:var(--panel);border:1px dashed rgba(56,189,248,.45)}
 .offline-how h3{margin-bottom:16px;font-size:1.2rem}
@@ -255,7 +260,7 @@ footer a:hover{color:var(--accent)}
   <div class="wrap nav">
     <a class="brand" href="#top">
       <img src="img/logo-mark.png" alt="">
-      <span>BEAT THE HAZARD<small>by Himal Interactive</small></span>
+      <span>BEAT THE HAZARD<small>by The Code Crafters</small></span>
     </a>
     <nav>
       <a href="#product">The product</a>
@@ -493,10 +498,14 @@ footer a:hover{color:var(--accent)}
 <section id="company" class="band">
   <div class="wrap">
     <p class="eyebrow rv">Who builds it</p>
-    <h2 class="rv">Himal Interactive</h2>
+    <h2 class="rv">The Code Crafters</h2>
     <p class="lead rv" style="margin-bottom:26px">
-      Beat The Hazard is our product. This is the company behind it.
+      Beat The Hazard is our product. This is the team behind it.
     </p>
+    <div class="built-by rv">
+      <span class="bb-k">Built by</span>
+      <span class="bb-v">Kushal Neupane</span>
+    </div>
     <p class="mission rv">
       We build training that people actually finish — and remember on the floor a week later.
     </p>
@@ -518,7 +527,7 @@ footer a:hover{color:var(--accent)}
       </div>
     </div>
     <p class="rv" style="margin-top:38px;font-size:.92rem;max-width:70ch">
-      Himal Interactive is a student software company formed for the CET257 Enterprise
+      The Code Crafters is a student software team formed for the CET257 Enterprise
       Project module at the University of Sunderland. <strong>Beat The Hazard</strong> is
       currently in development against a live client brief from a logistics operator.
       The demo linked from this page is the working product, not a mock-up.
@@ -566,11 +575,11 @@ footer a:hover{color:var(--accent)}
       <div>
         <a class="brand" href="#top" style="margin-bottom:14px">
           <img src="img/logo-mark.png" alt="">
-          <span>BEAT THE HAZARD<small>by Himal Interactive</small></span>
+          <span>BEAT THE HAZARD<small>by The Code Crafters</small></span>
         </a>
         <p style="font-size:.88rem;max-width:38ch;margin:0">
-          Browser-based 3D warehouse safety training. Built in the open,
-          documented honestly.
+          Browser-based 3D warehouse safety training.<br>
+          Built by Kushal Neupane.
         </p>
       </div>
       <div>
@@ -581,14 +590,14 @@ footer a:hover{color:var(--accent)}
         <a href="https://kushalthewave.github.io/interprize-project/" target="_blank" rel="noopener">Live demo</a>
       </div>
       <div>
-        <h4>Project</h4>
-        <a href="https://github.com/kushalthewave/interprize-project" target="_blank" rel="noopener">Source code</a>
+        <h4>Play</h4>
         <a href="../beat-the-hazard.html" download="beat-the-hazard.html">Download for offline play</a>
-        <a href="#company">About the company</a>
+        <a href="#offline">How to play offline</a>
+        <a href="#company">About the team</a>
       </div>
     </div>
     <div class="legal">
-      <span>© <span id="yr">2026</span> Himal Interactive — CET257 Enterprise Project, University of Sunderland.</span>
+      <span>© <span id="yr">2026</span> The Code Crafters · Built by Kushal Neupane — CET257 Enterprise Project, University of Sunderland.</span>
       <span>No trackers. No cookies. No third-party requests.</span>
     </div>
   </div>

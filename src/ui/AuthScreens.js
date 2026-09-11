@@ -202,7 +202,7 @@ export function loginScreen(ctx, caps) {
       el('div.brand', {}, [
         el('h1', { text: 'BEAT THE HAZARD' }),
         el('p', { text: 'Warehouse Forklift & Pedestrian Safety Training' }),
-        el('div.flagline', {}, ['🇳🇵', 'Himalaya Logistics · Birgunj Distribution Centre']),
+        el('div.flagline', {}, [el('span.fl-team', { text: 'The Code Crafters' }), el('span.fl-dot', { text: '·' }), el('span', { text: 'Built by Kushal Neupane' })]),
       ]),
 
       el('div.card.stack', {}, [

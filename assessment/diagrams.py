@@ -641,13 +641,13 @@ def _draw_mark(ax, cx, cy, r, accent, ink, ring):
     universal warning sign; the ring is the game's own targeting reticle.
     Together they say 'spot the hazard' with no words.
     """
-    ax.add_patch(Circle((cx, cy), r, facecolor="none", edgecolor=ring, linewidth=r * 0.30))
+    ax.add_patch(Circle((cx, cy), r, facecolor="none", edgecolor=ring, linewidth=r * 9))
     for ang in (0, 90, 180, 270):
         import math
         a = math.radians(ang)
         x0, y0 = cx + math.cos(a) * r * 0.96, cy + math.sin(a) * r * 0.96
         x1, y1 = cx + math.cos(a) * r * 1.30, cy + math.sin(a) * r * 1.30
-        ax.add_line(Line2D([x0, x1], [y0, y1], color=ring, linewidth=r * 0.26,
+        ax.add_line(Line2D([x0, x1], [y0, y1], color=ring, linewidth=r * 8,
                            solid_capstyle="round"))
     t = r * 0.80
     ax.add_patch(Polygon([(cx, cy + t * 0.86), (cx - t * 0.92, cy - t * 0.66),

@@ -36,7 +36,7 @@ function status() {
 }
 
 function downloadButton(update, { big = false } = {}) {
-  if (!canDownload()) return null;
+  if (!canDownload() || !offline.online) return null;
   fetchSize(update);
   return el(`a.btn${big ? '.btn-primary' : ''}.offline-dl`, {
     href: offline.downloadUrl,
@@ -58,10 +58,21 @@ function installButton(rerender) {
   }, ['📲 Install app']);
 }
 
-/** Compact strip for the bottom of the main menu. */
+/**
+ * Compact strip for the bottom of the main menu.
+ *
+ * It only appears where it is useful: in an ordinary browser tab. Once the
+ * game is installed as an app, or when this IS the downloaded file, the game
+ * already plays offline and the strip is just clutter, so it hides itself.
+ * Offline in a browser tab it drops the Download button, which could not work
+ * without a connection.
+ */
 export function offlineStrip(ctx) {
   const holder = el('div.offline-strip');
   const render = () => {
+    const alreadyOffline = offline.isInstalled || offline.isFileBuild;
+    holder.hidden = alreadyOffline;
+    if (alreadyOffline) { holder.replaceChildren(); return; }
     const st = status();
     holder.replaceChildren(
       el('div.os-text', {}, [
@@ -70,7 +81,7 @@ export function offlineStrip(ctx) {
           text: st?.text ?? 'Download the game as one file, or install it as an app — both work offline.',
         }),
       ]),
-      el('div.row', {}, [downloadButton(render), installButton(render)]),
+      offline.online && el('div.row', {}, [downloadButton(render), installButton(render)]),
     );
   };
   render();

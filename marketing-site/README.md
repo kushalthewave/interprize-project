@@ -1,7 +1,7 @@
 # Beat The Hazard — product website
 
-The zero-budget marketing site for Beat The Hazard, published by Himal
-Interactive, and the A6 deliverable ("initial website ideas / design prototypes") for CET257
+The zero-budget marketing site for Beat The Hazard, by The Code Crafters
+(built by Kushal Neupane), and the A6 deliverable ("initial website ideas / design prototypes") for CET257
 Assessment 1.
 
 **Live:** https://kushalthewave.github.io/interprize-project/company/

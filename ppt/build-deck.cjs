@@ -41,7 +41,7 @@ const F = { head: 'Arial', body: 'Calibri', mono: 'Consolas' };
 const pres = new pptxgen();
 pres.layout = 'LAYOUT_WIDE';           // 13.333 x 7.5 in
 pres.author = 'Kushal Neupane';
-pres.company = 'Beat The Hazard';
+pres.company = 'The Code Crafters';
 pres.title = 'Beat The Hazard';
 
 const W = 13.333;
@@ -153,15 +153,15 @@ const notes = (s, t) => s.addNotes(t);
   txt(s, 'A 3D interactive health & safety training game for\nwarehouse forklift and pedestrian safety',
     M, 3.35, 8.6, 1.0, { size: 19, color: C.white, lh: 1.3 });
   rule(s, M, 4.62);
-  txt(s, 'Himalaya Logistics Distribution Centre  ·  Birgunj, Nepal', M, 4.85, 8, 0.35,
-    { size: 13.5, color: C.dim, valign: 'middle' });
+  txt(s, 'The Code Crafters', M, 4.85, 8, 0.35,
+    { size: 13.5, bold: true, color: C.accent, valign: 'middle' });
 
   hudChip(s, M, 5.5, 1.9, 'Hazards', '15');
   hudChip(s, M + 2.05, 5.5, 1.9, 'Sites', '3');
   hudChip(s, M + 4.1, 5.5, 1.9, 'Tests', '266', { color: C.success });
   hudChip(s, M + 6.15, 5.5, 1.9, 'Frame rate', '60', { color: C.success });
 
-  txt(s, 'Kushal Neupane', M, 6.75, 6, 0.32, { size: 12.5, bold: true, color: C.white });
+  txt(s, 'Built by Kushal Neupane', M, 6.75, 6, 0.32, { size: 12.5, bold: true, color: C.white });
   notes(s, '[0:00 – 0:30] Open on the screenshot: "this is the actual game, running." ' +
     'One-line pitch: we put the trainee INSIDE the warehouse instead of showing them slides about it. ' +
     'Do not linger — the four numbers do the work. Move on within 30 seconds.');
@@ -821,13 +821,13 @@ const notes = (s, t) => s.addNotes(t);
   txt(s, 'Play it yourself', 7.5, 3.85, 4.9, 0.4, { size: 15, bold: true, headFont: true, color: C.accent });
   txt(s, 'kushalthewave.github.io/interprize-project', 7.5, 4.35, 4.9, 0.4,
     { size: 13, bold: true, mono: true, color: C.info });
-  txt(s, 'Source, documentation and tests:', 7.5, 4.9, 4.9, 0.3, { size: 11.5, color: C.dim });
-  txt(s, 'github.com/kushalthewave/interprize-project', 7.5, 5.2, 4.9, 0.4,
-    { size: 12, bold: true, mono: true, color: C.info });
+  txt(s, 'Download it, or install it as an app —', 7.5, 4.9, 4.9, 0.3, { size: 11.5, color: C.dim });
+  txt(s, 'both play with no internet.', 7.5, 5.2, 4.9, 0.4,
+    { size: 12, bold: true, color: C.info });
   txt(s, 'Also ships as one 828 kB file that runs offline.', 7.5, 5.7, 4.9, 0.35,
     { size: 11.5, italic: true, color: C.faint });
 
-  txt(s, 'BEAT THE HAZARD   ·   Kushal Neupane', M, 6.7, 9, 0.35,
+  txt(s, 'BEAT THE HAZARD   ·   The Code Crafters   ·   Built by Kushal Neupane', M, 6.7, 9, 0.35,
     { size: 12, bold: true, color: C.dim, valign: 'middle' });
 
   notes(s, '[18:00 – 20:00] Two minutes. Have the game ALREADY LOADED in another window — do not ' +

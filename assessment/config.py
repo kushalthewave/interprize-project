@@ -10,9 +10,9 @@ information. Search the built .docx files for « to find any you missed.
 """
 
 # ── Identity ────────────────────────────────────────────────────────────
-TEAM_NUMBER = "[Team_Number]"      # e.g. "07"  → folder becomes 07_Himal_Interactive
-COMPANY = "Himal Interactive"
-COMPANY_SLUG = "Himal_Interactive"
+TEAM_NUMBER = "[Team_Number]"      # e.g. "07"  → folder becomes 07_The_Code_Crafters
+COMPANY = "The Code Crafters"
+COMPANY_SLUG = "The_Code_Crafters"
 TAGLINE = "Training people actually finish."
 PRODUCT = "Beat The Hazard"
 PRODUCT_SLUG = "BeatTheHazard"
@@ -28,6 +28,7 @@ SUBMISSION_DATE = "«dd Month yyyy»"
 
 # ── Live links (real, already deployed) ─────────────────────────────────
 LIVE_URL = "https://kushalthewave.github.io/interprize-project/"
+BUILT_BY = "Kushal Neupane"
 OFFLINE_URL = "https://kushalthewave.github.io/interprize-project/beat-the-hazard.html"
 REPO_URL = "https://github.com/kushalthewave/interprize-project"
 
