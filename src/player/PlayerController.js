@@ -1,12 +1,12 @@
 /**
  * PlayerController.js
- * First-person camera controller: pointer-lock mouse look, WASD movement with
+ * Camera controller, third or first person: pointer-lock mouse look, WASD movement with
  * acceleration/damping, crouch, and collision resolution against the scene's
  * axis-aligned collider list.
  *
  * Why no physics engine: the warehouse is a flat slab with box-shaped
  * obstacles. A circle-vs-AABB sweep gives correct, cheap, deterministic
- * collision without adding a ~500kB dependency. See docs/DECISIONS.md.
+ * collision without adding a ~500kB dependency.
  *
  * Input: rebindable keyboard (Settings → Controls), mouse, touch sticks, and
  * any standard gamepad through the browser Gamepad API.
