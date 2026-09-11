@@ -16,6 +16,7 @@ import { bus, EV } from './core/EventBus.js';
 import { Graphics } from './core/Graphics.js';
 import { actionForKey, presetPatch, detectPreset, isPresetKey } from './data/settings.js';
 import { setColourMode, palette } from './data/palette.js';
+import { initOffline, onOfflineChange } from './services/offline.js';
 
 /** Where a training round in progress is kept, so a closed tab can resume it. */
 const CHECKPOINT_KEY = 'beat-the-hazard:checkpoint:v1';
@@ -237,6 +238,13 @@ function boot() {
     graphics,
     engine,
     player,
+    onOfflineChange,
+  });
+
+  // Offline play: register the service worker, catch the install offer, and
+  // tell the player when the connection comes and goes.
+  initOffline({
+    onOnlineChange: (on) => ui.toast(on ? 'Back online' : '📴 You are offline — the game keeps working', on ? 'ok' : ''),
   });
 
   // Captions: sounds as [bracketed text], spoken lines as subtitles.

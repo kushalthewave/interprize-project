@@ -1157,3 +1157,18 @@ html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after 
 .set-row select { width: auto; max-width: 320px; }
 .set-row .set-slider input[type="range"] { width: auto; }
 .kb > .btn { align-self: flex-start; }
+
+/* ==================================================================
+   Play without internet
+   ================================================================== */
+.offline-strip {
+  display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;
+  margin-top: 1.2rem; padding: 0.9rem 1.1rem; border-radius: var(--radius);
+  background: var(--panel); border: 1px dashed rgba(56, 189, 248, 0.45);
+}
+.offline-strip .os-k { font-size: 0.64rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--info); font-weight: 800; }
+.offline-strip .os-d { font-size: 0.86rem; color: var(--text-dim); max-width: 60ch; }
+a.btn { text-decoration: none; }
+.offline-ways { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 0.6rem; }
+.offline-ways .ow { display: flex; flex-direction: column; gap: 0.35rem; align-items: flex-start; padding: 0.8rem; border-radius: var(--radius-sm); background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border); }
+@media (max-width: 720px) { .offline-ways { grid-template-columns: 1fr; } }

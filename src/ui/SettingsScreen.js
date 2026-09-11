@@ -16,6 +16,7 @@ import {
 import { RENDER } from '../data/config.js';
 import { AudioManager } from '../audio/AudioManager.js';
 import { securityPanel } from './AuthScreens.js';
+import { offlineCard } from './OfflinePanel.js';
 
 let lastTab = 'video';
 
@@ -342,6 +343,7 @@ function controllerLayout() {
 function accountTab(ctx, rerender) {
   const p = ctx.profile;
   return [
+    offlineCard(ctx),
     ...(ctx.auth ? securityPanel(ctx, ctx.authCaps ?? { passkey: { available: false, reason: '' } }, rerender) : []),
     el('div.card.stack.mt', {}, [
       el('h3', { text: '💾 Data' }),

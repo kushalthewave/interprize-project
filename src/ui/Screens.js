@@ -10,6 +10,7 @@ import { DIFFICULTIES, DIFFICULTY_ORDER, ACHIEVEMENTS, RANKS, TEST } from '../da
 import { HAZARDS, HAZARD_CATEGORIES } from '../data/hazards.js';
 import { ENVIRONMENTS } from '../environment/registry.js';
 import { avatarPicker } from './AuthScreens.js';
+import { offlineStrip } from './OfflinePanel.js';
 import { AVATARS, getAvatar, avatarNode } from './avatars.js';
 import { Timer } from '../gameplay/Timer.js';
 
@@ -75,7 +76,8 @@ export function menuScreen(ctx) {
         tile('📖', 'Hazard Guide', 'Reference for all 15 hazard types and their controls.', 'guide'),
         tile('⚙️', 'Settings', 'Audio, motion, accessibility and data.', 'settings'),
       ]),
-      el('p.faint.center.mt', { text: 'Desktop: mouse + keyboard. Tablet/phone: on-screen sticks.' }),
+      offlineStrip(ctx),
+      el('p.faint.center.mt', { text: 'Desktop: mouse + keyboard or a controller. Tablet/phone: on-screen sticks.' }),
     ]),
   ]);
 }
