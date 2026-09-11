@@ -37,8 +37,8 @@ npm test
 ✓ tests/score.test.js     (26 tests)
 ✓ tests/profile.test.js   (30 tests)
 
-Test Files  10 passed (10)
-     Tests  255 passed (255)
+Test Files  11 passed (11)
+     Tests  266 passed (266)
   Duration  625ms
 ```
 
@@ -52,6 +52,7 @@ Test Files  10 passed (10)
 | `avatars.test.js` | 12 | Exactly five avatars, in order, each with a name, role and prop; legacy ids mapped; unknown ids — including `constructor` and `__proto__` — fall back to the default; every SVG self-contained with no external reference, labelled for screen readers, and given unique gradient and clip ids so two copies on one page do not collide |
 | `settings.test.js` | 41 | Every requested section present; unique keys; defaults valid; ranges clamped, bad selects and toggles rejected; migration from older profiles (keeps values, turns head bob off for anyone who had reduced motion, drops unknown keys, repairs unbound actions, strips reserved keys); presets recognised and never switch post-processing on; key rebinding (conflicts move the key and promote the displaced action's alternative, reserved keys refused, no mutation); resolution and frame-cap maths including 60 Hz jitter |
 | `settings-runtime.test.js` | 10 | Colour-blind palettes complete and genuinely different; 3D marker colour follows the mode; aim tolerance combines difficulty × assist and is clamped to 0.85–2.2; score snapshot round-trips for training resume and survives corrupt data |
+| `offline.test.js` | 11 | The generated service worker, run in a simulated worker scope: every built file precached; the game opens with the network switched off; hashed files served from cache without a request; other origins and the company site left alone; old caches removed on update; one missing file cannot empty the cache. The offline single file starts with a doctype, declares UTF-8 within the first 1024 bytes, and loads nothing from the network |
 | `hazards.test.js` | 23 | All 15 required hazard ids present, unique, every teaching field non-empty and of substantial length, valid severities, valid categories, life-threatening scenarios classified major, difficulty monotonicity across six parameters, the three difficulties genuinely distinct, scoring constants match the brief, rank thresholds |
 | `profile.test.js` | 38 | Sign-in and name sanitisation, default and legacy avatar migration (`male`→David, `female`→Maria), the remembered identity after sign-out and through a reset, persistence round-trip, recovery from a corrupt save, every gate open by default, every gate still enforced when a site switches it on, best-score-never-regresses, stat accumulation, history cap and ordering, each achievement condition and its boundary, no duplicate unlocks, completion percentage, reset preserving identity |
 
@@ -231,3 +232,18 @@ Manual pass:
   voice is installed depends on the operating system. Subtitles show either way.
 - **Fullscreen** — browsers only allow it from a real click, which automation
   cannot provide.
+
+
+### Offline play: what was verified, and how
+
+- **The downloaded file** was served the way a disk presents it — no charset
+  header. Before the fix: `windows-1252`, quirks mode, the Nepal flag as
+  `ÐŸ‡³ÐŸ‡Μ`. After: `UTF-8`, standards mode, correct text, a full training round
+  with all 15 hazards, progress saved, and the menu recognising it as the
+  offline file.
+- **The Download button** in the production build hands out that fixed file.
+- **The service worker** is verified in a simulated worker scope, not in a
+  real browser: the embedded test browser here refuses to register *any*
+  service worker, including a one-line one. **Installing the app and playing
+  it offline has not been verified in a real browser** — open the live site in
+  Chrome or Edge once, switch Wi-Fi off, and reload to confirm.
