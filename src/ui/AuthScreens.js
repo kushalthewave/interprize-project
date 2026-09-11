@@ -12,10 +12,57 @@ import { formatSecret } from '../services/auth/base32.js';
 import { totp, secondsRemaining } from '../services/auth/totp.js';
 import { setAuthConfig, getStoredAuthConfig, isFromBuild } from '../services/auth/providers.js';
 
-const AVATARS = {
-  male: { face: '🧑🏽‍🏭', label: 'Ramesh', sub: 'Daura-surwal inspired · dhaka topi' },
-  female: { face: '👩🏽‍🏭', label: 'Sunita', sub: 'Kurti-surwal inspired · dupatta' },
-};
+import { AVATARS, AVATAR_ORDER, avatarNode, normaliseAvatar } from './avatars.js';
+
+/**
+ * The avatar picker, shared by the login and profile screens. A large
+ * preview shows who you are; the grid below shows all five. Returns the node
+ * and a getter for the current choice.
+ */
+export function avatarPicker(initial, { onChange } = {}) {
+  let chosen = normaliseAvatar(initial);
+  const preview = el('div.avatar-preview');
+  const renderPreview = () => {
+    const a = AVATARS[chosen];
+    mount(preview,
+      avatarNode(chosen, { size: 92 }),
+      el('div', {}, [
+        el('div.ap-k', { text: 'You are' }),
+        el('div.ap-name', { text: a.name }),
+        el('div.ap-role', { text: a.role }),
+        el('div.ap-blurb', { text: a.blurb }),
+      ]),
+    );
+  };
+
+  const grid = el('div.avatar-grid', { role: 'group', 'aria-label': 'Choose your avatar' });
+  for (const id of AVATAR_ORDER) {
+    const a = AVATARS[id];
+    const b = el(`button.avatar-opt${id === chosen ? '.selected' : ''}`, {
+      type: 'button',
+      'aria-pressed': String(id === chosen),
+      'aria-label': `${a.name}, ${a.role}`,
+      title: `${a.name} — ${a.role}`,
+    }, [
+      avatarNode(id, { size: 58, badge: false }),
+      el('span.label', { text: a.name }),
+      el('span.sub', { text: a.role }),
+    ]);
+    b.addEventListener('click', () => {
+      chosen = id;
+      for (const n of grid.children) {
+        n.classList.toggle('selected', n === b);
+        n.setAttribute('aria-pressed', String(n === b));
+      }
+      renderPreview();
+      onChange?.(id);
+    });
+    grid.append(b);
+  }
+  renderPreview();
+
+  return { node: el('div.avatar-picker', {}, [preview, grid]), get value() { return chosen; } };
+}
 
 /* ================================================================== *
  * Login
@@ -27,32 +74,16 @@ const AVATARS = {
  */
 export function loginScreen(ctx, caps) {
   const p = ctx.profile;
+  const back = caps.remembered;          // who signed out last on this device
   const err = el('div.auth-error', { role: 'alert' });
   const showErr = (m) => { err.textContent = m; err.classList.toggle('show', !!m); };
 
   /* ---- name + avatar (the default path) ---- */
   const nameInput = el('input', {
     type: 'text', placeholder: 'e.g. Sunita Shrestha', maxLength: 32,
-    value: p.name || '', autocomplete: 'name', id: 'trainee-name',
+    value: p.name || back?.name || '', autocomplete: 'name', id: 'trainee-name',
   });
-
-  let avatar = p.avatar || 'male';
-  const avatarOpts = Object.entries(AVATARS).map(([key, a]) =>
-    el(`button.avatar-opt${key === avatar ? '.selected' : ''}`, {
-      type: 'button', 'aria-pressed': key === avatar,
-      on: {
-        click: (e) => {
-          avatar = key;
-          for (const n of e.currentTarget.parentElement.children) n.classList.remove('selected');
-          e.currentTarget.classList.add('selected');
-        },
-      },
-    }, [
-      el('span.face', { text: a.face }),
-      el('span.label', { text: a.label }),
-      el('span.sub', { text: a.sub }),
-    ]),
-  );
+  const picker = avatarPicker(p.name ? p.avatar : (back?.avatar ?? p.avatar));
 
   const submitName = async () => {
     const name = nameInput.value.trim();
@@ -62,7 +93,8 @@ export function loginScreen(ctx, caps) {
       return;
     }
     showErr('');
-    await ctx.actions.signInWithName({ name, avatar });
+    try { await ctx.actions.signInWithName({ name, avatar: picker.value }); }
+    catch (e) { showErr(e.message); }
   };
   nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitName(); });
 
@@ -70,7 +102,9 @@ export function loginScreen(ctx, caps) {
   const passkeyBlock = () => {
     const pk = caps.passkey;
     if (pk.enrolled && pk.available) {
+      const who = back?.name;
       return el('button.auth-btn.auth-passkey', {
+        type: 'button',
         on: {
           click: async () => {
             showErr('');
@@ -79,9 +113,11 @@ export function loginScreen(ctx, caps) {
           },
         },
       }, [
-        el('span.auth-icon', { text: '🔐' }),
+        back
+          ? avatarNode(back.avatar, { size: 40, badge: false, className: 'auth-avatar' })
+          : el('span.auth-icon', { text: '🔐' }),
         el('span', {}, [
-          el('span.auth-label', { text: 'Sign in with a passkey' }),
+          el('span.auth-label', { text: who ? `Sign in as ${who} with your passkey` : 'Sign in with a passkey' }),
           el('span.auth-sub', { text: 'Fingerprint, face or device PIN — nothing to type' }),
         ]),
       ]);
@@ -90,19 +126,18 @@ export function loginScreen(ctx, caps) {
       return el('div.auth-unavailable', {}, [
         el('span.auth-icon', { text: '🔐' }),
         el('span', {}, [
-          el('span.auth-label', { text: 'Passkeys unavailable' }),
+          el('span.auth-label', { text: 'Passkeys unavailable here' }),
           el('span.auth-sub', { text: pk.reason }),
         ]),
       ]);
     }
-    // Available but nothing enrolled yet: offer to create one right here
-    // rather than sending the user away to find a settings screen.
     return el('button.auth-btn.auth-passkey', {
+      type: 'button',
       on: {
         click: async () => {
           showErr('');
-          const name = nameInput.value.trim() || p.name || 'Trainee';
-          try { await ctx.actions.createPasskeyAndSignIn({ name, avatar }); }
+          const name = nameInput.value.trim() || p.name || back?.name || 'Trainee';
+          try { await ctx.actions.createPasskeyAndSignIn({ name, avatar: picker.value }); }
           catch (e) { showErr(e.message); }
         },
       },
@@ -120,19 +155,34 @@ export function loginScreen(ctx, caps) {
   };
 
   /* ---- social ---- */
+  // An unconfigured provider used to be a greyed-out button that did nothing,
+  // and the only place to configure it was behind a sign-in. Now it opens
+  // its setup form right here on the login screen.
+  const setupHost = el('div.provider-setup-host');
+  let openId = null;
   const socialButtons = caps.providers.map((prov) => {
     if (!prov.configured) {
-      return el('button.auth-btn.auth-social.disabled', {
-        disabled: true, title: prov.setupHint,
+      return el('button.auth-btn.auth-social.needs-setup', {
+        type: 'button',
+        title: prov.setupHint,
+        on: {
+          click: () => {
+            showErr('');
+            openId = openId === prov.id ? null : prov.id;
+            mount(setupHost, openId ? providerQuickSetup(ctx, prov, () => ctx.go('login')) : null);
+          },
+        },
       }, [
         el('span.auth-icon', { text: prov.icon }),
-        el('span', {}, [
+        el('span', { style: { flex: '1' } }, [
           el('span.auth-label', { text: prov.label }),
           el('span.auth-sub', { text: prov.reason }),
         ]),
+        el('span.auth-setup', { text: 'Set up' }),
       ]);
     }
     return el('button.auth-btn.auth-social', {
+      type: 'button',
       style: { background: prov.colour, color: prov.textColour },
       on: {
         click: async () => {
@@ -147,8 +197,6 @@ export function loginScreen(ctx, caps) {
     ]);
   });
 
-  const anySocialConfigured = caps.providers.some((p2) => p2.configured);
-
   return el('div.screen', {}, [
     el('div.screen-inner.narrow', {}, [
       el('div.brand', {}, [
@@ -159,27 +207,38 @@ export function loginScreen(ctx, caps) {
 
       el('div.card.stack', {}, [
         el('div.section-head', {}, [
-          el('h2', { text: 'Start training' }),
+          el('h2', { text: back ? `Welcome back, ${back.name}` : 'Start training' }),
           el('p', { text: 'Your name and progress are stored on this device only.' }),
         ]),
 
+        caps.totp?.enrolled && el('div.auth-note.small', {
+          text: '🔢 This profile is protected by an authenticator app. After you sign in you will be asked for the 6-digit code.',
+        }),
+
         passkeyBlock(),
 
-        ...(anySocialConfigured || caps.providers.length
-          ? [el('div.auth-divider', {}, [el('span', { text: 'or continue with' })]), ...socialButtons]
-          : []),
+        caps.providers.length > 0 && el('div.auth-divider', {}, [el('span', { text: 'or continue with' })]),
+        ...socialButtons,
+        setupHost,
 
         el('div.auth-divider', {}, [el('span', { text: 'or just use a name' })]),
 
         el('div', {}, [el('label', { for: 'trainee-name', text: 'Your name' }), nameInput]),
-        el('div', {}, [el('label', { text: 'Choose your avatar' }), el('div.avatar-grid', {}, avatarOpts)]),
+        el('div', {}, [el('label', { text: 'Choose your avatar' }), picker.node]),
         err,
         el('button.btn.btn-primary.btn-lg.btn-block', {
-          text: 'Enter the warehouse', on: { click: submitName },
+          type: 'button', text: 'Enter the warehouse', on: { click: submitName },
         }),
         el('button.btn.btn-sm.btn-ghost.btn-block', {
+          type: 'button',
           text: 'Continue as guest',
-          on: { click: () => ctx.actions.signInWithName({ name: 'Trainee', avatar }) },
+          on: {
+            click: async () => {
+              showErr('');
+              try { await ctx.actions.signInWithName({ name: 'Guest', avatar: picker.value }); }
+              catch (e) { showErr(e.message); }
+            },
+          },
         }),
       ]),
 
@@ -190,11 +249,79 @@ export function loginScreen(ctx, caps) {
   ]);
 }
 
+/**
+ * Inline setup for one provider, opened from its button on the login screen.
+ * Only public identifiers are ever asked for. GitHub also needs the URL of a
+ * server-side exchange, and the form says so rather than pretending otherwise.
+ */
+function providerQuickSetup(ctx, prov, onSaved) {
+  const stored = getStoredAuthConfig();
+  const spec = {
+    google: {
+      fields: [['googleClientId', 'Google Client ID', 'xxxxxxxx.apps.googleusercontent.com']],
+      link: 'https://console.cloud.google.com/apis/credentials',
+      steps: 'Google Cloud Console → Credentials → Create OAuth client ID → Web application. Add the origin below under “Authorised JavaScript origins”. No secret is needed.',
+    },
+    facebook: {
+      fields: [['facebookAppId', 'Facebook App ID', '1234567890123456']],
+      link: 'https://developers.facebook.com/apps',
+      steps: 'Create an app → add “Facebook Login” → add the origin below as a valid domain.',
+    },
+    github: {
+      fields: [
+        ['githubClientId', 'GitHub Client ID', 'Iv1.xxxxxxxxxxxx'],
+        ['githubTokenEndpoint', 'Token exchange endpoint (your server)', 'https://your-worker.workers.dev/github'],
+      ],
+      link: 'https://github.com/settings/developers',
+      steps: 'GitHub cannot finish sign-in in a browser alone — the exchange needs the client secret. Register an OAuth App, deploy the one-function endpoint in docs/AUTHENTICATION.md, and paste both here.',
+    },
+  }[prov.id];
+  if (!spec) return null;
+
+  const inputs = spec.fields.map(([key, label, ph]) => {
+    const input = el('input', {
+      type: 'text', value: stored[key] ?? '', placeholder: ph,
+      id: `qs-${key}`, autocomplete: 'off', spellcheck: false,
+    });
+    return { key, input, node: el('div', {}, [el('label', { for: `qs-${key}`, text: label }), input]) };
+  });
+
+  const title = prov.label.replace('Continue with ', '');
+  return el('div.card.provider-quick', {}, [
+    el('div.row.between', {}, [
+      el('strong', { text: `Set up ${title}` }),
+      el('a', { href: spec.link, target: '_blank', rel: 'noopener noreferrer', text: 'Open console ↗' }),
+    ]),
+    el('p.set-desc', { text: spec.steps }),
+    el('div.auth-note.small', {}, [
+      'Origin to register: ',
+      el('code', { text: window.location.origin, style: { userSelect: 'all' } }),
+    ]),
+    ...inputs.map((i) => i.node),
+    el('div.row', {}, [
+      el('button.btn.btn-primary.btn-sm', {
+        type: 'button',
+        text: 'Save & enable',
+        on: {
+          click: async () => {
+            const patch = {};
+            for (const i of inputs) patch[i.key] = i.input.value;
+            setAuthConfig(patch);
+            await ctx.actions.refreshAuthCaps();
+            ctx.actions.toast(`${title} settings saved`, 'ok');
+            onSaved();
+          },
+        },
+      }),
+    ]),
+  ]);
+}
+
 /* ================================================================== *
  * Second factor prompt
  * ================================================================== */
 
-export function totpChallengeScreen(ctx, { onSuccess }) {
+export function totpChallengeScreen(ctx, { onSuccess, onCancel, canUsePasskey = false, pending = null }) {
   const err = el('div.auth-error', { role: 'alert' });
   const input = el('input', {
     type: 'text', inputMode: 'numeric', autocomplete: 'one-time-code',
@@ -221,13 +348,24 @@ export function totpChallengeScreen(ctx, { onSuccess }) {
     el('div.screen-inner.narrow', {}, [
       el('div.card.stack.center', {}, [
         el('div', { text: '🔢', style: { fontSize: '2.4rem' } }),
-        el('h2', { text: 'Enter your 6-digit code' }),
+        pending && el('div.row', { style: { justifyContent: 'center' } }, [avatarNode(pending.avatar, { size: 64, badge: false })]),
+        el('h2', { text: pending ? `${pending.name}, enter your 6-digit code` : 'Enter your 6-digit code' }),
         el('p.muted', { text: 'Open your authenticator app and type the current code for Beat The Hazard.' }),
         input,
         err,
         el('button.btn.btn-primary.btn-block', { text: 'Verify', on: { click: submit } }),
+        canUsePasskey && el('button.btn.btn-block', {
+          text: '🔐 Use my passkey instead',
+          on: {
+            click: async () => {
+              try { await ctx.actions.signInWithPasskey(); }
+              catch (e) { err.textContent = e.message; err.classList.add('show'); }
+            },
+          },
+        }),
         el('button.btn.btn-ghost.btn-sm', {
-          text: 'Cancel', on: { click: () => ctx.actions.signOut() },
+          text: pending ? '← Back' : 'Sign out',
+          on: { click: () => (onCancel ? onCancel() : ctx.actions.signOut()) },
         }),
       ]),
     ]),

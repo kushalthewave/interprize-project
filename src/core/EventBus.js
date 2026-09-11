@@ -70,6 +70,8 @@ export const EV = {
   // train mode
   TRAIN_STEP: 'train:step',
   TRAIN_COMPLETE: 'train:complete',
+  /** Direction and distance from the player to the hazard being guided to. */
+  TRAIN_GUIDE: 'train:guide',
   // ui / app
   SCREEN_CHANGE: 'app:screen',
   TOAST: 'ui:toast',

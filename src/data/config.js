@@ -125,11 +125,33 @@ export const ACHIEVEMENTS = [
   { id: 'all-environments', label: 'Site Inspector', desc: 'Complete a test in all three environments.', icon: '🗺️' },
 ];
 
-/** Progression gate order: train -> simple -> mid -> hard. */
+/**
+ * Progression gates: train -> simple -> mid -> hard.
+ *
+ * All off. Training is optional and every Test difficulty is open from the
+ * start: an experienced operative should not have to sit through a guided
+ * tour before being allowed to prove they already know the floor, and a
+ * supervisor running a quick assessment should not find it locked. The gate
+ * logic is kept (and tested) so a site that wants a mandatory path can turn
+ * it back on here.
+ */
 export const PROGRESSION = {
-  requireTrainBeforeTest: true,
-  requireSimpleBeforeMid: true,
-  requireMidBeforeHard: true,
+  requireTrainBeforeTest: false,
+  requireSimpleBeforeMid: false,
+  requireMidBeforeHard: false,
   /** Minimum score in the previous difficulty to unlock the next. */
   unlockScore: 30,
+};
+
+/**
+ * Test Mode is one fixed five-minute round, whatever the difficulty.
+ * Difficulty still changes the reaction threshold used for the fast/slow
+ * scoring tier, the decoys, the lighting and the guidance — just not the
+ * length of the assessment, so results across difficulties are comparable.
+ */
+export const TEST = {
+  timeLimitSeconds: 300,
+  /** The round clock turns amber, then red, with this many seconds left. */
+  warnAtSeconds: 60,
+  criticalAtSeconds: 30,
 };

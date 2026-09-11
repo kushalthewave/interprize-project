@@ -10,17 +10,18 @@
  *   tick(dt)                             advance clock, expire hazards
  *   end(reason)                          produce a summary + persist it
  *
- * TRAIN MODE teaches: hazards are highlighted, the clock does not kill the
- * round, each find opens a teaching card, and finding them all completes the
- * module and unlocks testing.
+ * TRAIN MODE teaches: there is no clock at all. A guide leads the trainee to
+ * the nearest hazard they have not found yet — an arrow and a distance in the
+ * HUD, the hazard's location in words, and a column of light over the spot.
+ * Each find opens a teaching card. Training is optional.
  *
- * TEST MODE evaluates: no highlights (except on Simple), the reaction clock
- * runs per hazard, wrong flags break the combo, and the round ends when the
- * clock expires or every hazard is found.
+ * TEST MODE evaluates: one fixed five-minute round, no guide and no
+ * locations, no highlights (except on Simple), wrong flags break the combo,
+ * and the round ends when the clock runs out or every hazard is found.
  */
 import * as THREE from 'three';
 import { bus, EV } from '../core/EventBus.js';
-import { DIFFICULTIES, SCORING } from '../data/config.js';
+import { DIFFICULTIES, SCORING, TEST } from '../data/config.js';
 import { ScoreManager } from './ScoreManager.js';
 import { Timer } from './Timer.js';
 import { HazardSystem } from '../hazards/HazardSystem.js';
@@ -176,15 +177,21 @@ export class GameManager {
       scoring: SCORING,
     });
 
-    // The reaction clock can be switched off in Settings. When it is off the
-    // round is untimed: a very large budget is used so nothing ever expires,
-    // and every find is scored at the "slow" tier rather than being penalised
-    // for a clock the player was never shown.
+    // Test Mode is one fixed five-minute round. Underneath it the per-hazard
+    // clock still runs at the difficulty's pace, because that is what decides
+    // whether a find earned the fast tier.
+    //
+    // Train Mode has no clock at all, and the Test clock can be switched off
+    // in Settings for untimed practice. Either way a very large budget is used
+    // so nothing ever expires.
     this.timed = mode === MODE.TEST && this.profile.settings.timedTest !== false;
     this.timer = new Timer({
       secondsPerHazard: this.timed ? diff.secondsPerHazard : 36000,
       hazardCount: total,
+      totalSeconds: this.timed ? TEST.timeLimitSeconds : null,
       warnAt: 0.25,
+      roundWarnAt: TEST.warnAtSeconds,
+      roundCriticalAt: TEST.criticalAtSeconds,
     });
 
     this.hazards.reset();
@@ -194,11 +201,8 @@ export class GameManager {
     if (mode === MODE.TRAIN) {
       this.train = {
         index: 0,
-        // teach major hazards first, then minor - a sensible pedagogic order
-        order: [...this.hazards.instances].sort((a, b) =>
-          a.severity === b.severity ? 0 : a.severity === 'major' ? -1 : 1,
-        ),
-        showing: null,
+        order: [...this.hazards.instances],
+        target: null,
         completed: false,
       };
     }
@@ -217,8 +221,15 @@ export class GameManager {
       totalHazards: total,
       secondsPerHazard: this.timer.secondsPerHazard,
       timed: this.timed,
+      timeLimit: this.timed ? TEST.timeLimitSeconds : null,
       showHazardCount: mode === MODE.TRAIN || diff.showHazardCount,
+      player: { name: this.profile.name || 'Trainee', avatar: this.profile.avatar },
     });
+
+    // Name the first hazard straight away. Previously the Train panel said
+    // "Explore the warehouse" until something had been found, so the one
+    // moment a trainee most needed directions was the one they got none.
+    if (mode === MODE.TRAIN) this._advanceTrain(null);
   }
 
   pause() {
@@ -267,7 +278,8 @@ export class GameManager {
         kind: 'correct',
         hazard: inst.def,
         hint: inst.hint,
-        where: this.profile.settings.showLocations === false ? null : inst.where,
+        // Locations are a Train Mode aid; a test does not give them away.
+        where: this._locationsShown() ? inst.where : null,
         points: Math.round(out.points * this.score.multiplier),
         fast: out.fast,
         combo: out.combo,
@@ -294,20 +306,35 @@ export class GameManager {
     return { result: 'wrong' };
   }
 
-  /** Train Mode: point the player at the next hazard to learn. */
+  _locationsShown() {
+    return this.mode === MODE.TRAIN && this.profile.settings.showLocations !== false;
+  }
+
+  /**
+   * Train Mode: choose the next hazard to lead the player to.
+   *
+   * The nearest unfound one, measured from where the player is standing.
+   * The old fixed order (all majors first) sent a trainee from one end of a
+   * 62 m building to the other and back again; nearest-first means the next
+   * hazard is usually a short walk away.
+   */
   _advanceTrain(found) {
     const t = this.train;
     t.index = t.order.filter((i) => i.found).length;
-    const next = t.order.find((i) => !i.found);
+    const next = this._nearestUnfound();
+    t.target = next;
+    this.hazards.setGuideTarget(next);
     bus.emit(EV.TRAIN_STEP, {
       index: t.index,
       total: t.order.length,
+      started: found == null,
       next: next
         ? {
             id: next.id,
             name: next.def.name,
+            severity: next.severity,
             hint: next.hint,
-            where: this.profile.settings.showLocations === false ? null : next.where,
+            where: this._locationsShown() ? next.where : null,
           }
         : null,
       justFound: found?.def ?? null,
@@ -316,6 +343,32 @@ export class GameManager {
       t.completed = true;
       bus.emit(EV.TRAIN_COMPLETE, { environment: this.environmentId });
     }
+  }
+
+  _nearestUnfound() {
+    const px = this.player.position.x;
+    const pz = this.player.position.z;
+    let best = null;
+    let bestD = Infinity;
+    for (const i of this.hazards.instances) {
+      if (i.found) continue;
+      const d = Math.hypot(i.center.x - px, i.center.z - pz);
+      if (d < bestD) { bestD = d; best = i; }
+    }
+    return best;
+  }
+
+  /**
+   * Where the guided hazard is relative to the player: a bearing (radians,
+   * 0 = straight ahead, positive = to the left) and a floor distance.
+   */
+  _guideVector(inst) {
+    const dx = inst.center.x - this.player.position.x;
+    const dz = inst.center.z - this.player.position.z;
+    // Same convention as PlayerController: facing yaw = (-sin, -cos).
+    let rel = Math.atan2(-dx, -dz) - this.player.yaw;
+    rel = Math.atan2(Math.sin(rel), Math.cos(rel));
+    return { angle: rel, distance: Math.hypot(dx, dz) };
   }
 
   /* ---------------------------------------------------------------- *
@@ -331,6 +384,17 @@ export class GameManager {
     this.player.update(dt);
 
     const { expired, hazardExpired } = this.timer.tick(dt);
+
+    if (this.mode === MODE.TRAIN && this.train.target && !this.train.target.found) {
+      const inst = this.train.target;
+      const v = this._guideVector(inst);
+      bus.emit(EV.TRAIN_GUIDE, {
+        ...v,
+        name: inst.def.name,
+        severity: inst.severity,
+        where: this._locationsShown() ? inst.where : null,
+      });
+    }
 
     // The per-hazard clock ran out.
     //
@@ -349,12 +413,12 @@ export class GameManager {
       });
     }
 
-    // timer audio warnings, at most once per second
+    // Audio warnings in the last ten seconds of the round, at most once a second.
     if (this.mode === MODE.TEST && this.timed) {
-      const sec = Math.ceil(this.timer.hazardRemaining);
-      if (sec !== this._warnedAt && sec <= 5 && sec > 0) {
+      const sec = Math.ceil(this.timer.remaining);
+      if (sec !== this._warnedAt && sec <= 10 && sec > 0) {
         this._warnedAt = sec;
-        this.timer.critical ? this.audio?.timerCritical() : this.audio?.timerWarn();
+        sec <= 5 ? this.audio?.timerCritical() : this.audio?.timerWarn();
       }
     }
 
@@ -364,8 +428,8 @@ export class GameManager {
       display: this.timer.display,
       hazardRemaining: this.timer.hazardRemaining,
       timed: this.timed,
-      warning: this.timed && this.timer.warning,
-      critical: this.timed && this.timer.critical,
+      warning: this.timed && this.timer.roundWarning,
+      critical: this.timed && this.timer.roundCritical,
       score: this.score.score,
       streak: this.score.streak,
       combo: this.score.comboActive,
@@ -385,6 +449,7 @@ export class GameManager {
     this.state = STATE.FINISHED;
 
     this.hazards.active = false;
+    this.hazards.setGuideTarget(null);
     this.hazards.revealAll();
     this.player.enabled = false;
     this.player.releaseLock();
@@ -408,12 +473,12 @@ export class GameManager {
       .map((i) => ({
         id: i.id, name: i.def.name, severity: i.severity,
         safetyTip: i.def.safetyTip,
-        where: i.where,
+        where: this._locationsShown() ? i.where : null,
       }));
-    // Where each found hazard was, so the results screen can show a route back.
-    summary.foundLocations = Object.fromEntries(
-      this.hazards.instances.filter((i) => i.found).map((i) => [i.id, i.where]),
-    );
+    // Where each found hazard was — Train Mode only.
+    summary.foundLocations = this._locationsShown()
+      ? Object.fromEntries(this.hazards.instances.filter((i) => i.found).map((i) => [i.id, i.where]))
+      : {};
     summary.timed = this.timed;
 
     let unlocked = [];

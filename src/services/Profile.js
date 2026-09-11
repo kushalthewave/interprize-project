@@ -10,6 +10,7 @@
  */
 import { ACHIEVEMENTS, DIFFICULTY_ORDER, PROGRESSION } from '../data/config.js';
 import { bus, EV } from '../core/EventBus.js';
+import { DEFAULT_AVATAR, normaliseAvatar } from '../data/avatars.js';
 
 const KEY = 'beat-the-hazard:profile:v1';
 
@@ -79,8 +80,13 @@ function blankProfile() {
   return {
     version: 1,
     name: '',
-    avatar: 'male',
+    avatar: DEFAULT_AVATAR,
     authProvider: 'local',
+    /**
+     * Who was signed in before the last sign-out. A passkey or a returning
+     * trainee restores this instead of arriving as a nameless "Trainee".
+     */
+    remembered: null,
     email: null,
     createdAt: Date.now(),
     stats: {
@@ -130,6 +136,11 @@ export class Profile {
     this.data.achievements ??= [];
     this.data.history ??= [];
     this.data.security = { ...base.security, ...(this.data.security ?? {}) };
+    // Profiles from before the five team-lead avatars stored 'male'/'female'.
+    this.data.avatar = normaliseAvatar(this.data.avatar);
+    if (this.data.remembered) {
+      this.data.remembered.avatar = normaliseAvatar(this.data.remembered.avatar);
+    }
   }
 
   save() {
@@ -139,13 +150,15 @@ export class Profile {
   }
 
   get name() { return this.data.name; }
-  get avatar() { return this.data.avatar; }
+  get avatar() { return normaliseAvatar(this.data.avatar); }
+  /** The identity from before the last sign-out, or null. */
+  get remembered() { return this.data.remembered ?? null; }
   get settings() { return this.data.settings; }
   get isSignedIn() { return !!this.data.name; }
 
-  signIn({ name, avatar = 'male', provider = 'local', email = null }) {
+  signIn({ name, avatar = DEFAULT_AVATAR, provider = 'local', email = null }) {
     this.data.name = String(name ?? '').trim().slice(0, 32) || 'Trainee';
-    this.data.avatar = avatar;
+    this.data.avatar = normaliseAvatar(avatar);
     this.data.authProvider = provider;
     this.data.email = email;
     if (!this.data.createdAt) this.data.createdAt = Date.now();
@@ -154,6 +167,16 @@ export class Profile {
   }
 
   signOut() {
+    // Remember who this was. Signing out ends the session; it should not make
+    // the device forget the person whose passkey is registered on it.
+    if (this.data.name) {
+      this.data.remembered = {
+        name: this.data.name,
+        avatar: this.avatar,
+        authProvider: this.data.authProvider,
+        email: this.data.email,
+      };
+    }
     this.data.name = '';
     this.data.authProvider = 'local';
     this.data.email = null;
@@ -161,7 +184,7 @@ export class Profile {
   }
 
   setAvatar(a) {
-    this.data.avatar = a;
+    this.data.avatar = normaliseAvatar(a);
     this.save();
   }
 
@@ -207,10 +230,12 @@ export class Profile {
     if (difficulty !== 'train' && PROGRESSION.requireTrainBeforeTest && !p.train) {
       return 'Complete Train Mode in this environment first.';
     }
-    if (difficulty === 'mid' && p.simple < PROGRESSION.unlockScore) {
+    // Each reason respects the same switch isUnlocked() does, so a gate that
+    // is turned off can never produce a "locked" message.
+    if (difficulty === 'mid' && PROGRESSION.requireSimpleBeforeMid && p.simple < PROGRESSION.unlockScore) {
       return `Score ${PROGRESSION.unlockScore}+ on Simple to unlock.`;
     }
-    if (difficulty === 'hard' && p.mid < PROGRESSION.unlockScore) {
+    if (difficulty === 'hard' && PROGRESSION.requireMidBeforeHard && p.mid < PROGRESSION.unlockScore) {
       return `Score ${PROGRESSION.unlockScore}+ on Mid to unlock.`;
     }
     return '';
@@ -322,8 +347,8 @@ export class Profile {
    * action in Settings -> Security.
    */
   resetProgress() {
-    const { name, avatar, authProvider, email, settings, security } = this.data;
-    this.data = { ...blankProfile(), name, avatar, authProvider, email, settings, security };
+    const { name, avatar, authProvider, email, settings, security, remembered } = this.data;
+    this.data = { ...blankProfile(), name, avatar, authProvider, email, settings, security, remembered };
     this.save();
   }
 }

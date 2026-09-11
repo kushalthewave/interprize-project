@@ -52,17 +52,30 @@ function boot() {
    * Actions exposed to the UI
    * ---------------------------------------------------------------- */
   /**
-   * After any successful sign-in, require the second factor if one is enrolled,
-   * then land on the menu. One funnel, so no route can skip 2FA.
+   * Every sign-in route funnels through here, so none can skip the second
+   * factor. The identity is only written to the profile *after* the code is
+   * accepted: a failed or abandoned prompt leaves the existing profile exactly
+   * as it was.
    */
-  async function completeSignIn() {
+  async function completeSignIn(identity) {
     audio.init();
     audio.resume();
-    if (auth.hasTotp) {
-      ui.go('totp-challenge', { onSuccess: () => ui.go('menu') });
+    const finish = async () => {
+      auth.commit(identity);
+      await refreshCaps();
+      ui.go('menu');
+    };
+    if (auth.needsSecondFactor(identity)) {
+      ui.go('totp-challenge', {
+        pending: identity,
+        onSuccess: finish,
+        // Backing out of a pending sign-in must not sign the owner out.
+        onCancel: () => ui.go('login'),
+        canUsePasskey: auth.hasPasskey && ui.caps?.passkey?.available,
+      });
       return;
     }
-    ui.go('menu');
+    await finish();
   }
 
   /** Refresh what the login screen is allowed to offer. */
@@ -74,40 +87,40 @@ function boot() {
 
   const actions = {
     async signInWithName({ name, avatar }) {
-      auth.signInWithName({ name, avatar });
-      await completeSignIn();
+      await completeSignIn(auth.identityForName({ name, avatar }));
     },
 
     async signInWithProvider(id) {
-      const account = await auth.signInWithProvider(id);
-      ui.toast(`Signed in as ${account.name}`, 'ok');
-      await completeSignIn();
+      const identity = await auth.identityFromProvider(id);
+      await completeSignIn(identity);
     },
 
     async signInWithPasskey() {
-      await auth.signInWithPasskey();
-      ui.toast('Unlocked with your passkey', 'ok');
-      await completeSignIn();
+      const identity = await auth.identityFromPasskey();
+      await completeSignIn(identity);
     },
 
     /**
      * Create a passkey and sign in with it in one step, straight from the
-     * login screen. Previously the only route was "sign in some other way
-     * first, then go and find Settings", which nobody would do.
+     * login screen.
      */
     async createPasskeyAndSignIn({ name, avatar }) {
-      // The profile has to exist before a credential can be attached to it.
-      auth.signInWithName({ name, avatar });
+      const before = { ...auth.profile.data };
+      // The profile needs a name before a credential can be attached to it.
+      auth.profile.signIn({ name, avatar, provider: 'passkey' });
       try {
         await auth.enrolPasskey();
       } catch (err) {
-        // Roll back so a cancelled prompt does not silently sign them in.
-        auth.signOut();
+        // Put the profile back: a cancelled prompt must not sign anyone in.
+        Object.assign(auth.profile.data, {
+          name: before.name, avatar: before.avatar,
+          authProvider: before.authProvider, email: before.email,
+        });
+        auth.profile.save();
         await refreshCaps();
         throw err;
       }
-      await refreshCaps();
-      await completeSignIn();
+      await completeSignIn({ name, avatar, provider: 'passkey', email: null, method: 'passkey' });
     },
 
     /** Re-read auth capabilities after the provider settings change. */
@@ -277,8 +290,6 @@ function boot() {
     if (document.hidden && game.state === STATE.PLAYING) game.pause();
   });
 
-  // Invert-Y support, applied at the source so every input path respects it.
-  const rawApplyLook = player._onMouseMove;
   bus.on(EV.PROFILE_CHANGED, () => applySettings());
 
   /* ---------------------------------------------------------------- *
@@ -310,17 +321,24 @@ function boot() {
   // Decide the opening screen only after we know what auth can offer, and
   // after any OAuth redirect has been consumed.
   (async () => {
-    const redirected = await auth.completeRedirectSignIn();
+    const redirected = await auth.identityFromRedirect();
     await refreshCaps();
     if (redirected) {
-      ui.toast(`Signed in as ${redirected.name}`, 'ok');
-      await completeSignIn();
+      await completeSignIn(redirected);
       return;
     }
     if (!profile.isSignedIn) { ui.go('login'); return; }
-    // A returning trainee with 2FA on still has to present a code.
-    if (auth.hasTotp) ui.go('totp-challenge', { onSuccess: () => ui.go('menu') });
-    else ui.go('menu');
+    // A returning trainee with 2FA on still has to present a code. Here the
+    // profile already belongs to them, so cancelling does sign them out.
+    if (auth.hasTotp) {
+      ui.go('totp-challenge', {
+        onSuccess: () => ui.go('menu'),
+        onCancel: () => actions.signOut(),
+        canUsePasskey: auth.hasPasskey && ui.caps?.passkey?.available,
+      });
+    } else {
+      ui.go('menu');
+    }
   })();
 
   // Expose a small surface for manual QA in the browser console.
