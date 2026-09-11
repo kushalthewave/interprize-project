@@ -182,6 +182,17 @@ header.stuck{border-bottom-color:var(--border);background:rgba(11,15,20,.93)}
 .tbl td:last-child{text-align:right;font-family:var(--mono);color:var(--accent);font-weight:700}
 .tbl tr:last-child td{border-bottom:none}
 
+/* ---------- offline play ---------- */
+.offline-how{margin-top:28px;padding:28px;border-radius:16px;background:var(--panel);border:1px dashed rgba(56,189,248,.45)}
+.offline-how h3{margin-bottom:16px;font-size:1.2rem}
+.oh-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+@media(max-width:860px){.oh-steps{grid-template-columns:1fr}}
+.oh-steps div{display:flex;gap:12px;align-items:flex-start}
+.oh-steps b{flex:0 0 30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--info);color:#04131c;font-size:.9rem}
+.oh-steps p{margin:0;font-size:.92rem}
+.oh-steps strong{color:var(--text)}
+.oh-note{margin:16px 0 0;font-size:.82rem;color:var(--faint)}
+
 /* ---------- team leads ---------- */
 .leads{display:grid;grid-template-columns:repeat(5,1fr);gap:18px}
 @media(max-width:900px){.leads{grid-template-columns:repeat(3,1fr)}}
@@ -291,7 +302,7 @@ footer a:hover{color:var(--accent)}
     <div class="stat rv"><b>3</b><span>Warehouse environments, hand-laid out</span></div>
     <div class="stat rv"><b>60 fps</b><span>On ordinary laptop hardware</span></div>
     <div class="stat rv"><b>0</b><span>Third-party art assets — everything is generated</span></div>
-    <div class="stat rv"><b>822 kB</b><span>Offline build: one file, works with no network</span></div>
+    <div class="stat rv"><b>828 kB</b><span>Offline build: one file, works with no network</span></div>
   </div>
 </div>
 
@@ -329,7 +340,7 @@ footer a:hover{color:var(--accent)}
       <div class="card rv">
         <div class="ico">⌾</div>
         <h3>Runs anywhere</h3>
-        <p>A browser tab. It also ships as a single 822 kB HTML file that runs from a USB
+        <p>A browser tab. It also ships as a single 828 kB HTML file that runs from a USB
         stick with no network at all — because warehouse Wi-Fi is not a dependency worth taking.</p>
       </div>
       <div class="card rv">
@@ -524,8 +535,27 @@ footer a:hover{color:var(--accent)}
       catch before the clock runs out.</p>
       <div class="cta-row" style="justify-content:center">
         <a class="btn btn-primary" href="https://kushalthewave.github.io/interprize-project/" target="_blank" rel="noopener">Play the live demo →</a>
-        <a class="btn btn-ghost" href="https://kushalthewave.github.io/interprize-project/beat-the-hazard.html" target="_blank" rel="noopener">Download the offline build</a>
+        <a class="btn btn-ghost" href="../beat-the-hazard.html" download="beat-the-hazard.html">⬇ Download to play offline</a>
       </div>
+    </div>
+
+    <div class="offline-how rv" id="offline">
+      <h3>Play with no internet</h3>
+      <div class="oh-steps">
+        <div>
+          <b>1</b>
+          <p><strong>Download</strong> — one file, about 820 kB. Save it to a laptop or a USB stick.</p>
+        </div>
+        <div>
+          <b>2</b>
+          <p><strong>Double-click it.</strong> It opens in your browser and runs with the network unplugged — the whole game is inside that one file.</p>
+        </div>
+        <div>
+          <b>3</b>
+          <p><strong>Or install it</strong> — open the demo in Chrome or Edge and choose <em>Install</em> in the address bar, or <em>Add to Home Screen</em> on a phone. After one visit it plays offline too.</p>
+        </div>
+      </div>
+      <p class="oh-note">Progress is saved in the browser you play in. Passkey sign-in needs the online version; everything else works in the downloaded file.</p>
     </div>
   </div>
 </section>
@@ -553,7 +583,7 @@ footer a:hover{color:var(--accent)}
       <div>
         <h4>Project</h4>
         <a href="https://github.com/kushalthewave/interprize-project" target="_blank" rel="noopener">Source code</a>
-        <a href="https://kushalthewave.github.io/interprize-project/beat-the-hazard.html" target="_blank" rel="noopener">Offline build</a>
+        <a href="../beat-the-hazard.html" download="beat-the-hazard.html">Download for offline play</a>
         <a href="#company">About the company</a>
       </div>
     </div>
