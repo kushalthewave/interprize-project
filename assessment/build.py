@@ -40,7 +40,7 @@ SECTIONS = [
 # (section, deliverable, state, note)
 STATUS = [
     ("A1", "Functional and non-functional requirements", "Complete",
-     "38 functional and 17 non-functional requirements, each with a source, a priority "
+     "42 functional and 17 non-functional requirements, each with a source, a priority "
      "and a measured result."),
     ("A1", "User requirements analysis", "Complete",
      "PACT, three personas and a full Nielsen heuristic evaluation carried out against "
@@ -121,7 +121,7 @@ def contents_doc(out_dir):
          "any of it, it is worth spending two minutes here:")
     table(doc, ["", ""], [
         ["**Play it**", CFG.LIVE_URL],
-        ["**Offline build**", "`A7/Prototype/beat-the-hazard.html` — one file, 738 kB, "
+        ["**Offline build**", "`A7/Prototype/beat-the-hazard.html` — one file, 822 kB, "
                               "no network needed"],
         ["**Company website**", CFG.LIVE_URL.rstrip("/") + "/company/"],
         ["**Source and history**", CFG.REPO_URL],

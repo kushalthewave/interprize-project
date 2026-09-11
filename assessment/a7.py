@@ -62,7 +62,7 @@ RUNNING_ORDER = [
      "★ A real measured problem solved with a named technique. The strongest technical "
      "moment in the talk."),
     (15, "Proven, not assumed", "1:00", "16:15", "qa",
-     "204 tests, and the ones that caught bugs nothing else would have."),
+     "255 tests, and the ones that caught bugs nothing else would have."),
     (16, "What went wrong", "1:00", "17:15", "qa",
      "★ Finding your own defects reads as competence. Do not apologise through it."),
     (17, "Honest limitations", "0:45", "18:00", "qa",
@@ -146,7 +146,7 @@ QA_PREP = [
      "Centrally, no, and that is the honest limitation. It is a small backend, and we "
      "would rather agree it with you than assume it."),
     ("What if the site has no Wi-Fi?",
-     "Then use the offline build. One HTML file, 738 kB, runs from a USB stick with no "
+     "Then use the offline build. One HTML file, 822 kB, runs from a USB stick with no "
      "network at all. We can demonstrate that now if you would like."),
     ("Is it accurate to our site?",
      "The hazards are generic warehouse hazards across seven recognised categories. "
@@ -383,7 +383,7 @@ def prototype_instructions(out_dir):
     h1(doc, "2  With no internet at all")
     para(doc,
          "The submission contains `Prototype/beat-the-hazard.html`. It is one file of "
-         "738 kB containing the entire product — code, geometry, textures and audio. "
+         "822 kB containing the entire product — code, geometry, textures and audio. "
          "Copy it anywhere, double-click it, and it runs with the network disconnected.")
     callout(doc, "One limitation of the offline file",
             "Browsers only allow passkeys in a secure context, so opening the file "
@@ -397,7 +397,7 @@ def prototype_instructions(out_dir):
     table(doc, ["Step", "Command"], [
         ["Install dependencies", "`npm ci`"],
         ["Run the development server", "`npm run dev`"],
-        ["Run the test suite (204 tests)", "`npm test`"],
+        ["Run the test suite (255 tests)", "`npm test`"],
         ["Build for production", "`npm run build`"],
         ["Build the single offline file", "`npm run build:single`"],
     ], widths=[6.0, 10.0], size=9.6)

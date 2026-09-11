@@ -158,7 +158,7 @@ const notes = (s, t) => s.addNotes(t);
 
   hudChip(s, M, 5.5, 1.9, 'Hazards', '15');
   hudChip(s, M + 2.05, 5.5, 1.9, 'Sites', '3');
-  hudChip(s, M + 4.1, 5.5, 1.9, 'Tests', '204', { color: C.success });
+  hudChip(s, M + 4.1, 5.5, 1.9, 'Tests', '255', { color: C.success });
   hudChip(s, M + 6.15, 5.5, 1.9, 'Frame rate', '60', { color: C.success });
 
   txt(s, 'Kushal Neupane', M, 6.75, 6, 0.32, { size: 12.5, bold: true, color: C.white });
@@ -645,7 +645,7 @@ const notes = (s, t) => s.addNotes(t);
   });
 
   card(s, M, 5.45, W - M * 2, 1.15, { fill: C.panel2, line: null });
-  txt(s, 'Zero third-party assets. No downloaded models, stock textures, sound files or web fonts — which means no licences to track and nothing to attribute. It also keeps the whole game to one 738 kB file.',
+  txt(s, 'Zero third-party assets. No downloaded models, stock textures, sound files or web fonts — which means no licences to track and nothing to attribute. It also keeps the whole game to one 822 kB file.',
     M + 0.4, 5.45, W - M * 2 - 0.8, 1.15, { size: 13, color: C.text, valign: 'middle', lh: 1.35 });
 
   notes(s, '[13:30 – 14:15] Keep it brisk — this is credibility, not the story. ' +
@@ -696,7 +696,7 @@ const notes = (s, t) => s.addNotes(t);
   const s = slide();
   header(s, 'Quality', 'Proven, not assumed', { titleSize: 30 });
 
-  hudChip(s, M, 1.85, 2.85, 'Automated tests', '204', { color: C.success, h: 1.05 });
+  hudChip(s, M, 1.85, 2.85, 'Automated tests', '255', { color: C.success, h: 1.05 });
   hudChip(s, M + 3.0, 1.85, 2.85, 'Passing', '100%', { color: C.success, h: 1.05 });
   hudChip(s, M + 6.0, 1.85, 2.85, 'Hazards reachable', '42/42', { color: C.success, h: 1.05 });
   hudChip(s, M + 9.0, 1.85, 2.9, 'Console errors', '0', { color: C.success, h: 1.05 });
@@ -824,7 +824,7 @@ const notes = (s, t) => s.addNotes(t);
   txt(s, 'Source, documentation and tests:', 7.5, 4.9, 4.9, 0.3, { size: 11.5, color: C.dim });
   txt(s, 'github.com/kushalthewave/interprize-project', 7.5, 5.2, 4.9, 0.4,
     { size: 12, bold: true, mono: true, color: C.info });
-  txt(s, 'Also ships as one 738 kB file that runs offline.', 7.5, 5.7, 4.9, 0.35,
+  txt(s, 'Also ships as one 822 kB file that runs offline.', 7.5, 5.7, 4.9, 0.35,
     { size: 11.5, italic: true, color: C.faint });
 
   txt(s, 'BEAT THE HAZARD   ·   Kushal Neupane', M, 6.7, 9, 0.35,

@@ -11,13 +11,36 @@ limitations below stated honestly.
 | Check | Status |
 |---|---|
 | Build (`npm run build`) | ✅ passing, 2.6 s |
-| Tests (`npm test`) | ✅ **204 / 204 passing** (8 suites) |
+| Tests (`npm test`) | ✅ **255 / 255 passing** (10 suites) |
 | Syntax gate | ✅ 47 files, 0 errors |
 | App boots | ✅ no console errors |
 | Playthrough, all 3 environments | ✅ every hazard reachable |
 | Performance | ✅ 60 fps, 1,520 draw calls |
 
 ---
+
+## Latest changes — Settings (2026-09-11)
+
+A full settings system in six tabs, opened from the menu or the pause menu:
+
+- **Video:** preset, resolution scale, fullscreen, frame-rate cap, FOV, texture
+  / shadow / lighting quality, MSAA or FXAA, motion blur, lens flare, depth of
+  field. Post-processing only exists when an effect is on, so the default draw
+  path costs nothing extra.
+- **Audio:** master, music (new — a quiet procedural pad that ducks during a
+  round so it never masks the reversing alarm), voice (new — spoken
+  announcements), sound effects; output device where the browser allows it.
+- **Controls:** rebindable keys with conflict handling; standard controllers;
+  aim assist.
+- **Gameplay:** default difficulty (skips the choice), tutorials & hints,
+  training auto-save with "Resume training" on the menu, crosshair style / size
+  / colour.
+- **Accessibility:** subtitles, closed captions for sounds, caption size,
+  three colour-blind palettes applied to the menus *and* the 3D markers, menu and
+  HUD scale, head bob, camera shake, reduce all motion.
+- V-Sync and ray tracing are shown as browser-controlled, with the reason.
+
+Tests: 204 → 255. Offline build: 738 kB → 822 kB (still under the 1 MB budget).
 
 ## Latest changes (2026-09-11)
 

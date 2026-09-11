@@ -115,6 +115,16 @@ FUNCTIONAL = [
      "Should", "Client feedback", "Built"),
     ("FR-38", "An unconfigured social provider can be set up from the login screen itself, "
               "without signing in first.", "Should", "Defect DEF-18", "Built"),
+    ("FR-39", "Settings in six tabs — Video, Audio, Controls, Gameplay, Accessibility, "
+              "Account — reachable from the menu and mid-round from the pause menu, every "
+              "change applied immediately.", "Should", "Client feedback", "Built"),
+    ("FR-40", "Keys can be rebound, with a key moved off any action that already used it; "
+              "any standard game controller can play.", "Should", "Client feedback", "Built"),
+    ("FR-41", "Subtitles for spoken announcements, captions for important sounds, and "
+              "three colour-blind palettes applied to both the menus and the 3D markers.",
+     "Should", "Accessibility review", "Built"),
+    ("FR-42", "A training round in progress is auto-saved and can be resumed from the menu; "
+              "a test never is.", "Could", "Client feedback", "Built"),
 ]
 
 NON_FUNCTIONAL = [
@@ -128,7 +138,7 @@ NON_FUNCTIONAL = [
     ("NFR-04", "Portability", "The offline build issues no network request after load.",
      "Browser network panel, count of requests", "Met — zero requests"),
     ("NFR-05", "Portability", "The offline build is a single file of 1 MB or less.",
-     "File size on disk", "Met — 738 kB"),
+     "File size on disk", "Met — 822 kB"),
     ("NFR-06", "Legal", "No third-party art, model, texture or audio asset is used.",
      "Dependency and asset audit (docs/ASSET_CREDITS.md)",
      "Met — geometry, textures and audio are generated at run time"),
@@ -156,7 +166,7 @@ NON_FUNCTIONAL = [
      "Met — 70 vector tests pass; see the limits stated in §7.2"),
     ("NFR-14", "Maintainability", "Core logic is covered by automated tests that run in "
                "CI on every push.", "Test count and CI status",
-     "Met — 204 tests across 8 suites, all passing"),
+     "Met — 255 tests across 10 suites, all passing"),
     ("NFR-15", "Deployability", "Hosting requires no server, no database and no paid "
                "service.", "Deployment procedure", "Met — static files on GitHub Pages"),
     ("NFR-16", "Content", "Every hazard maps to a recognised warehouse risk category and "
@@ -494,7 +504,7 @@ def build(out_dir):
                        ("2.4  Scoring and feedback", (22, 28)),
                        ("2.5  Settings and accessibility", (28, 31)),
                        ("2.6  Delivery and resilience", (31, 35)),
-                       ("2.7  Added after client feedback", (35, 38))):
+                       ("2.7  Added after client feedback", (35, 42))):
         h2(doc, title)
         table(doc, ["ID", "Requirement", "Priority", "Source", "State"],
               [[r[0], r[1], r[2], r[3], r[4]] for r in FUNCTIONAL[rng[0]:rng[1]]],
@@ -661,7 +671,7 @@ def build(out_dir):
     para(doc,
          "Five layers with a strict rule: no layer imports the layer above it. Gameplay "
          "publishes events and the UI subscribes, which is why the game logic can be unit "
-         "tested with no DOM at all — the 204 tests in §8 need no browser.")
+         "tested with no DOM at all — the 255 tests in §8 need no browser.")
     figure(doc, os.path.join(FIG, "fig_architecture.png"), 16.0,
            "Figure 6 — Layered module architecture.")
 

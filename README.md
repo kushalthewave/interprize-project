@@ -191,6 +191,28 @@ menu, the profile, the results screen, and a player card in the corner of the HU
 for the whole round. Change it any time from **Profile**. Profiles saved with the
 earlier two avatars are migrated automatically.
 
+## Settings
+
+Six tabs — **Video, Audio, Controls, Gameplay, Accessibility, Account & data** —
+reachable from the menu and from the pause menu mid-round. Every setting changes
+something real and applies immediately:
+
+| Tab | What it controls |
+|---|---|
+| **Video** | Quality preset (Low / Medium / High / Ultra / Custom), resolution scale (Auto or 50–150%), windowed / fullscreen, frame-rate cap, field of view, texture quality (anisotropic filtering), shadow quality, anti-aliasing (MSAA / FXAA / off), lighting quality, motion blur, lens flare, depth of field, performance overlay |
+| **Audio** | Master, music, voice and sound-effects volume; audio output device |
+| **Controls** | Look sensitivity, invert Y, aim assist, and fully rebindable keys; any standard controller works |
+| **Gameplay** | Default difficulty, the five-minute limit, Train Mode locations, tutorials & hints, auto-save, crosshair style / size / colour |
+| **Accessibility** | Subtitles, closed captions for sounds, caption size, colour-blind modes (protanopia, deuteranopia, tritanopia), menu & HUD size, head bob, camera shake, reduce all motion |
+| **Account & data** | Passkeys, authenticator app, social sign-in setup, reset progress, sign out |
+
+**What a browser does not let a game do**, shown as information rather than as a
+switch that does nothing: **V-Sync** is always on (browsers present every frame in
+step with the display, so there is no tearing to prevent), **ray tracing** does not
+exist in WebGL, and there is no "borderless windowed" — browser fullscreen already
+is. Resolution is a scale of your screen rather than a list of monitor modes,
+because a web page cannot change the display's mode.
+
 ## Difficulty
 
 Difficulty changes **real gameplay parameters**, not a label:
@@ -304,7 +326,7 @@ diagrams in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 npm test
 ```
 
-**204 automated tests, all passing** — scoring rules, combo, ranks, the reaction
+**255 automated tests, all passing** — scoring rules, combo, ranks, the reaction
 clock, hazard-data integrity, difficulty configuration, profile progression and
 achievements.
 
