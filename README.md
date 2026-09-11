@@ -27,6 +27,7 @@ looks like, then prove you can spot them on your own against the clock.
 - [Testing](#testing)
 - [Assets](#assets)
 - [Limitations — read this](#limitations--read-this)
+- [GitHub sign-in](#github-sign-in)
 - [Future improvements](#future-improvements)
 
 ---
@@ -86,8 +87,6 @@ what "good" looks like is half of hazard spotting.
 | Physics | **Custom** | Circle-vs-AABB collision, ~60 lines. A full physics engine is ~500 kB for a flat slab with box obstacles. |
 | Art | **Procedural** | All geometry and textures generated at runtime. See [Assets](#assets). |
 | Audio | **Web Audio API** | Every sound synthesised. No files, no licences. |
-
-Full reasoning in [`docs/DECISIONS.md`](docs/DECISIONS.md).
 
 ## Installation
 
@@ -299,7 +298,8 @@ retuned without touching game code.
 | 15 | Blind corner conflict | Vehicle | Major |
 
 Each is fully documented — description, why it is dangerous, the control, and
-the teaching text — in [`docs/HAZARDS.md`](docs/HAZARDS.md).
+the teaching text — in [`src/data/hazards.js`](src/data/hazards.js), the same
+data the game uses.
 
 **The rule this project enforces:** a hazard is never an icon. The falling-box
 hazard is a rack bay where most cartons are stacked correctly, one is displaced,
@@ -315,8 +315,7 @@ identify it by looking at the world.
 | 3 | **High-Bay Annexe** | 54 × 40 m | 15 | Five-level narrow aisle, poor light, congested. The hard site. |
 
 Environments 2 and 3 are about 250 lines each because they reuse the shared prop
-library and scenario builders rather than duplicating the application. Details
-in [`docs/ENVIRONMENTS.md`](docs/ENVIRONMENTS.md).
+library and scenario builders rather than duplicating the application.
 
 ## Architecture
 
@@ -336,8 +335,14 @@ src/
 ```
 
 Gameplay code never touches the DOM; the UI listens on an event bus. Hazard
-*content* is pure data, separate from both the 3D scene and the UI. Full
-diagrams in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+*content* is pure data, separate from both the 3D scene and the UI.
+
+```
+index.html, src/, public/   the game
+tests/                      automated tests
+scripts/                    build helpers (offline single file, service worker, syntax check)
+marketing/                  the marketing website — plain HTML, published at /company/
+```
 
 ## Testing
 
@@ -345,16 +350,16 @@ diagrams in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 npm test
 ```
 
-**266 automated tests, all passing** — scoring rules, combo, ranks, the reaction
+**283 automated tests, all passing** — scoring rules, combo, ranks, the reaction
 clock, hazard-data integrity, difficulty configuration, profile progression and
 achievements.
 
 Because the gameplay logic is pure and framework-free, it is tested in Node with
 no browser or mocking.
 
-3D behaviour was verified by **manual browser QA**, including a repeatable
-reachability harness (`scripts/qa-harness.js`) that walks the player around every
-hazard from 24 vantage points and confirms it can be flagged. Latest run:
+3D behaviour was verified by **manual browser QA**, including a reachability
+pass that walked the player around every hazard from 24 vantage points and
+confirmed it can be flagged. Latest run:
 
 | Environment | Difficulty | Hazards reachable | Score | Rank |
 |---|---|---|---|---|
@@ -364,9 +369,6 @@ hazard from 24 vantage points and confirms it can be flagged. Latest run:
 
 Performance measured in-browser: **60 fps, 1,520 draw calls, 272k triangles**,
 no console errors.
-
-What has and has not been tested — honestly — is in
-[`docs/TESTING.md`](docs/TESTING.md).
 
 ## Assets
 
@@ -381,9 +383,8 @@ sound is generated in code at runtime:
   safety signage, and the flag of Nepal drawn to its real double-pennant outline
 - **Audio** — synthesised with the Web Audio API
 
-This is a deliberate decision, not a shortcut — see
-[`docs/ASSET_CREDITS.md`](docs/ASSET_CREDITS.md) for the reasoning and the full
-inventory.
+This is a deliberate decision, not a shortcut: nothing to license, nothing to
+download, and the whole game fits in one offline file.
 
 ## Limitations — read this
 
@@ -401,7 +402,7 @@ that does not:
   ship untested VR code, it is left out. Desktop play does not depend on it.
 - **Social sign-in is implemented but not tested against live servers.** Google
   and Facebook work with no backend once you add a free Client ID; GitHub needs
-  a small server endpoint and says so. See [`docs/AUTHENTICATION.md`](docs/AUTHENTICATION.md).
+  a small server endpoint and says so — see [GitHub sign-in](#github-sign-in).
 - **Passkeys and TOTP are local, not server-verified.** With no backend they
   protect a profile on a shared machine and implement the real standards
   correctly, but they are not an authentication boundary. Documented in full.
@@ -409,6 +410,38 @@ that does not:
   responsive, but they have only been exercised in a desktop browser.
 - **Performance was measured on one machine.** 60 fps there; low-end hardware
   will be slower. Adaptive pixel-ratio scaling is in place as mitigation.
+
+## GitHub sign-in
+
+GitHub cannot finish a sign-in in the browser alone: the token exchange needs
+the client secret, and GitHub's token endpoint sends no CORS headers. Deploy
+this one-function endpoint (Cloudflare Worker, Netlify or Vercel — all free):
+
+```js
+export default async function handler(request) {
+  const { code } = await request.json();
+  const tokenRes = await fetch('https://github.com/login/oauth/access_token', {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      client_id: process.env.GITHUB_CLIENT_ID,
+      client_secret: process.env.GITHUB_CLIENT_SECRET, // stays on the server
+      code,
+    }),
+  });
+  const { access_token } = await tokenRes.json();
+  const userRes = await fetch('https://api.github.com/user', {
+    headers: { Authorization: `Bearer ${access_token}`, 'User-Agent': 'beat-the-hazard' },
+  });
+  return new Response(await userRes.text(), {
+    headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+  });
+}
+```
+
+Then set `VITE_GITHUB_CLIENT_ID` and `VITE_GITHUB_TOKEN_ENDPOINT` (see
+`.env.example`), or paste both into the Set up form on the sign-in screen.
+Until then the GitHub button is disabled and says why.
 
 ## Future improvements
 
@@ -423,6 +456,8 @@ that does not:
 7. Replay of a finished round, showing what was missed and where
 
 ---
+
+**The Code Crafters** · Built by Kushal Neupane.
 
 Built as a university project. Hazards are staged for teaching purposes and the
 safety guidance is educational, not a substitute for site-specific training or a

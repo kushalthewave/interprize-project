@@ -62,7 +62,7 @@ jobs:
           # The company marketing site is plain static HTML with no build
           # step, so it is copied in as-is and served from /company/.
           mkdir -p dist/company
-          cp -r marketing-site/. dist/company/
+          cp -r marketing/. dist/company/
           # Stop GitHub applying Jekyll processing to the built assets.
           touch dist/.nojekyll
 

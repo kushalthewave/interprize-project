@@ -5,7 +5,7 @@
  * Why: it removes every third-party audio licence and attribution problem,
  * adds zero bytes to the download, and lets the reversing alarm and forklift
  * engine react continuously to distance and speed rather than being a looped
- * clip. See docs/ASSET_CREDITS.md.
+ * clip.
  *
  * Mix
  *   master ─┬─ music   procedural ambient pad (ducks during a round)

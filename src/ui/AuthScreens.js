@@ -273,7 +273,7 @@ function providerQuickSetup(ctx, prov, onSaved) {
         ['githubTokenEndpoint', 'Token exchange endpoint (your server)', 'https://your-worker.workers.dev/github'],
       ],
       link: 'https://github.com/settings/developers',
-      steps: 'GitHub cannot finish sign-in in a browser alone — the exchange needs the client secret. Register an OAuth App, deploy the one-function endpoint in docs/AUTHENTICATION.md, and paste both here.',
+      steps: 'GitHub cannot finish sign-in in a browser alone — the exchange needs the client secret. Register an OAuth App, deploy the one-function endpoint from the README (GitHub sign-in), and paste both here.',
     },
   }[prov.id];
   if (!spec) return null;
@@ -522,7 +522,7 @@ function providerSetupPanel(ctx, caps, rerender) {
       'https://github.com/settings/developers'),
     field('githubTokenEndpoint', 'GitHub token endpoint (server)',
       'https://your-worker.workers.dev/github',
-      'GitHub cannot finish sign-in in a browser: the exchange needs the client secret and its endpoint sends no CORS headers. Deploy the small function in docs/AUTHENTICATION.md and paste its URL here.',
+      'GitHub cannot finish sign-in in a browser: the exchange needs the client secret and its endpoint sends no CORS headers. Deploy the small function from the README (GitHub sign-in) and paste its URL here.',
       null),
   ];
 
