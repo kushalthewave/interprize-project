@@ -37,8 +37,8 @@ npm test
 ✓ tests/score.test.js     (26 tests)
 ✓ tests/profile.test.js   (30 tests)
 
-Test Files  8 passed (8)
-     Tests  204 passed (204)
+Test Files  10 passed (10)
+     Tests  255 passed (255)
   Duration  625ms
 ```
 
@@ -50,6 +50,8 @@ Test Files  8 passed (8)
 | `timer.test.js` | 20 | Fixed five-minute Test round overriding seconds × hazards, the per-hazard clock still running underneath at the difficulty pace, round warning at 1:00 and critical at 0:30, reset keeping the fixed length; plus budget = seconds × hazards, countdown, expiry fires once and only once, pause/resume, no resume after finish, per-hazard clock independent of the round clock, `nextHazard()` reset, warning band, critical band including the 10 s cap, `mm:ss` formatting, negative clamping |
 | `auth.test.js` | 14 | An identity is committed only after the second factor — a failed 2FA leaves the owner's profile untouched; passkeys record their owner and restore name and avatar after a sign-out; a passkey skips TOTP because it is already two factors; unregistered and cancelled passkeys refuse cleanly; the login screen learns who signed out last |
 | `avatars.test.js` | 12 | Exactly five avatars, in order, each with a name, role and prop; legacy ids mapped; unknown ids — including `constructor` and `__proto__` — fall back to the default; every SVG self-contained with no external reference, labelled for screen readers, and given unique gradient and clip ids so two copies on one page do not collide |
+| `settings.test.js` | 41 | Every requested section present; unique keys; defaults valid; ranges clamped, bad selects and toggles rejected; migration from older profiles (keeps values, turns head bob off for anyone who had reduced motion, drops unknown keys, repairs unbound actions, strips reserved keys); presets recognised and never switch post-processing on; key rebinding (conflicts move the key and promote the displaced action's alternative, reserved keys refused, no mutation); resolution and frame-cap maths including 60 Hz jitter |
+| `settings-runtime.test.js` | 10 | Colour-blind palettes complete and genuinely different; 3D marker colour follows the mode; aim tolerance combines difficulty × assist and is clamped to 0.85–2.2; score snapshot round-trips for training resume and survives corrupt data |
 | `hazards.test.js` | 23 | All 15 required hazard ids present, unique, every teaching field non-empty and of substantial length, valid severities, valid categories, life-threatening scenarios classified major, difficulty monotonicity across six parameters, the three difficulties genuinely distinct, scoring constants match the brief, rank thresholds |
 | `profile.test.js` | 38 | Sign-in and name sanitisation, default and legacy avatar migration (`male`→David, `female`→Maria), the remembered identity after sign-out and through a reset, persistence round-trip, recovery from a corrupt save, every gate open by default, every gate still enforced when a site switches it on, best-score-never-regresses, stat accumulation, history cap and ordering, each achievement condition and its boundary, no duplicate unlocks, completion percentage, reset preserving identity |
 
@@ -204,3 +206,28 @@ Manual pass:
   switched off, because it never checked the flag that `isUnlocked()` checks.
   Not visible in the UI today — the message only shows when locked — but it
   would have surfaced the moment a site turned one gate on and another off.
+
+
+### Settings: bugs found while building them
+
+- **"Low" quality left shadows on.** `SHADOWS.off` is deliberately `null`, and
+  `SHADOWS[q] ?? SHADOWS.high` treated that `null` as "missing" and fell through
+  to High. Found by reading the renderer state after applying the preset.
+- **Rebinding a key left the other action with an empty primary slot.** Only
+  the action being changed was tidied. Found by writing the test.
+- **Aim tolerance never did anything.** Every difficulty set `flagRadius`
+  (1.35 / 1.0 / 0.8) and nothing read it. It now scales each hazard's target
+  volume, combined with Aim Assist.
+- **Forklifts were silent.** `createForkliftEmitter()` and `footstep()` existed
+  and were never called. They now run, driven by distance, and feed the captions.
+
+### Settings: what is NOT verified
+
+- A **physical controller** — tested with a simulated standard-mapping gamepad
+  (moves, turns, A flags, Start pauses and resumes), not real hardware.
+- **Switching audio output** between two real devices — the API is detected and
+  called; the test machine exposes only the default output.
+- **Spoken announcements** — speech synthesis is present and called; whether a
+  voice is installed depends on the operating system. Subtitles show either way.
+- **Fullscreen** — browsers only allow it from a real click, which automation
+  cannot provide.

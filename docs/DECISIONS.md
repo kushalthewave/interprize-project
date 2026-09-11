@@ -331,3 +331,50 @@ the owner's profile.
 build self-contained, and the portraits stay sharp from a 44 px HUD chip to a
 170 px website tile. The same code produces the portraits on the company
 website, so the product and the site show the same five people.
+
+
+---
+
+## A setting either does something or says why it cannot
+
+**Context.** A standard PC-game settings list includes V-Sync, borderless
+windowed, a monitor-resolution list and ray tracing. A browser game controls
+none of those.
+
+**Decision.** Those rows are shown as information — "Browser-controlled", with
+the reason — instead of as switches. Resolution is offered as a scale of the
+screen (50–150%, or Auto), which a page genuinely controls.
+
+**Why.** A toggle that does nothing is a small lie, and this product's whole
+argument is about noticing what is really there.
+
+---
+
+## Motion blur and depth of field are off, and no preset turns them on
+
+**Decision.** Both are implemented and available, default off, and excluded
+from every quality preset — including Ultra.
+
+**Why.** They make hazards harder to see, which in a hazard-spotting game is a
+handicap, not a visual upgrade. It is the player's choice, never a side effect
+of picking "Ultra".
+
+---
+
+## Music ducks during a round
+
+**Decision.** The background music drops to about a third of its level while a
+round is being played.
+
+**Why.** The reversing alarm is a safety cue. It must never be masked by a
+soundtrack.
+
+---
+
+## Training is checkpointed; tests are not
+
+**Decision.** Auto-save writes a training round in progress every 30 or 60
+seconds, and the menu offers to resume it. A test is never checkpointed.
+
+**Why.** Resuming a test would let a trainee stop the five-minute clock by
+closing the tab.
