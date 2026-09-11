@@ -91,6 +91,9 @@ export class HazardSystem {
     this.highlightEnabled = false;
     this.flagRadius = 1.0;
     this.active = false;
+    /** Train Mode: the hazard the guide is currently leading the player to. */
+    this.guideTarget = null;
+    this.beacon = null;
 
     this.group = new THREE.Group();
     this.group.name = 'hazard-proxies';
@@ -225,6 +228,60 @@ export class HazardSystem {
     if (inst.marker) inst.marker.visible = on;
   }
 
+  /**
+   * Train Mode: lead the player to one hazard.
+   *
+   * A column of light rises from the hazard's position and is drawn over
+   * everything, so it can be seen across the building and through racking.
+   * The HUD arrow says which way to turn; the beam says where to stop. Pass
+   * null to remove it.
+   */
+  setGuideTarget(inst) {
+    // The previous target's marker goes back to normal size.
+    if (this.guideTarget?.marker) this.guideTarget.marker.scale.setScalar(1);
+    this.guideTarget = inst ?? null;
+    if (!inst) {
+      if (this.beacon) this.beacon.visible = false;
+      return;
+    }
+    if (!this.beacon) this.beacon = this._makeBeacon();
+    const colour = inst.severity === 'major' ? 0xff4d4d : 0xffc14d;
+    this.beacon.userData.beam.material.color.setHex(colour);
+    this.beacon.userData.base.material.color.setHex(colour);
+    this.beacon.position.set(inst.center.x, 0, inst.center.z);
+    this.beacon.visible = true;
+  }
+
+  _makeBeacon() {
+    const g = new THREE.Group();
+    g.name = 'train-guide-beacon';
+    const beam = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.16, 0.34, 9, 16, 1, true),
+      new THREE.MeshBasicMaterial({
+        color: 0xffc14d, transparent: true, opacity: 0.32,
+        depthTest: false, depthWrite: false, side: THREE.DoubleSide,
+      }),
+    );
+    beam.position.y = 4.5;
+    beam.renderOrder = 998;
+    const base = new THREE.Mesh(
+      new THREE.RingGeometry(0.55, 0.78, 32),
+      new THREE.MeshBasicMaterial({
+        color: 0xffc14d, transparent: true, opacity: 0.7,
+        depthTest: false, depthWrite: false, side: THREE.DoubleSide,
+      }),
+    );
+    base.rotation.x = -Math.PI / 2;
+    base.position.y = 0.04;
+    base.renderOrder = 998;
+    g.add(beam, base);
+    g.userData.beam = beam;
+    g.userData.base = base;
+    g.visible = false;
+    this.markerGroup.add(g);
+    return g;
+  }
+
   /* ---------------------------------------------------------------- *
    * Targeting
    * ---------------------------------------------------------------- */
@@ -234,6 +291,13 @@ export class HazardSystem {
 
     // markers billboard toward the camera and pulse
     const s = 1 + Math.sin(this._t * 3.2) * 0.12;
+    if (this.beacon?.visible) {
+      this.beacon.userData.beam.material.opacity = 0.22 + (s - 0.88) * 0.5;
+      this.beacon.userData.base.scale.setScalar(0.85 + (s - 0.88) * 1.4);
+      // The guided hazard's own marker is drawn larger than the rest.
+      const gm = this.guideTarget?.marker;
+      if (gm?.visible) gm.scale.setScalar(1.6);
+    }
     for (const i of this.instances) {
       const m = i.marker;
       if (!m || !m.visible) continue;
@@ -386,7 +450,9 @@ export class HazardSystem {
   }
 
   reset() {
+    this.setGuideTarget(null);
     for (const i of this.instances) {
+      if (i.marker) i.marker.scale.setScalar(1);
       i.found = false;
       i.foundAt = null;
       i.reactionTime = null;
@@ -418,6 +484,15 @@ export class HazardSystem {
     this.decoyProxies = [];
     this.current = null;
     this.currentDecoy = null;
+    this.guideTarget = null;
+    if (this.beacon) {
+      this.beacon.traverse((o) => {
+        o.geometry?.dispose?.();
+        o.material?.dispose?.();
+      });
+      this.markerGroup.remove(this.beacon);
+      this.beacon = null;
+    }
   }
 
   dispose() {

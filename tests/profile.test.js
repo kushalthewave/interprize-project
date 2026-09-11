@@ -2,7 +2,7 @@
  * Profile: progression gates, achievements and stats folding.
  * Uses MemoryAdapter so no browser storage is involved.
  */
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { Profile, MemoryAdapter } from '../src/services/Profile.js';
 import { PROGRESSION, ACHIEVEMENTS } from '../src/data/config.js';
 
@@ -37,10 +37,50 @@ describe('Profile - identity', () => {
 
   it('signs in and trims the name', () => {
     const p = mk();
-    p.signIn({ name: '  Sunita  ', avatar: 'female' });
+    p.signIn({ name: '  Sunita  ', avatar: 'maria' });
     expect(p.name).toBe('Sunita');
-    expect(p.avatar).toBe('female');
+    expect(p.avatar).toBe('maria');
     expect(p.isSignedIn).toBe(true);
+  });
+
+  it('defaults a new trainee to the first of the five avatars', () => {
+    expect(mk().avatar).toBe('sarah');
+  });
+
+  it('maps the old two-avatar ids onto the new five', () => {
+    const p = mk();
+    p.signIn({ name: 'Ramesh', avatar: 'male' });
+    expect(p.avatar).toBe('david');
+    p.setAvatar('female');
+    expect(p.avatar).toBe('maria');
+  });
+
+  it('migrates a saved profile that still has a legacy avatar', () => {
+    const adapter = new MemoryAdapter();
+    adapter.save({ name: 'Old', avatar: 'female' });
+    expect(new Profile(adapter).avatar).toBe('maria');
+  });
+
+  it('replaces an unknown avatar id with the default', () => {
+    const p = mk();
+    p.signIn({ name: 'X', avatar: 'nobody' });
+    expect(p.avatar).toBe('sarah');
+  });
+
+  it('remembers who signed out, so a passkey can restore them', () => {
+    const p = mk();
+    p.signIn({ name: 'Kushal', avatar: 'aisha', provider: 'passkey' });
+    p.signOut();
+    expect(p.isSignedIn).toBe(false);
+    expect(p.remembered).toEqual({ name: 'Kushal', avatar: 'aisha', authProvider: 'passkey', email: null });
+  });
+
+  it('keeps the remembered identity through a progress reset', () => {
+    const p = mk();
+    p.signIn({ name: 'Kushal', avatar: 'james' });
+    p.signOut();
+    p.resetProgress();
+    expect(p.remembered?.name).toBe('Kushal');
   });
 
   it('falls back to a default name when given only whitespace', () => {
@@ -71,7 +111,33 @@ describe('Profile - identity', () => {
   });
 });
 
-describe('Profile - progression gates', () => {
+describe('Profile - progression gates (default: all open)', () => {
+  it('opens every Test difficulty without any training', () => {
+    const p = mk();
+    for (const d of ['simple', 'mid', 'hard']) {
+      expect(p.isUnlocked('env01', d)).toBe(true);
+      expect(p.lockReason('env01', d)).toBe('');
+    }
+  });
+
+  it('opens every environment independently of the others', () => {
+    const p = mk();
+    expect(p.isUnlocked('env02', 'hard')).toBe(true);
+    expect(p.isUnlocked('env03', 'simple')).toBe(true);
+  });
+});
+
+describe('Profile - progression gates (when a site turns them on)', () => {
+  const saved = { ...PROGRESSION };
+  beforeEach(() => {
+    Object.assign(PROGRESSION, {
+      requireTrainBeforeTest: true,
+      requireSimpleBeforeMid: true,
+      requireMidBeforeHard: true,
+    });
+  });
+  afterEach(() => { Object.assign(PROGRESSION, saved); });
+
   it('always allows Train Mode', () => {
     expect(mk().isUnlocked('env01', 'train')).toBe(true);
   });

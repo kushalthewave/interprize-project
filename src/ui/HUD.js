@@ -9,6 +9,7 @@
 import { el, mount, secs } from './dom.js';
 import { bus, EV } from '../core/EventBus.js';
 import { Timer } from '../gameplay/Timer.js';
+import { avatarNode, getAvatar } from './avatars.js';
 
 export class HUD {
   constructor(root) {
@@ -29,7 +30,7 @@ export class HUD {
     this.elDiff = el('span.v', { text: 'Simple' });
     this.elProgFill = el('div.progress-fill', { style: { width: '0%' } });
 
-    this.chipTimer = el('div.hud-chip', {}, [el('span.k', { text: 'Reaction clock' }), this.elTimer]);
+    this.chipTimer = el('div.hud-chip.hud-clock', {}, [el('span.k', { text: 'Time left' }), this.elTimer]);
     this.chipScore = el('div.hud-chip', {}, [el('span.k', { text: 'Score' }), this.elScore]);
     this.chipFound = el('div.hud-chip.wide', {}, [
       el('span.k', { text: 'Hazards found' }),
@@ -39,8 +40,12 @@ export class HUD {
     this.comboBadge = el('div.combo-badge', { hidden: true }, ['🔥 COMBO', el('span', { text: '' })]);
     this.comboCount = this.comboBadge.lastChild;
 
+    // Who is playing — your own avatar, in the corner, the whole round.
+    this.playerCard = el('div.hud-player');
+
     this.topBar = el('div.hud-top', {}, [
       el('div.hud-group', {}, [
+        this.playerCard,
         el('div.hud-chip', {}, [el('span.k', { text: 'Mode' }), this.elMode]),
         el('div.hud-chip', {}, [el('span.k', { text: 'Difficulty' }), this.elDiff]),
       ]),
@@ -61,6 +66,16 @@ export class HUD {
     // --- train panel
     this.trainPanel = el('div.train-panel', { hidden: true });
 
+    // --- train guide: which way, how far, and where
+    this.guideArrow = el('div.guide-arrow', {}, [el('div.guide-arrow-head')]);
+    this.guideDist = el('div.guide-dist', { text: '' });
+    this.guideName = el('div.guide-name', { text: '' });
+    this.guideWhere = el('div.guide-where', { text: '' });
+    this.guide = el('div.train-guide', { hidden: true, role: 'status', 'aria-live': 'off' }, [
+      el('div.guide-dial', {}, [this.guideArrow]),
+      el('div.guide-text', {}, [this.guideDist, this.guideName, this.guideWhere]),
+    ]);
+
     // --- controls hint
     this.hint = el('div.controls-hint', {}, [
       el('span', { html: '<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move' }),
@@ -77,6 +92,7 @@ export class HUD {
       this.targetLabel,
       this.feedback,
       this.trainPanel,
+      this.guide,
       this.hint,
     ]);
     this.root.append(this.el);
@@ -87,32 +103,38 @@ export class HUD {
 
     on(EV.GAME_START, (d) => {
       this.elMode.textContent = d.mode === 'train' ? 'TRAIN' : 'TEST';
-      this.elDiff.textContent = d.difficulty
-        ? d.difficulty[0].toUpperCase() + d.difficulty.slice(1)
-        : '—';
+      // Train Mode always uses the gentle presentation, so naming a
+      // difficulty there was misleading.
+      this.elDiff.textContent = d.mode === 'train'
+        ? 'Guided'
+        : d.difficulty ? d.difficulty[0].toUpperCase() + d.difficulty.slice(1) : '—';
       this.showHazardCount = d.showHazardCount;
       this.total = d.totalHazards;
       this.elFound.textContent = d.showHazardCount ? `0/${d.totalHazards}` : '0';
       this.chipFound.querySelector('.k').textContent = d.showHazardCount
         ? 'Hazards found' : 'Hazards found (total hidden)';
       this.elScore.textContent = '0';
-      this.timed = d.timed !== false;
-      this.chipTimer.querySelector('.k').textContent = this.timed ? 'Reaction clock' : 'Time elapsed';
-      this.elTimer.textContent = this.timed ? Timer.format(d.secondsPerHazard) : '00:00';
+      this.mode = d.mode;
+      this.timed = d.mode === 'test' && d.timed !== false;
+      // Train Mode has no clock, so it shows no clock. Test Mode counts the
+      // five minutes down; untimed practice counts up.
+      this.chipTimer.hidden = d.mode === 'train';
+      this.chipTimer.querySelector('.k').textContent = this.timed ? 'Time left' : 'Time (untimed)';
+      this.elTimer.textContent = this.timed ? Timer.format(d.timeLimit ?? 0) : '00:00';
+      this.chipTimer.classList.remove('warn', 'crit');
       this.comboBadge.hidden = true;
       this.feedback.hidden = true;
       this.trainPanel.hidden = d.mode !== 'train';
-      if (d.mode === 'train') {
-        this._renderTrainPanel({ index: 0, total: d.totalHazards, next: null, started: true });
-      }
+      this.guide.hidden = true;
+      this._renderPlayer(d.player);
       this.show();
     });
 
     on(EV.GAME_TICK, (d) => {
-      // Untimed practice counts up instead of down - a frozen countdown of
-      // "600:00" told the player nothing.
+      // The whole round counts down in a test; untimed practice counts up
+      // instead, because a frozen "600:00" told the player nothing.
       this.elTimer.textContent = this.timed
-        ? Timer.format(d.hazardRemaining)
+        ? Timer.format(d.remaining)
         : Timer.format(d.elapsed ?? 0);
       this.chipTimer.classList.toggle('warn', d.warning && !d.critical);
       this.chipTimer.classList.toggle('crit', d.critical);
@@ -150,11 +172,12 @@ export class HUD {
       const n = d.remaining ?? 0;
       this._card({
         kind: 'expired',
-        title: '⏱ Reaction clock reset',
-        body: `That search took a while, so your combo has reset. ${n} hazard${n === 1 ? '' : 's'} still to find — keep going.`,
+        title: '⏱ Slow search — combo reset',
+        body: `That one took a while, so your combo has reset. ${n} hazard${n === 1 ? '' : 's'} still to find — keep going.`,
       });
     });
     on(EV.TRAIN_STEP, (d) => this._renderTrainPanel(d));
+    on(EV.TRAIN_GUIDE, (d) => this._renderGuide(d));
     on(EV.GAME_END, () => this.hide());
   }
 
@@ -220,34 +243,71 @@ export class HUD {
   _renderTrainPanel(d) {
     this.trainPanel.hidden = false;
 
-    // Three distinct states. `next == null` alone does NOT mean "finished" -
-    // at round start nothing has been found yet and there is no "next" to
-    // name, which previously showed "Training complete" on the opening frame.
-    const complete = !d.started && d.next == null && d.index >= d.total && d.total > 0;
+    // `next == null` alone does NOT mean "finished" — it also happens before
+    // anything is loaded. Finished means every hazard counted as learned.
+    const complete = d.next == null && d.total > 0 && d.index >= d.total;
+    if (complete) this.guide.hidden = true;
 
+    const sev = d.next?.severity;
     mount(
       this.trainPanel,
-      el('div.tp-k', { text: `Training · ${d.index}/${d.total} learned` }),
+      el('div.tp-k', { text: `Training · ${d.index}/${d.total} found` }),
       el('h4', {
-        text: complete ? '🎓 Training complete' : d.next ? 'Find the next hazard' : 'Explore the warehouse',
+        text: complete ? '🎓 Training complete' : d.index === 0 ? 'Your first hazard' : 'Next hazard',
       }),
-      el('p', {
-        text: complete
-          ? 'You have identified every hazard in this environment. Test Mode is now unlocked.'
-          : d.next
-            ? (d.next.hint ?? 'Look for anything physically wrong: an obstruction, damage, instability, or a person in the wrong place.')
-            : 'Walk around and look for anything physically wrong. Glowing rings mark the hazards you have not found yet — look at one and press E to flag it.',
-      }),
-      d.next && !complete && el('div.kw', {}, [el('span', { text: d.next.name })]),
-      // Where to go. Without this the player can know WHAT to look for and
-      // still have no idea which end of a 62 m building to walk to.
+      d.next && !complete && el('div.tp-target', {}, [
+        el('span', { text: d.next.name }),
+        sev && el(`span.tag.tag-${sev}`, { text: sev }),
+      ]),
+      // Where to go, in words, from the very first frame.
       d.next?.where && !complete &&
         el('div.tp-where', {}, [el('span.tp-pin', { text: '📍' }), d.next.where]),
+      el('p', {
+        text: complete
+          ? 'You found every hazard in this warehouse. When you are ready, try Test Mode — five minutes, no guide and no locations.'
+          : d.next
+            ? (d.next.hint ?? 'Follow the arrow and the column of light. When you can see the hazard, aim at it and press E.')
+            : 'Walk around and look for anything physically wrong.',
+      }),
+    );
+  }
+
+  /** Train Mode compass: which way to turn, and how far to walk. */
+  _renderGuide(d) {
+    if (this.mode !== 'train') return;
+    this.guide.hidden = false;
+    this.guideArrow.style.transform = `rotate(${(-d.angle * 180) / Math.PI}deg)`;
+    const m = Math.round(d.distance);
+    const close = d.distance < 4;
+    this.guide.classList.toggle('close', close);
+    this.guide.classList.toggle('major', d.severity === 'major');
+    this.guideDist.textContent = close ? 'Right here — look around' : `${m} m`;
+    this.guideName.textContent = d.name;
+    this.guideWhere.textContent = d.where ?? '';
+    this.guideWhere.hidden = !d.where;
+  }
+
+  _renderPlayer(player) {
+    if (!player) { this.playerCard.hidden = true; return; }
+    const a = getAvatar(player.avatar);
+    this.playerCard.hidden = false;
+    mount(
+      this.playerCard,
+      avatarNode(a.id, { size: 44, badge: false }),
+      el('div.hp-text', {}, [
+        el('span.hp-name', { text: player.name }),
+        el('span.hp-role', { text: a.role }),
+      ]),
     );
   }
 
   show() { this.el.hidden = false; }
-  hide() { this.el.hidden = true; this.targetLabel.hidden = true; this.feedback.hidden = true; }
+  hide() {
+    this.el.hidden = true;
+    this.targetLabel.hidden = true;
+    this.feedback.hidden = true;
+    this.guide.hidden = true;
+  }
 
   setTouchMode(on) {
     this.hint.style.display = on ? 'none' : '';

@@ -287,21 +287,60 @@ h3 { margin: 0 0 0.5rem; font-size: 1.05rem; font-weight: 700; }
 }
 
 /* ==================================================================
-   Avatar picker
+   Avatars — the five team leads, drawn as inline SVG (ui/avatars.js)
    ================================================================== */
 
-.avatar-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; }
-.avatar-opt {
-  padding: 1.1rem 0.75rem; border-radius: var(--radius);
-  background: rgba(255, 255, 255, 0.04); border: 2px solid var(--border);
-  display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
-  transition: border-color 0.14s, background 0.14s;
+.avatar { display: inline-block; flex: 0 0 auto; line-height: 0; }
+.avatar svg { width: 100%; height: 100%; display: block; overflow: visible; }
+
+/* Picker: a large "you are" preview above a row of all five. */
+.avatar-picker { display: flex; flex-direction: column; gap: 0.8rem; }
+.avatar-preview {
+  display: flex; align-items: center; gap: 1rem;
+  padding: 0.8rem 1rem; border-radius: var(--radius);
+  background: linear-gradient(120deg, rgba(242, 185, 12, 0.12), rgba(242, 185, 12, 0.03));
+  border: 1px solid rgba(242, 185, 12, 0.35);
 }
-.avatar-opt:hover { border-color: var(--border-strong); }
-.avatar-opt.selected { border-color: var(--accent); background: rgba(242, 185, 12, 0.1); }
-.avatar-opt .face { font-size: 2.4rem; line-height: 1; }
-.avatar-opt .label { font-size: 0.82rem; font-weight: 700; }
-.avatar-opt .sub { font-size: 0.7rem; color: var(--text-faint); text-align: center; line-height: 1.3; }
+.avatar-preview .ap-k { font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); font-weight: 800; }
+.avatar-preview .ap-name { font-size: 1.25rem; font-weight: 800; line-height: 1.15; }
+.avatar-preview .ap-role { font-size: 0.84rem; color: var(--text); font-weight: 600; }
+.avatar-preview .ap-blurb { font-size: 0.78rem; color: var(--text-dim); margin-top: 0.15rem; }
+
+.avatar-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.5rem; }
+.avatar-opt {
+  padding: 0.55rem 0.25rem 0.5rem; border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.04); border: 2px solid var(--border);
+  display: flex; flex-direction: column; align-items: center; gap: 0.3rem;
+  transition: border-color 0.14s, background 0.14s, transform 0.14s;
+  min-width: 0;
+}
+.avatar-opt:hover { border-color: var(--border-strong); transform: translateY(-2px); }
+.avatar-opt.selected { border-color: var(--accent); background: rgba(242, 185, 12, 0.12); }
+.avatar-opt.selected::after {
+  content: '✓'; position: absolute; margin: -0.35rem 0 0 2.6rem;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--accent); color: #1a1204; font-size: 0.7rem; font-weight: 900;
+  display: grid; place-items: center;
+}
+.avatar-opt { position: relative; }
+.avatar-opt .label { font-size: 0.8rem; font-weight: 800; }
+.avatar-opt .sub { font-size: 0.62rem; color: var(--text-faint); text-align: center; line-height: 1.25; }
+@media (max-width: 520px) {
+  .avatar-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* "Who am I" block: menu, profile, results */
+.who { display: flex; align-items: center; gap: 0.8rem; text-align: left; }
+.who-name { font-weight: 800; font-size: 1.05rem; line-height: 1.2; }
+.who-role { font-size: 0.8rem; color: var(--text-dim); }
+.who-btn {
+  background: none; border: 0; padding: 0; color: inherit; cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+.who-btn:hover .who-name { color: var(--accent); }
+.profile-hero { display: flex; justify-content: center; margin-bottom: 1rem; }
+.profile-hero .who-name { font-size: 1.3rem; }
+.result-who { display: flex; justify-content: center; margin-bottom: 0.7rem; }
 
 /* ==================================================================
    HUD
@@ -857,3 +896,90 @@ h3 { margin: 0 0 0.5rem; font-size: 1.05rem; font-weight: 700; }
 @media (max-width: 720px) {
   .totp-input { font-size: 1.35rem; letter-spacing: 0.22em; }
 }
+
+
+/* ==================================================================
+   In-game player card — your own avatar, visible the whole round
+   ================================================================== */
+
+.hud-player {
+  display: flex; align-items: center; gap: 0.55rem;
+  padding: 0.3rem 0.8rem 0.3rem 0.3rem;
+  background: rgba(10, 14, 19, 0.78); border: 1px solid var(--border);
+  border-radius: 999px; backdrop-filter: blur(6px);
+}
+.hud-player[hidden] { display: none; }
+.hud-player .hp-text { display: flex; flex-direction: column; line-height: 1.15; }
+.hud-player .hp-name { font-weight: 800; font-size: 0.9rem; }
+.hud-player .hp-role { font-size: 0.66rem; color: var(--text-faint); letter-spacing: 0.04em; }
+
+/* ==================================================================
+   Train Mode guide — which way, how far, and where
+   ================================================================== */
+
+.train-guide {
+  position: absolute; top: 5.4rem; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 0.85rem;
+  padding: 0.55rem 1.1rem 0.55rem 0.55rem;
+  background: rgba(10, 14, 19, 0.88); border: 1px solid rgba(255, 193, 77, 0.55);
+  border-radius: 999px; box-shadow: var(--shadow);
+  pointer-events: none; max-width: min(560px, calc(100vw - 2rem));
+}
+.train-guide[hidden] { display: none; }
+.train-guide.major { border-color: rgba(255, 77, 77, 0.6); }
+.guide-dial {
+  width: 46px; height: 46px; border-radius: 50%; flex: 0 0 46px;
+  background: radial-gradient(circle, rgba(255, 193, 77, 0.2), rgba(255, 193, 77, 0.04));
+  border: 2px solid rgba(255, 193, 77, 0.7);
+  display: grid; place-items: center;
+}
+.train-guide.major .guide-dial { border-color: rgba(255, 77, 77, 0.8); background: radial-gradient(circle, rgba(255, 77, 77, 0.22), rgba(255, 77, 77, 0.04)); }
+.guide-arrow { width: 100%; height: 100%; display: grid; place-items: center; transition: transform 0.08s linear; }
+.guide-arrow-head {
+  width: 0; height: 0;
+  border-left: 9px solid transparent; border-right: 9px solid transparent;
+  border-bottom: 20px solid var(--minor);
+  transform: translateY(-3px);
+  filter: drop-shadow(0 0 5px rgba(255, 193, 77, 0.7));
+}
+.train-guide.major .guide-arrow-head { border-bottom-color: var(--major); filter: drop-shadow(0 0 5px rgba(255, 77, 77, 0.7)); }
+.train-guide.close .guide-dial { animation: pulseCrit 0.9s infinite; }
+.train-guide.close .guide-arrow-head { border-bottom-width: 0; border-left-width: 0; border-right-width: 0; }
+.train-guide.close .guide-arrow::after { content: '◎'; font-size: 1.4rem; color: var(--minor); }
+.guide-text { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
+.guide-dist { font-family: var(--mono); font-weight: 800; font-size: 1.15rem; color: var(--text); }
+.guide-name { font-size: 0.82rem; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.guide-where { font-size: 0.78rem; color: #ffdf8a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.guide-where[hidden] { display: none; }
+
+.train-panel .tp-target {
+  display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
+  font-weight: 800; font-size: 1rem; margin-bottom: 0.45rem;
+}
+
+@media (max-width: 720px) {
+  .train-guide { top: 4.6rem; }
+  .hud-player .hp-text { display: none; }
+  .hud-player { padding-right: 0.3rem; }
+}
+
+/* ==================================================================
+   Login — provider setup and the remembered-account passkey button
+   ================================================================== */
+
+.auth-social.needs-setup { opacity: 1; background: rgba(255, 255, 255, 0.04); border-style: dashed; }
+.auth-social.needs-setup .auth-label { color: var(--text); }
+.auth-social.needs-setup .auth-sub { color: var(--text-dim); opacity: 1; }
+.auth-setup {
+  margin-left: auto; padding: 0.25rem 0.6rem; border-radius: 6px;
+  font-size: 0.72rem; font-weight: 800; letter-spacing: 0.04em;
+  background: rgba(242, 185, 12, 0.14); color: var(--accent);
+}
+.auth-avatar { margin-right: 0.15rem; }
+.provider-quick { display: flex; flex-direction: column; gap: 0.6rem; border-color: rgba(242, 185, 12, 0.35); }
+.provider-quick a { color: var(--accent); font-weight: 700; font-size: 0.82rem; }
+.provider-setup-host:empty { display: none; }
+
+/* Anything in the HUD toggled with the hidden attribute must actually hide:
+   component rules such as .hud-chip set display and would otherwise win. */
+#hud [hidden] { display: none !important; }

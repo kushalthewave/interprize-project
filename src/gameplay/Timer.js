@@ -15,15 +15,30 @@ export class Timer {
    * @param {number} o.warnAt           fraction of the per-hazard clock left
    *                                    at which the UI should warn
    */
-  constructor({ secondsPerHazard = 60, hazardCount = 1, warnAt = 0.25 } = {}) {
+  constructor({
+    secondsPerHazard = 60,
+    hazardCount = 1,
+    warnAt = 0.25,
+    totalSeconds = null,
+    roundWarnAt = 60,
+    roundCriticalAt = 30,
+  } = {}) {
     this.secondsPerHazard = secondsPerHazard;
     this.hazardCount = Math.max(1, hazardCount);
     this.warnAt = warnAt;
+    /**
+     * A fixed round length that overrides secondsPerHazard x hazardCount.
+     * Test Mode uses this for its five-minute limit; the per-hazard clock
+     * keeps running underneath because it decides the fast/slow tier.
+     */
+    this.totalSeconds = totalSeconds;
+    this.roundWarnAt = roundWarnAt;
+    this.roundCriticalAt = roundCriticalAt;
     this.reset();
   }
 
   reset() {
-    this.total = this.secondsPerHazard * this.hazardCount;
+    this.total = this.totalSeconds ?? this.secondsPerHazard * this.hazardCount;
     this.remaining = this.total;
     this.elapsed = 0;
     this.hazardElapsed = 0;
@@ -82,6 +97,15 @@ export class Timer {
 
   get critical() {
     return this.hazardRemaining <= Math.min(10, this.secondsPerHazard * 0.15);
+  }
+
+  /** The whole round is running low. */
+  get roundWarning() {
+    return this.remaining <= this.roundWarnAt;
+  }
+
+  get roundCritical() {
+    return this.remaining <= this.roundCriticalAt;
   }
 
   /** mm:ss for the whole round. */

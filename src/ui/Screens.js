@@ -6,15 +6,24 @@
  * and returns an HTMLElement. Screens never touch the 3D scene directly.
  */
 import { el, secs, pct } from './dom.js';
-import { DIFFICULTIES, DIFFICULTY_ORDER, ACHIEVEMENTS, RANKS } from '../data/config.js';
+import { DIFFICULTIES, DIFFICULTY_ORDER, ACHIEVEMENTS, RANKS, TEST } from '../data/config.js';
 import { HAZARDS, HAZARD_CATEGORIES } from '../data/hazards.js';
 import { ENVIRONMENTS } from '../environment/registry.js';
-import { securityPanel } from './AuthScreens.js';
+import { securityPanel, avatarPicker } from './AuthScreens.js';
+import { AVATARS, getAvatar, avatarNode } from './avatars.js';
+import { Timer } from '../gameplay/Timer.js';
 
-const AVATARS = {
-  male: { face: '🧑🏽‍🏭', label: 'Ramesh', sub: 'Daura-surwal inspired · dhaka topi' },
-  female: { face: '👩🏽‍🏭', label: 'Sunita', sub: 'Kurti-surwal inspired · dupatta' },
-};
+/** The signed-in trainee: portrait, name and role, as one block. */
+function whoAmI(p, { size = 56 } = {}) {
+  const a = getAvatar(p.avatar);
+  return el('div.who', {}, [
+    avatarNode(a.id, { size, className: 'who-avatar' }),
+    el('div', {}, [
+      el('div.who-name', { text: p.name || 'Trainee' }),
+      el('div.who-role', { text: `${a.name} · ${a.role}` }),
+    ]),
+  ]);
+}
 
 function brand(sub = 'Warehouse Forklift & Pedestrian Safety Training') {
   return el('div.brand', {}, [
@@ -31,91 +40,10 @@ function backBar(ctx, to = 'menu', label = '← Back') {
 }
 
 /* ================================================================== *
- * Login
- * ================================================================== */
-export function loginScreen(ctx) {
-  const nameInput = el('input', {
-    type: 'text',
-    placeholder: 'e.g. Sunita Shrestha',
-    maxLength: 32,
-    value: ctx.profile.name || '',
-    autocomplete: 'name',
-    id: 'trainee-name',
-  });
-
-  let avatar = ctx.profile.avatar || 'male';
-  const opts = Object.entries(AVATARS).map(([key, a]) =>
-    el(`button.avatar-opt${key === avatar ? '.selected' : ''}`, {
-      type: 'button',
-      'aria-pressed': key === avatar,
-      on: {
-        click: (e) => {
-          avatar = key;
-          for (const n of e.currentTarget.parentElement.children) n.classList.remove('selected');
-          e.currentTarget.classList.add('selected');
-        },
-      },
-    }, [
-      el('span.face', { text: a.face }),
-      el('span.label', { text: a.label }),
-      el('span.sub', { text: a.sub }),
-    ]),
-  );
-
-  const err = el('div.faint', { style: { color: 'var(--danger)', minHeight: '1.1rem' } });
-
-  const submit = () => {
-    const name = nameInput.value.trim();
-    if (name.length < 2) {
-      err.textContent = 'Please enter a name of at least 2 characters.';
-      nameInput.focus();
-      return;
-    }
-    ctx.actions.signIn({ name, avatar });
-  };
-
-  nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
-
-  const googleConfigured = !!ctx.googleClientId;
-
-  return el('div.screen', {}, [
-    el('div.screen-inner.narrow', {}, [
-      brand(),
-      el('div.card.stack', {}, [
-        el('div.section-head', {}, [
-          el('h2', { text: 'Start training' }),
-          el('p', { text: 'Your name and progress are stored on this device only.' }),
-        ]),
-        el('div', {}, [el('label', { for: 'trainee-name', text: 'Your name' }), nameInput]),
-        el('div', {}, [el('label', { text: 'Choose your avatar' }), el('div.avatar-grid', {}, opts)]),
-        err,
-        el('button.btn.btn-primary.btn-lg.btn-block', { text: 'Enter the warehouse', on: { click: submit } }),
-        el('div.row.between', { style: { marginTop: '0.3rem' } }, [
-          el('button.btn.btn-sm.btn-ghost', {
-            text: 'Continue as guest',
-            on: { click: () => ctx.actions.signIn({ name: 'Trainee', avatar }) },
-          }),
-          googleConfigured
-            ? el('button.btn.btn-sm', { text: 'Sign in with Google', on: { click: () => ctx.actions.googleSignIn() } })
-            : el('span.faint', {
-                text: 'Google sign-in not configured',
-                title: 'Set VITE_GOOGLE_CLIENT_ID in .env to enable Google sign-in.',
-              }),
-        ]),
-      ]),
-      el('p.faint.center.mt', {
-        text: 'This is a training simulation. Hazards shown are staged for teaching purposes.',
-      }),
-    ]),
-  ]);
-}
-
-/* ================================================================== *
  * Main menu
  * ================================================================== */
 export function menuScreen(ctx) {
   const p = ctx.profile;
-  const a = AVATARS[p.avatar] ?? AVATARS.male;
   const completion = p.completion(ENVIRONMENTS.map((e) => e.meta.id));
 
   const tile = (icon, title, desc, to, primary = false) =>
@@ -128,13 +56,10 @@ export function menuScreen(ctx) {
   return el('div.screen', {}, [
     el('div.screen-inner', {}, [
       el('div.userbar', {}, [
-        el('div.who', {}, [
-          el('div.avatar-chip', { text: a.face }),
-          el('div', {}, [
-            el('div', { text: p.name || 'Trainee', style: { fontWeight: '800' } }),
-            el('div.faint', { text: `Best score ${p.data.stats.bestScore} · ${p.data.achievements.length}/${ACHIEVEMENTS.length} achievements` }),
-          ]),
+        el('button.who-btn', { type: 'button', title: 'Change your avatar', on: { click: () => ctx.go('profile') } }, [
+          whoAmI(p, { size: 60 }),
         ]),
+        el('div.faint', { text: `Best score ${p.data.stats.bestScore} · ${p.data.achievements.length}/${ACHIEVEMENTS.length} achievements` }),
         el('div.row', {}, [
           el('span.stat-pill', { text: `${Math.round(completion * 100)}% complete` }),
           el('button.btn.btn-sm', { text: 'Profile', on: { click: () => ctx.go('profile') } }),
@@ -142,8 +67,8 @@ export function menuScreen(ctx) {
       ]),
       brand(),
       el('div.menu-grid', {}, [
-        tile('🎓', 'Train Mode', 'Guided tour. Hazards are highlighted and explained. Unlocks testing.', 'train-select', true),
-        tile('🎯', 'Test Mode', 'Find the hazards yourself against the clock. Scored and ranked.', 'test-select', true),
+        tile('🎓', 'Train Mode', 'Optional. No clock — a guide points you to every hazard and tells you where it is.', 'train-select', true),
+        tile('🎯', 'Test Mode', `${Math.round(TEST.timeLimitSeconds / 60)} minutes. No guide and no locations — find the hazards yourself. Scored and ranked.`, 'test-select', true),
         tile('🏭', 'Environments', 'Three warehouses: general storage, dispatch bay and high-bay annexe.', 'environments'),
         tile('📊', 'Progress', 'Scores, ranks, achievements and your session history.', 'progress'),
         tile('📖', 'Hazard Guide', 'Reference for all 15 hazard types and their controls.', 'guide'),
@@ -197,8 +122,8 @@ export function environmentScreen(ctx, { mode = 'test' } = {}) {
         el('h2', { text: mode === 'train' ? 'Train Mode · choose a site' : 'Test Mode · choose a site' }),
         el('p', {
           text: mode === 'train'
-            ? 'Training highlights every hazard and explains it. Complete a site to unlock testing there.'
-            : 'You will be scored on what you find, how fast, and how few wrong calls you make.',
+            ? 'No clock. A guide arrow and the hazard’s location lead you to each one. Training is optional — you can go straight to Test Mode.'
+            : `${Math.round(TEST.timeLimitSeconds / 60)} minutes on the clock. No guide and no locations — you are scored on what you find, how fast, and how few wrong calls you make.`,
         }),
       ]),
       el('div.grid.grid-3', {}, cards),
@@ -229,7 +154,8 @@ export function difficultyScreen(ctx, { environment }) {
       el('span.name', { text: d.label }),
       el('span.desc', { text: d.blurb }),
       el('div.meta', {}, [
-        el('span.stat-pill', { text: `${d.secondsPerHazard}s per hazard` }),
+        el('span.stat-pill', { text: `${Timer.format(TEST.timeLimitSeconds)} time limit` }),
+        el('span.stat-pill', { text: `Fast bonus under ${Math.round(d.secondsPerHazard * 0.5)}s` }),
         el('span.stat-pill', { text: `×${d.scoreMultiplier} score` }),
         el('span.stat-pill', { text: d.highlightHazards ? 'Hazards highlighted' : 'No highlights' }),
         el('span.stat-pill', { text: `${d.decoyCount} decoys` }),
@@ -244,7 +170,7 @@ export function difficultyScreen(ctx, { environment }) {
     el('div.screen-inner', {}, [
       el('div.section-head', {}, [
         el('h2', { text: `${env?.meta.name ?? 'Site'} · choose difficulty` }),
-        el('p', { text: 'Difficulty changes the clock, the lighting, the number of decoys and whether hazards move.' }),
+        el('p', { text: `Every test is ${Math.round(TEST.timeLimitSeconds / 60)} minutes. Difficulty changes how fast you must be to earn the bonus, the lighting, the number of decoys and whether hazards move.` }),
       ]),
       el('div.grid.grid-3', {}, cards),
       el('div.row.mt', {}, [
@@ -261,6 +187,9 @@ export function resultsScreen(ctx, { summary }) {
   const s = summary;
   const env = ENVIRONMENTS.find((e) => e.meta.id === s.environment);
   const isTrain = s.mode === 'train';
+  // Locations are a Train Mode aid. A test result names what you missed but
+  // does not give away where it was.
+  const showWhere = isTrain;
 
   const foundRows = s.finds.map((f) => {
     const h = HAZARDS.find((x) => x.id === f.id);
@@ -268,7 +197,7 @@ export function resultsScreen(ctx, { summary }) {
       el('span.mark', { text: '✓' }),
       el('div', { style: { flex: '1' } }, [
         el('div.hz-name', { text: h?.name ?? f.id }),
-        s.foundLocations?.[f.id] && el('div.hz-where', {}, ['📍 ', s.foundLocations[f.id]]),
+        showWhere && s.foundLocations?.[f.id] && el('div.hz-where', {}, ['📍 ', s.foundLocations[f.id]]),
         el('div.hz-tip', { text: h?.safetyTip ?? '' }),
       ]),
       el('span.hz-time', { text: `${secs(f.reactionTime)} · +${f.points}` }),
@@ -280,7 +209,7 @@ export function resultsScreen(ctx, { summary }) {
       el('span.mark', { text: '✗' }),
       el('div', { style: { flex: '1' } }, [
         el('div.hz-name', {}, [h.name, ' ', el(`span.tag.tag-${h.severity}`, { text: h.severity })]),
-        h.where && el('div.hz-where', {}, ['📍 ', h.where]),
+        showWhere && h.where && el('div.hz-where', {}, ['📍 ', h.where]),
         el('div.hz-tip', { text: h.safetyTip }),
       ]),
     ]),
@@ -299,7 +228,8 @@ export function resultsScreen(ctx, { summary }) {
   return el('div.screen', {}, [
     el('div.screen-inner.wide', {}, [
       el('div.result-hero', {}, [
-        el('div.faint', { text: `${isTrain ? 'Training' : 'Test'} complete · ${env?.meta.name ?? ''} · ${s.difficulty}` }),
+        el('div.result-who', {}, [whoAmI(ctx.profile, { size: 72 })]),
+        el('div.faint', { text: `${isTrain ? 'Training' : 'Test'} complete · ${env?.meta.name ?? ''}${isTrain ? '' : ` · ${s.difficulty}`}` }),
         el('div.result-score', { text: String(s.score) }),
         el('div.result-rank', {
           text: s.rank.label,
@@ -307,7 +237,7 @@ export function resultsScreen(ctx, { summary }) {
         }),
         el('div.result-sub', {
           text: s.reason === 'timeout'
-            ? 'The clock ran out.'
+            ? `The ${Math.round(TEST.timeLimitSeconds / 60)}-minute clock ran out.`
             : s.reason === 'quit'
               ? 'Round ended early.'
               : 'Every hazard found.',
@@ -376,22 +306,9 @@ export function resultsScreen(ctx, { summary }) {
 export function profileScreen(ctx) {
   const p = ctx.profile;
   const st = p.data.stats;
-  const a = AVATARS[p.avatar] ?? AVATARS.male;
 
   const nameInput = el('input', { type: 'text', value: p.name, maxLength: 32, id: 'pf-name' });
-  let avatar = p.avatar;
-  const avOpts = Object.entries(AVATARS).map(([key, av]) =>
-    el(`button.avatar-opt${key === avatar ? '.selected' : ''}`, {
-      type: 'button',
-      on: {
-        click: (e) => {
-          avatar = key;
-          for (const n of e.currentTarget.parentElement.children) n.classList.remove('selected');
-          e.currentTarget.classList.add('selected');
-        },
-      },
-    }, [el('span.face', { text: av.face }), el('span.label', { text: av.label }), el('span.sub', { text: av.sub })]),
-  );
+  const picker = avatarPicker(p.avatar);
 
   const stat = (v, k) => el('div.stat-box', {}, [el('div.v', { text: v }), el('div.k', { text: k })]);
 
@@ -402,12 +319,17 @@ export function profileScreen(ctx) {
         el('div.card.stack', {}, [
           el('h3', { text: 'Trainee details' }),
           el('div', {}, [el('label', { for: 'pf-name', text: 'Name' }), nameInput]),
-          el('div', {}, [el('label', { text: 'Avatar' }), el('div.avatar-grid', {}, avOpts)]),
+          el('div', {}, [el('label', { text: 'Your avatar' }), picker.node]),
           el('button.btn.btn-primary.btn-block', {
             text: 'Save changes',
             on: {
               click: () => {
-                p.signIn({ name: nameInput.value.trim() || 'Trainee', avatar, provider: p.data.authProvider });
+                p.signIn({
+                  name: nameInput.value.trim() || 'Trainee',
+                  avatar: picker.value,
+                  provider: p.data.authProvider,
+                  email: p.data.email,
+                });
                 ctx.actions.toast('Profile saved', 'ok');
                 ctx.go('profile');
               },
@@ -416,6 +338,7 @@ export function profileScreen(ctx) {
           el('div.faint', { text: `Signed in via: ${p.data.authProvider}${p.data.email ? ` (${p.data.email})` : ''}` }),
         ]),
         el('div.card', {}, [
+          el('div.profile-hero', {}, [whoAmI(p, { size: 96 })]),
           el('h3', { text: 'Lifetime statistics' }),
           el('div.stat-grid', {}, [
             stat(String(st.bestScore), 'Best score'),
@@ -425,9 +348,7 @@ export function profileScreen(ctx) {
             stat(`x${st.bestCombo}`, 'Best combo'),
             stat(secs(st.fastestAverage), 'Best avg time'),
           ]),
-          el('div.mt', {}, [
-            el('div.avatar-chip', { text: a.face, style: { width: '60px', height: '60px', fontSize: '1.9rem' } }),
-          ]),
+
         ]),
       ]),
       backBar(ctx),
@@ -626,8 +547,8 @@ export function settingsScreen(ctx) {
 
       el('div.card.mt', {}, [
         el('h3', { text: '🎯 Gameplay' }),
-        toggle('timedTest', 'Timed Test Mode', 'Run tests against the reaction clock. Turn off for untimed practice — hazards are still scored, just at the standard rate.'),
-        toggle('showLocations', 'Show hazard locations', 'Name the aisle or area a hazard is in, in Train Mode and on the results screen.'),
+        toggle('timedTest', `${Math.round(TEST.timeLimitSeconds / 60)}-minute Test limit`, 'Run tests against the five-minute clock. Turn off for untimed practice — hazards are still scored, just at the standard rate.'),
+        toggle('showLocations', 'Show hazard locations in Train Mode', 'The guide names the aisle or area each hazard is in. Test Mode never shows locations.'),
       ]),
 
       el('div.card.mt', {}, [

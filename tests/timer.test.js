@@ -139,3 +139,51 @@ describe('Timer - difficulty integration', () => {
     expect(simple.total).toBeGreaterThan(hard.total);
   });
 });
+
+describe('Timer - fixed round length (Test Mode)', () => {
+  it('uses totalSeconds instead of seconds-per-hazard x count', () => {
+    const t = new Timer({ secondsPerHazard: 60, hazardCount: 15, totalSeconds: 300 });
+    expect(t.total).toBe(300);
+    expect(t.display).toBe('05:00');
+  });
+
+  it('keeps the per-hazard clock at the difficulty pace underneath', () => {
+    const t = new Timer({ secondsPerHazard: 38, hazardCount: 15, totalSeconds: 300 });
+    t.start();
+    t.tick(10);
+    expect(t.hazardRemaining).toBe(28);
+    expect(t.remaining).toBe(290);
+  });
+
+  it('ends the round at five minutes whatever the difficulty', () => {
+    for (const per of [90, 60, 38]) {
+      const t = new Timer({ secondsPerHazard: per, hazardCount: 15, totalSeconds: 300 });
+      t.start();
+      let expired = false;
+      for (let i = 0; i < 300 && !expired; i++) expired = t.tick(1).expired;
+      expect(expired).toBe(true);
+      expect(t.elapsed).toBe(300);
+    }
+  });
+
+  it('warns at one minute and goes critical at thirty seconds', () => {
+    const t = new Timer({ secondsPerHazard: 60, hazardCount: 15, totalSeconds: 300, roundWarnAt: 60, roundCriticalAt: 30 });
+    t.start();
+    t.tick(239);
+    expect(t.roundWarning).toBe(false);
+    t.tick(1);
+    expect(t.roundWarning).toBe(true);
+    expect(t.roundCritical).toBe(false);
+    t.tick(30);
+    expect(t.roundCritical).toBe(true);
+  });
+
+  it('survives a reset with the fixed length intact', () => {
+    const t = new Timer({ secondsPerHazard: 60, hazardCount: 15, totalSeconds: 300 });
+    t.start();
+    t.tick(100);
+    t.reset();
+    expect(t.total).toBe(300);
+    expect(t.remaining).toBe(300);
+  });
+});
