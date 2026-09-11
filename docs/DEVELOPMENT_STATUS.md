@@ -11,13 +11,27 @@ limitations below stated honestly.
 | Check | Status |
 |---|---|
 | Build (`npm run build`) | ✅ passing, 2.6 s |
-| Tests (`npm test`) | ✅ **255 / 255 passing** (10 suites) |
+| Tests (`npm test`) | ✅ **266 / 266 passing** (11 suites) |
 | Syntax gate | ✅ 47 files, 0 errors |
 | App boots | ✅ no console errors |
 | Playthrough, all 3 environments | ✅ every hazard reachable |
 | Performance | ✅ 60 fps, 1,520 draw calls |
 
 ---
+
+## Latest changes — Offline play (2026-09-11)
+
+- **Fixed the downloaded file.** Opened from disk it showed garbled text and
+  ran in quirks mode: no doctype and no `<meta charset>`. The build now adds
+  both and refuses to write the file without them.
+- **Download buttons that download.** The website's button opened the game
+  online in a new tab. It and the new in-game button now save the file.
+- **Install as an app.** Web-app manifest, icons, and a service worker
+  generated at build time with the exact hashed file list; the online version
+  plays offline after one visit.
+- The menu and Settings → Account say which copy you are running and offer
+  whichever of Download / Install makes sense.
+- Tests 255 → 266. Offline file 828 kB.
 
 ## Latest changes — Settings (2026-09-11)
 
@@ -40,7 +54,7 @@ A full settings system in six tabs, opened from the menu or the pause menu:
   HUD scale, head bob, camera shake, reduce all motion.
 - V-Sync and ray tracing are shown as browser-controlled, with the reason.
 
-Tests: 204 → 255. Offline build: 738 kB → 822 kB (still under the 1 MB budget).
+Tests: 204 → 255. Offline build: 738 kB → 828 kB (still under the 1 MB budget).
 
 ## Latest changes (2026-09-11)
 

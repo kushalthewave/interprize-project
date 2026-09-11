@@ -191,6 +191,24 @@ menu, the profile, the results screen, and a player card in the corner of the HU
 for the whole round. Change it any time from **Profile**. Profiles saved with the
 earlier two avatars are migrated automatically.
 
+## Play without internet
+
+Two ways, both from the game's menu (**Play without internet**) or the website:
+
+1. **Download** — the whole game as one file, `beat-the-hazard.html` (about
+   830 kB). Save it to a laptop or a USB stick and double-click it. It runs in
+   any browser with the network unplugged. Progress is kept in that browser;
+   passkey sign-in needs the online version, everything else works.
+2. **Install as an app** — open the online version in Chrome or Edge and choose
+   **Install** (or *Add to Home Screen* on a phone). A service worker keeps a
+   copy of every game file, so after one visit it opens and plays offline, full
+   screen, with the same profile as the website.
+
+The downloaded file used to open with garbled text from disk — the Nepal flag
+appeared as `ÐŸ‡³ÐŸ‡Μ` and the page ran in quirks mode — because it had no
+`<!doctype>` and no `<meta charset>`. Online the server's header hid the
+problem. The build now refuses to produce the file without both.
+
 ## Settings
 
 Six tabs — **Video, Audio, Controls, Gameplay, Accessibility, Account & data** —
@@ -326,7 +344,7 @@ diagrams in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 npm test
 ```
 
-**255 automated tests, all passing** — scoring rules, combo, ranks, the reaction
+**266 automated tests, all passing** — scoring rules, combo, ranks, the reaction
 clock, hazard-data integrity, difficulty configuration, profile progression and
 achievements.
 
