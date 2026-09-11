@@ -13,7 +13,13 @@ import { AuthManager } from './services/auth/AuthManager.js';
 import { AudioManager } from './audio/AudioManager.js';
 import { UIManager } from './ui/UIManager.js';
 import { bus, EV } from './core/EventBus.js';
-import { PLAYER } from './data/config.js';
+import { Graphics } from './core/Graphics.js';
+import { actionForKey, presetPatch, detectPreset, isPresetKey } from './data/settings.js';
+import { setColourMode, palette } from './data/palette.js';
+
+/** Where a training round in progress is kept, so a closed tab can resume it. */
+const CHECKPOINT_KEY = 'beat-the-hazard:checkpoint:v1';
+const AIM_ASSIST = { off: { size: 1, friction: 1 }, low: { size: 1.25, friction: 0.7 }, high: { size: 1.55, friction: 0.5 } };
 
 function boot() {
   const canvas = document.getElementById('scene');
@@ -28,23 +34,31 @@ function boot() {
     return;
   }
 
+  // The profile comes first: MSAA is fixed when the graphics context is
+  // created, so the saved anti-aliasing choice has to be known before that.
+  const profile = new Profile();
+
   let engine;
   try {
-    engine = new Engine(canvas);
+    engine = new Engine(canvas, { antialias: profile.settings.antialias === 'msaa' });
   } catch (err) {
     console.error(err);
     showFatal('Could not start the 3D renderer', String(err?.message ?? err));
     return;
   }
 
-  const profile = new Profile();
+  const graphics = new Graphics(engine);
+  engine.onResize = () => graphics.onResize();
+
   const auth = new AuthManager(profile);
+  const s0 = profile.settings;
   const audio = new AudioManager({
-    enabled: profile.settings.audio,
-    volume: profile.settings.volume,
+    enabled: s0.audio, volume: s0.volume,
+    music: s0.musicVolume, voice: s0.voiceVolume, sfx: s0.sfxVolume,
   });
   const player = new PlayerController(engine.camera, canvas);
   const game = new GameManager({ engine, player, profile, audio });
+  game.onWorldLoaded = () => graphics.onWorldLoaded();
 
   const isTouch = matchMedia('(hover: none) and (pointer: coarse)').matches;
 
@@ -60,6 +74,7 @@ function boot() {
   async function completeSignIn(identity) {
     audio.init();
     audio.resume();
+    audio.startMusic();
     const finish = async () => {
       auth.commit(identity);
       await refreshCaps();
@@ -165,7 +180,14 @@ function boot() {
     },
     endRound() { game.end('quit'); },
     quitToMenu() {
+      // Quitting a training round on purpose keeps its checkpoint, so it can
+      // be picked up again from the menu.
+      const snap = game.snapshot();
       game.quit();
+      if (snap && Number(profile.settings.autosave)) {
+        try { localStorage.setItem(CHECKPOINT_KEY, JSON.stringify(snap)); } catch { /* blocked */ }
+      }
+      audio.setMusicDuck(false);
       game.unload();
       ui.setTouchVisible(false);
       ui.setLockPrompt(false);
@@ -174,12 +196,37 @@ function boot() {
     requestLock() { player.requestLock(); },
     setTouchMove(x, y) { player.touch.move.x = x; player.touch.move.y = y; },
     touchLook(dx, dy) { player.applyTouchLook(dx, dy); },
+    /**
+     * Change one setting. Presets move several values at once, and moving
+     * any of those values by hand turns the preset into "Custom".
+     */
     setSetting(k, v) {
-      profile.setSetting(k, v);
-      if (k === 'audio') audio.init();
+      if (k === 'quality') {
+        if (v !== 'custom') profile.setSettings(presetPatch(v));
+      } else {
+        profile.setSetting(k, v);
+        if (isPresetKey(k)) profile.setSetting('quality', detectPreset(profile.settings));
+      }
+      if (k === 'audio' || k === 'volume' || k.endsWith('Volume')) { audio.init(); audio.resume(); audio.startMusic(); }
+      if (k === 'displayMode') setFullscreen(v === 'fullscreen');
       // One path for everything, so a setting can never be saved but not applied.
       applySettings();
     },
+    setSettings(patch) {
+      profile.setSettings(patch);
+      if ('quality' in patch && patch.quality !== 'custom') profile.setSettings(presetPatch(patch.quality));
+      applySettings();
+    },
+    closeSettingsToPause() { ui.closeSettingsToPause(); },
+    /** A saved training round, if there is one to resume. */
+    checkpoint() { return readCheckpoint(); },
+    async resumeTraining() {
+      const snap = readCheckpoint();
+      if (!snap) return;
+      await startRound(snap.environment, 'simple', MODE.TRAIN);
+      if (game.restore(snap)) ui.toast(`Training resumed — ${snap.found.length}/${snap.total} found`, 'ok');
+    },
+    discardCheckpoint() { clearCheckpoint(); },
     toast(msg, kind) { ui.toast(msg, kind); },
   };
 
@@ -187,7 +234,14 @@ function boot() {
     profile,
     auth,
     actions,
+    graphics,
+    engine,
+    player,
   });
+
+  // Captions: sounds as [bracketed text], spoken lines as subtitles.
+  audio.onCaption = (text) => ui.caption(text);
+  audio.onSpeech = (text) => ui.caption(text, { speech: true });
 
   /* ---------------------------------------------------------------- *
    * Round start
@@ -195,6 +249,8 @@ function boot() {
   async function startRound(envId, difficulty, mode) {
     audio.init();
     audio.resume();
+    audio.startMusic();
+    clearCheckpoint();
     ui.enterGame({ touch: isTouch });
     try {
       await game.loadEnvironment(envId, difficulty, mode);
@@ -215,16 +271,93 @@ function boot() {
    * Called on round start and whenever the profile changes, so a setting
    * changed mid-session takes effect immediately.
    */
+  let lastSink = null;
   function applySettings() {
     const s = profile.settings;
+    const root = document.documentElement;
+
+    // Audio
     audio.setEnabled(s.audio);
     audio.setVolume(s.volume);
+    audio.setMix({ music: s.musicVolume, voice: s.voiceVolume, sfx: s.sfxVolume });
+    if (s.outputDevice !== lastSink) { lastSink = s.outputDevice; audio.setOutputDevice(s.outputDevice); }
+
+    // Video
+    graphics.apply(s);
+    ui.setFps('', !!s.showFps);
+
+    // Controls
     player.reducedMotion = !!s.reducedMotion;
+    player.headBob = !!s.headBob;
+    player.cameraShake = !!s.cameraShake;
     player.invertY = !!s.invertY;
     player.lookSensitivity = s.lookSensitivity ?? 1;
-    if (s.reducedMotion) player._bob = 0;
-    ui.setFps('', !!s.showFps);
+    player.keybinds = s.keybinds;
+    if (s.reducedMotion || !s.headBob) player._bob = 0;
+    game.hazards.setAimAssist((AIM_ASSIST[s.aimAssist] ?? AIM_ASSIST.off).size);
+
+    // Gameplay and HUD
+    ui.hud.applySettings(s);
+    ui.setCaptionSize(s.captionSize);
+
+    // Accessibility
+    root.style.fontSize = `${16 * (Number(s.uiScale) || 1)}px`;
+    root.classList.toggle('reduce-motion', !!s.reducedMotion);
+    if (setColourMode(s.colourblind) !== root.dataset.cb) {
+      root.dataset.cb = s.colourblind;
+      const pal = palette();
+      root.style.setProperty('--major', pal.major);
+      root.style.setProperty('--minor', pal.minor);
+      root.style.setProperty('--success', pal.success);
+      root.style.setProperty('--danger', pal.danger);
+      game.hazards.refreshColours();
+    }
   }
+
+  /* ---------------------------------------------------------------- *
+   * Fullscreen
+   * ---------------------------------------------------------------- */
+  function setFullscreen(on) {
+    try {
+      if (on && !document.fullscreenElement) document.documentElement.requestFullscreen?.()?.catch?.(() => {
+        profile.setSetting('displayMode', 'windowed');
+        ui.toast('The browser did not allow fullscreen here.', 'error');
+      });
+      if (!on && document.fullscreenElement) document.exitFullscreen?.();
+    } catch { /* unsupported: stay windowed */ }
+  }
+  // Esc or F11 leaves fullscreen without going through Settings; keep the
+  // setting truthful about what the screen is actually doing.
+  document.addEventListener('fullscreenchange', () => {
+    const mode = document.fullscreenElement ? 'fullscreen' : 'windowed';
+    if (profile.settings.displayMode !== mode) profile.setSetting('displayMode', mode);
+  });
+
+  /* ---------------------------------------------------------------- *
+   * Training checkpoints
+   * ---------------------------------------------------------------- */
+  function readCheckpoint() {
+    try {
+      const snap = JSON.parse(localStorage.getItem(CHECKPOINT_KEY) || 'null');
+      // A checkpoint older than a day is stale; nobody expects that back.
+      if (!snap || Date.now() - (snap.savedAt ?? 0) > 864e5) return null;
+      return snap;
+    } catch { return null; }
+  }
+  function clearCheckpoint() {
+    try { localStorage.removeItem(CHECKPOINT_KEY); } catch { /* storage blocked */ }
+  }
+  let checkpointAcc = 0;
+  engine.addUpdater((dt) => {
+    const every = Number(profile.settings.autosave);
+    if (!every || game.mode !== MODE.TRAIN || game.state !== STATE.PLAYING) return;
+    checkpointAcc += dt;
+    if (checkpointAcc < every) return;
+    checkpointAcc = 0;
+    const snap = game.snapshot();
+    if (!snap) return;
+    try { localStorage.setItem(CHECKPOINT_KEY, JSON.stringify(snap)); } catch { /* storage full or blocked */ }
+  });
 
   /* ---------------------------------------------------------------- *
    * Cross-layer input
@@ -270,18 +403,68 @@ function boot() {
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
 
     if (e.code === 'Escape') {
+      if (ui.inPauseSettings) { e.preventDefault(); ui.closeSettingsToPause(); return; }
       if (game.state === STATE.PLAYING) { e.preventDefault(); game.pause(); }
       else if (game.state === STATE.PAUSED) { e.preventDefault(); actions.resume(); }
       return;
     }
-    if (e.code === 'KeyE' && game.state === STATE.PLAYING) {
+    // Flag and Pause follow the player's own key bindings.
+    const action = actionForKey(profile.settings.keybinds, e.code);
+    if (action === 'flag' && game.state === STATE.PLAYING) {
       e.preventDefault();
       game.flag();
     }
-    if (e.code === 'KeyP' && game.state === STATE.PLAYING) {
-      e.preventDefault();
-      game.pause();
+    if (action === 'pause' && !e.repeat) {
+      if (game.state === STATE.PLAYING) { e.preventDefault(); game.pause(); }
+      else if (game.state === STATE.PAUSED && !ui.inPauseSettings) { e.preventDefault(); actions.resume(); }
     }
+  });
+
+  /* ---------------------------------------------------------------- *
+   * Controller, aim assist, depth-of-field focus, footsteps
+   * ---------------------------------------------------------------- */
+  player.onPadFlag = () => { if (game.state === STATE.PLAYING) game.flag(); };
+  player.onPadPause = () => {
+    if (game.state === STATE.PLAYING) game.pause();
+    else if (game.state === STATE.PAUSED) actions.resume();
+  };
+  player.onGamepadChange = (pad) => ui.toast(pad ? '🎮 Controller connected' : 'Controller disconnected', pad ? 'ok' : '');
+  player.onStep = () => { if (game.state === STATE.PLAYING) audio.footstep(); };
+
+  engine.addUpdater((dt) => {
+    player.pollGamepad(dt);
+    const current = game.hazards.current;
+    const assist = AIM_ASSIST[profile.settings.aimAssist] ?? AIM_ASSIST.off;
+    player.aimFriction = current ? assist.friction : 1;
+    // Depth of field focuses on the hazard under the crosshair, or mid-distance.
+    graphics.setFocusDistance(current ? current.center.distanceTo(engine.camera.position) : 8);
+  });
+
+  /* ---------------------------------------------------------------- *
+   * Spoken announcements (voice volume + subtitles)
+   * ---------------------------------------------------------------- */
+  let warned60 = false;
+  let warned30 = false;
+  bus.on(EV.GAME_START, (d) => {
+    warned60 = warned30 = false;
+    audio.setMusicDuck(true);
+    audio.say(d.mode === 'train'
+      ? 'Training. Follow the arrow to the first hazard.'
+      : d.timed ? 'Test started. You have five minutes.' : 'Test started. There is no time limit.', { interrupt: true });
+  });
+  bus.on(EV.HAZARD_FOCUS, (d) => {
+    if (d.kind === 'correct') audio.say(`${d.hazard.name}. ${d.hazard.severity === 'major' ? 'Major' : 'Minor'} hazard.`, { interrupt: true });
+  });
+  bus.on(EV.GAME_TICK, (d) => {
+    if (!d.timed) return;
+    if (!warned60 && d.remaining <= 60 && d.remaining > 30) { warned60 = true; audio.say('One minute remaining.'); }
+    if (!warned30 && d.remaining <= 30) { warned30 = true; audio.say('Thirty seconds.'); }
+  });
+  bus.on(EV.TRAIN_COMPLETE, () => audio.say('Training complete. Every hazard found.'));
+  bus.on(EV.GAME_END, (s) => {
+    audio.setMusicDuck(false);
+    clearCheckpoint();
+    audio.say(`Round over. ${s.score} points. ${s.rank.label}.`, { interrupt: true });
   });
 
   // Auto-pause when the tab is hidden - a reaction clock running in a
@@ -342,7 +525,8 @@ function boot() {
   })();
 
   // Expose a small surface for manual QA in the browser console.
-  window.BTH = { engine, game, player, profile, audio, ui, bus, EV, auth };
+  window.BTH = { engine, game, player, profile, audio, ui, bus, EV, auth, graphics };
+  applySettings();
   document.getElementById('boot-fallback')?.remove();
   console.info('[Beat The Hazard] ready. window.BTH exposes the running systems.');
 }

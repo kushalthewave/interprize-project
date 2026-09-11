@@ -44,6 +44,34 @@ export class ScoreManager {
     this.slowSearches = 0;
   }
 
+  /** Everything needed to carry a round across a page reload. */
+  toJSON() {
+    return {
+      rawScore: this.rawScore, correct: this.correct, wrong: this.wrong,
+      attempts: this.attempts, streak: this.streak, bestStreak: this.bestStreak,
+      comboActive: this.comboActive, comboBonusTotal: this.comboBonusTotal,
+      finds: this.finds.map((f) => ({ ...f })), misses: this.misses.map((m) => ({ ...m })),
+      slowSearches: this.slowSearches,
+    };
+  }
+
+  restore(data) {
+    if (!data || typeof data !== 'object') return this;
+    const num = (v) => (Number.isFinite(v) ? v : 0);
+    this.rawScore = num(data.rawScore);
+    this.correct = num(data.correct);
+    this.wrong = num(data.wrong);
+    this.attempts = num(data.attempts);
+    this.streak = num(data.streak);
+    this.bestStreak = num(data.bestStreak);
+    this.comboActive = !!data.comboActive;
+    this.comboBonusTotal = num(data.comboBonusTotal);
+    this.finds = Array.isArray(data.finds) ? data.finds.map((f) => ({ ...f })) : [];
+    this.misses = Array.isArray(data.misses) ? data.misses.map((m) => ({ ...m })) : [];
+    this.slowSearches = num(data.slowSearches);
+    return this;
+  }
+
   /** Final score after the difficulty multiplier, rounded to an integer. */
   get score() {
     return Math.max(0, Math.round(this.rawScore * this.multiplier));

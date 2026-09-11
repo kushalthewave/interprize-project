@@ -8,11 +8,17 @@
  * obstacles. A circle-vs-AABB sweep gives correct, cheap, deterministic
  * collision without adding a ~500kB dependency. See docs/DECISIONS.md.
  *
- * Also supports touch (dual virtual sticks) so the game is playable on
- * tablets, and gamepad-free keyboard-only play for accessibility.
+ * Input: rebindable keyboard (Settings → Controls), mouse, touch sticks, and
+ * any standard gamepad through the browser Gamepad API.
  */
 import * as THREE from 'three';
 import { PLAYER } from '../data/config.js';
+import { DEFAULT_KEYBINDS } from '../data/settings.js';
+
+/** Standard-mapping gamepad buttons. */
+const PAD = { A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, LT: 6, RT: 7, BACK: 8, START: 9, L3: 10, R3: 11 };
+const DEADZONE = 0.16;
+const dz = (v) => (Math.abs(v) < DEADZONE ? 0 : (v - Math.sign(v) * DEADZONE) / (1 - DEADZONE));
 
 const FORWARD = new THREE.Vector3();
 const RIGHT = new THREE.Vector3();
@@ -62,10 +68,27 @@ export class PlayerController {
     /* --- user settings, applied from Profile via main.applySettings() --- */
     /** Flip the vertical look axis. */
     this.invertY = false;
-    /** Disable head bob (and any other camera motion) for motion sensitivity. */
+    /** Master switch: no head bob and no camera shake. */
     this.reducedMotion = false;
+    this.headBob = true;
+    this.cameraShake = true;
     /** Multiplier on look speed, 0.25 - 3.0. */
     this.lookSensitivity = 1;
+    /** action -> [primary, alternative] KeyboardEvent.code */
+    this.keybinds = DEFAULT_KEYBINDS;
+    /**
+     * Aim assist slows the camera while the crosshair is over a hazard, so it
+     * is easier to stop on one. Set by the game each frame (1 = no effect).
+     */
+    this.aimFriction = 1;
+
+    /** Latest gamepad state, or null when none is connected. */
+    this.gamepad = null;
+    this.pad = { move: { x: 0, y: 0 }, run: false, crouch: false };
+    this._padPrev = [];
+
+    this._shake = 0;
+    this._stepT = 0;
 
     this._bind();
   }
@@ -74,6 +97,12 @@ export class PlayerController {
    * Input
    * ---------------------------------------------------------------- */
 
+  /** Is any key bound to this action currently held? */
+  isDown(action) {
+    const slots = this.keybinds[action] ?? [];
+    return slots.some((c) => c && this.keys.has(c));
+  }
+
   _bind() {
     this._onKeyDown = (e) => {
       if (!this.enabled) return;
@@ -81,14 +110,12 @@ export class PlayerController {
       const t = e.target;
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
       this.keys.add(e.code);
-      if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') this.running = true;
-      if (e.code === 'ControlLeft' || e.code === 'KeyC') this.setCrouch(true);
-      if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
+      // Stop bound keys scrolling the page or triggering browser shortcuts.
+      const bound = Object.values(this.keybinds).some((slots) => slots.includes(e.code));
+      if (bound || ['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
     };
     this._onKeyUp = (e) => {
       this.keys.delete(e.code);
-      if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') this.running = false;
-      if (e.code === 'ControlLeft' || e.code === 'KeyC') this.setCrouch(false);
     };
     this._onMouseMove = (e) => {
       if (!this.enabled) return;
@@ -98,7 +125,7 @@ export class PlayerController {
       const my = e.movementY ?? 0;
       if (this.dragging) this.dragMoved += Math.abs(mx) + Math.abs(my);
       const base = this.locked ? PLAYER.lookSensitivity : PLAYER.lookSensitivity * 1.4;
-      const sens = base * this.lookSensitivity;
+      const sens = base * this.lookSensitivity * this.aimFriction;
       this.yaw -= mx * sens;
       this.pitch -= my * sens * (this.invertY ? -1 : 1);
       this._clampPitch();
@@ -186,9 +213,64 @@ export class PlayerController {
 
   /** Feed look deltas from a touch stick (pixels). */
   applyTouchLook(dx, dy) {
-    this.yaw -= dx * PLAYER.touchLookSensitivity;
-    this.pitch -= dy * PLAYER.touchLookSensitivity;
+    // Touch follows the same sensitivity, invert and aim-assist settings as
+    // the mouse; it used to ignore all three.
+    const sens = PLAYER.touchLookSensitivity * this.lookSensitivity * this.aimFriction;
+    this.yaw -= dx * sens;
+    this.pitch -= dy * sens * (this.invertY ? -1 : 1);
     this._clampPitch();
+  }
+
+  /**
+   * Read the first connected gamepad. Called every frame by main.js, even
+   * when paused, so Start can resume. Movement and look only apply while the
+   * round is live; button presses are reported as edges through callbacks.
+   *
+   *   Left stick   move          Right stick   look
+   *   A            flag hazard   Start         pause / resume
+   *   LB / L3      run (hold)    B / R3        crouch (hold)
+   */
+  pollGamepad(dt) {
+    const pads = typeof navigator !== 'undefined' && navigator.getGamepads ? navigator.getGamepads() : [];
+    const gp = [...(pads ?? [])].find((p) => p && p.connected) ?? null;
+    const was = this.gamepad;
+    this.gamepad = gp ? { id: gp.id } : null;
+    if (!!was !== !!gp) this.onGamepadChange?.(this.gamepad);
+    if (!gp) {
+      this.pad.move.x = this.pad.move.y = 0;
+      this.pad.run = this.pad.crouch = false;
+      return;
+    }
+
+    const btn = (i) => !!gp.buttons[i]?.pressed;
+    const edge = (i) => btn(i) && !this._padPrev[i];
+
+    if (edge(PAD.START)) this.onPadPause?.();
+    if (this.enabled && edge(PAD.A)) this.onPadFlag?.();
+
+    if (this.enabled) {
+      this.pad.move.x = dz(gp.axes[0] ?? 0);
+      this.pad.move.y = -dz(gp.axes[1] ?? 0);
+      this.pad.run = btn(PAD.LB) || btn(PAD.L3);
+      this.pad.crouch = btn(PAD.B) || btn(PAD.R3);
+
+      const rx = dz(gp.axes[2] ?? 0);
+      const ry = dz(gp.axes[3] ?? 0);
+      // Squared response gives fine control near the centre of the stick.
+      const curve = (v) => Math.sign(v) * v * v;
+      const sens = 2.6 * this.lookSensitivity * this.aimFriction;
+      this.yaw -= curve(rx) * sens * dt;
+      this.pitch -= curve(ry) * sens * 0.75 * dt * (this.invertY ? -1 : 1);
+      this._clampPitch();
+    }
+
+    this._padPrev = gp.buttons.map((b) => b.pressed);
+  }
+
+  /** A jolt (0–1), e.g. a carton landing nearby. Ignored when shake is off. */
+  addShake(strength) {
+    if (!this.cameraShake || this.reducedMotion) return;
+    this._shake = Math.min(1, Math.max(this._shake, strength));
   }
 
   /* ---------------------------------------------------------------- *
@@ -226,12 +308,16 @@ export class PlayerController {
     // --- desired direction in local space
     let fwd = 0;
     let strafe = 0;
-    if (this.keys.has('KeyW') || this.keys.has('ArrowUp')) fwd += 1;
-    if (this.keys.has('KeyS') || this.keys.has('ArrowDown')) fwd -= 1;
-    if (this.keys.has('KeyD') || this.keys.has('ArrowRight')) strafe += 1;
-    if (this.keys.has('KeyA') || this.keys.has('ArrowLeft')) strafe -= 1;
-    fwd += this.touch.move.y;
-    strafe += this.touch.move.x;
+    if (this.isDown('forward')) fwd += 1;
+    if (this.isDown('back')) fwd -= 1;
+    if (this.isDown('right')) strafe += 1;
+    if (this.isDown('left')) strafe -= 1;
+    fwd += this.touch.move.y + this.pad.move.y;
+    strafe += this.touch.move.x + this.pad.move.x;
+
+    this.running = this.isDown('run') || this.pad.run;
+    const wantCrouch = this.isDown('crouch') || this.pad.crouch;
+    if (wantCrouch !== this.crouching) this.setCrouch(wantCrouch);
 
     const mag = Math.hypot(fwd, strafe);
     if (mag > 1) {
@@ -275,10 +361,26 @@ export class PlayerController {
     // --- smooth crouch
     this.height += (this.targetHeight - this.height) * (1 - Math.exp(-14 * dt));
 
+    // --- footsteps, independent of whether the camera bobs
+    const stepSpeed = Math.hypot(this.velocity.x, this.velocity.z);
+    if (stepSpeed > 0.6) {
+      this._stepT += dt * stepSpeed;
+      const stride = this.crouching ? 0.55 : 0.78;
+      if (this._stepT >= stride) {
+        this._stepT -= stride;
+        this.onStep?.();
+      }
+    } else {
+      this._stepT = 0;
+    }
+
+    // --- camera shake decays quickly
+    this._shake = Math.max(0, this._shake - dt * 2.4);
+
     // --- subtle head bob so walking feels physical (disabled when still)
-    // Honours the "reduce motion" setting: some people get motion sick from
-    // camera bob, so it must be genuinely switchable off, not just damped.
-    if (this.reducedMotion) {
+    // Its own setting, and also off under "reduce all motion": some people
+    // get motion sick from camera bob, so it must be genuinely switchable off.
+    if (this.reducedMotion || !this.headBob) {
       this._bob = 0;
       this._bobT = 0;
     } else {
@@ -317,14 +419,17 @@ export class PlayerController {
   }
 
   _applyCamera() {
+    const k = this._shake * this._shake;
+    const jx = k ? (Math.random() - 0.5) * 0.05 * k : 0;
+    const jy = k ? (Math.random() - 0.5) * 0.05 * k : 0;
     this.camera.position.set(
       this.position.x,
-      this.height + (this._bob ?? 0),
+      this.height + (this._bob ?? 0) + jy * 0.6,
       this.position.z,
     );
     this.camera.rotation.set(0, 0, 0);
-    this.camera.rotateY(this.yaw);
-    this.camera.rotateX(this.pitch);
+    this.camera.rotateY(this.yaw + jx);
+    this.camera.rotateX(this.pitch + jy);
   }
 
   dispose() {

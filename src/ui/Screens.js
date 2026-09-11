@@ -9,7 +9,7 @@ import { el, secs, pct } from './dom.js';
 import { DIFFICULTIES, DIFFICULTY_ORDER, ACHIEVEMENTS, RANKS, TEST } from '../data/config.js';
 import { HAZARDS, HAZARD_CATEGORIES } from '../data/hazards.js';
 import { ENVIRONMENTS } from '../environment/registry.js';
-import { securityPanel, avatarPicker } from './AuthScreens.js';
+import { avatarPicker } from './AuthScreens.js';
 import { AVATARS, getAvatar, avatarNode } from './avatars.js';
 import { Timer } from '../gameplay/Timer.js';
 
@@ -66,6 +66,7 @@ export function menuScreen(ctx) {
         ]),
       ]),
       brand(),
+      resumeBanner(ctx),
       el('div.menu-grid', {}, [
         tile('🎓', 'Train Mode', 'Optional. No clock — a guide points you to every hazard and tells you where it is.', 'train-select', true),
         tile('🎯', 'Test Mode', `${Math.round(TEST.timeLimitSeconds / 60)} minutes. No guide and no locations — find the hazards yourself. Scored and ranked.`, 'test-select', true),
@@ -75,6 +76,28 @@ export function menuScreen(ctx) {
         tile('⚙️', 'Settings', 'Audio, motion, accessibility and data.', 'settings'),
       ]),
       el('p.faint.center.mt', { text: 'Desktop: mouse + keyboard. Tablet/phone: on-screen sticks.' }),
+    ]),
+  ]);
+}
+
+/** "Resume training" when a training round was interrupted. */
+function resumeBanner(ctx) {
+  const snap = ctx.actions.checkpoint?.();
+  if (!snap) return null;
+  const env = ENVIRONMENTS.find((e) => e.meta.id === snap.environment);
+  const mins = Math.max(1, Math.round((Date.now() - snap.savedAt) / 60000));
+  return el('div.resume-banner', {}, [
+    el('div', {}, [
+      el('div.rb-k', { text: 'Training in progress' }),
+      el('div.rb-t', { text: `${env?.meta.name ?? 'Warehouse'} — ${snap.found.length} of ${snap.total} found` }),
+      el('div.rb-d', { text: `Saved ${mins} minute${mins === 1 ? '' : 's'} ago.` }),
+    ]),
+    el('div.row', {}, [
+      el('button.btn.btn-primary', { type: 'button', text: 'Resume', on: { click: () => ctx.actions.resumeTraining() } }),
+      el('button.btn.btn-ghost.btn-sm', {
+        type: 'button', text: 'Discard',
+        on: { click: () => { ctx.actions.discardCheckpoint(); ctx.go('menu'); } },
+      }),
     ]),
   ]);
 }
@@ -98,7 +121,9 @@ export function environmentScreen(ctx, { mode = 'test' } = {}) {
         click: () => {
           if (locked) return;
           if (mode === 'train') ctx.actions.startTrain(m.id);
-          else ctx.go('difficulty', { environment: m.id });
+          else if (p.settings.defaultDifficulty && p.settings.defaultDifficulty !== 'ask') {
+            ctx.actions.startTest(m.id, p.settings.defaultDifficulty);
+          } else ctx.go('difficulty', { environment: m.id });
         },
       },
     }, [
@@ -146,12 +171,13 @@ export function difficultyScreen(ctx, { environment }) {
     const reason = locked ? p.lockReason(environment, id) : '';
     const best = prog[id] ?? 0;
 
+    const isDefault = p.settings.defaultDifficulty === id;
     return el(`button.select-card.diff-${id}${locked ? '.locked' : ''}`, {
       disabled: locked,
       title: reason,
       on: { click: () => !locked && ctx.actions.startTest(environment, id) },
     }, [
-      el('span.name', { text: d.label }),
+      el('span.name', {}, [d.label, isDefault ? el('span.tag.tag-minor', { text: 'your default', style: { marginLeft: '0.5rem' } }) : null]),
       el('span.desc', { text: d.blurb }),
       el('div.meta', {}, [
         el('span.stat-pill', { text: `${Timer.format(TEST.timeLimitSeconds)} time limit` }),
@@ -466,118 +492,6 @@ export function guideScreen(ctx) {
         el('p', { text: `${HAZARDS.length} hazard types you will meet in the warehouse, and the control for each.` }),
       ]),
       ...sections,
-      backBar(ctx),
-    ]),
-  ]);
-}
-
-/* ================================================================== *
- * Settings
- * ================================================================== */
-export function settingsScreen(ctx) {
-  const p = ctx.profile;
-  const s = p.settings;
-
-  /** A labelled on/off row. */
-  const toggle = (key, label, desc) => {
-    const input = el('input', { type: 'checkbox', checked: !!s[key], id: `set-${key}` });
-    input.addEventListener('change', () => ctx.actions.setSetting(key, input.checked));
-    return el('div.set-row', {}, [
-      el('div', {}, [
-        el('label', {
-          for: `set-${key}`, text: label,
-          class: 'set-label',
-          style: { textTransform: 'none', letterSpacing: 'normal', marginBottom: '0', fontSize: '0.92rem', color: 'var(--text)' },
-        }),
-        el('div.set-desc', { text: desc }),
-      ]),
-      input,
-    ]);
-  };
-
-  /** A slider with a live readout, so the value is never a mystery. */
-  const slider = (key, label, desc, { min, max, step, value, format, toSetting }) => {
-    const out = el('span.set-val', { text: format(value) });
-    const input = el('input', {
-      type: 'range', min: String(min), max: String(max), step: String(step),
-      value: String(value), id: `set-${key}`,
-    });
-    input.addEventListener('input', () => {
-      const v = Number(input.value);
-      out.textContent = format(v);
-      ctx.actions.setSetting(key, toSetting ? toSetting(v) : v);
-    });
-    return el('div', { style: { padding: '0.7rem 0', borderBottom: '1px solid var(--border)' } }, [
-      el('div.row.between', { style: { marginBottom: '0.1rem' } }, [
-        el('div.set-label', { text: label }),
-      ]),
-      el('div.set-desc', { text: desc, style: { marginBottom: '0.5rem' } }),
-      el('div.set-slider', {}, [input, out]),
-    ]);
-  };
-
-  return el('div.screen', {}, [
-    el('div.screen-inner.narrow', {}, [
-      el('div.section-head', {}, [
-        el('h2', { text: 'Settings' }),
-        el('p', { text: 'Changes apply immediately and are saved to this device.' }),
-      ]),
-
-      el('div.card', {}, [
-        el('h3', { text: '🔊 Audio' }),
-        toggle('audio', 'Sound', 'Ambience, forklift engines, reversing alarms and feedback cues.'),
-        slider('volume', 'Volume', 'Overall loudness of every sound.', {
-          min: 0, max: 100, step: 1,
-          value: Math.round((s.volume ?? 0.7) * 100),
-          format: (v) => `${v}%`,
-          toSetting: (v) => v / 100,
-        }),
-      ]),
-
-      el('div.card.mt', {}, [
-        el('h3', { text: '🎮 Controls' }),
-        slider('lookSensitivity', 'Look sensitivity', 'How fast the camera turns with the mouse.', {
-          min: 25, max: 300, step: 5,
-          value: Math.round((s.lookSensitivity ?? 1) * 100),
-          format: (v) => `${(v / 100).toFixed(2)}×`,
-          toSetting: (v) => v / 100,
-        }),
-        toggle('invertY', 'Invert vertical look', 'Push the mouse forward to look down.'),
-      ]),
-
-      el('div.card.mt', {}, [
-        el('h3', { text: '🎯 Gameplay' }),
-        toggle('timedTest', `${Math.round(TEST.timeLimitSeconds / 60)}-minute Test limit`, 'Run tests against the five-minute clock. Turn off for untimed practice — hazards are still scored, just at the standard rate.'),
-        toggle('showLocations', 'Show hazard locations in Train Mode', 'The guide names the aisle or area each hazard is in. Test Mode never shows locations.'),
-      ]),
-
-      el('div.card.mt', {}, [
-        el('h3', { text: '♿ Accessibility & display' }),
-        toggle('reducedMotion', 'Reduce motion', 'Turns off camera head bob while walking.'),
-        toggle('showFps', 'Show performance overlay', 'Displays frame rate and draw calls while playing.'),
-      ]),
-      ...(ctx.auth ? securityPanel(ctx, ctx.authCaps ?? { passkey: { available: false, reason: '' } }, () => ctx.go('settings')) : []),
-
-      el('div.card.stack.mt', {}, [
-        el('h3', { text: '💾 Data' }),
-        el('p.faint', { text: 'Progress is stored in this browser. Clearing it cannot be undone.' }),
-        el('button.btn.btn-danger.btn-block', {
-          text: 'Reset all progress',
-          on: {
-            click: () => {
-              if (confirm('Reset all scores, progress and achievements? This cannot be undone.')) {
-                p.resetProgress();
-                ctx.actions.toast('Progress reset', 'ok');
-                ctx.go('menu');
-              }
-            },
-          },
-        }),
-        el('button.btn.btn-ghost.btn-block', {
-          text: 'Sign out',
-          on: { click: () => ctx.actions.signOut() },
-        }),
-      ]),
       backBar(ctx),
     ]),
   ]);
