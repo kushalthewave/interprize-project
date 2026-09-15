@@ -27,6 +27,7 @@ export function serviceWorker() {
         './icons/icon-512.png',
         './icons/icon-maskable-512.png',
         './icons/apple-touch-icon.png',
+        './icons/favicon-48.png',
       ];
       const precache = [...new Set([...statics, ...files])];
       const version = createHash('sha256').update(precache.join('|')).digest('hex').slice(0, 12);

@@ -13,6 +13,9 @@ import { avatarPicker } from './AuthScreens.js';
 import { offlineStrip } from './OfflinePanel.js';
 import { AVATARS, getAvatar, avatarNode } from './avatars.js';
 import { Timer } from '../gameplay/Timer.js';
+import { icon } from './icons.js';
+import { logo } from './logo.js';
+import { validateName } from '../services/auth/validate.js';
 
 /** The signed-in trainee: portrait, name and role, as one block. */
 function whoAmI(p, { size = 56 } = {}) {
@@ -26,11 +29,14 @@ function whoAmI(p, { size = 56 } = {}) {
   ]);
 }
 
-function brand(sub = 'Warehouse Forklift & Pedestrian Safety Training') {
+function brand(sub = 'Warehouse forklift and pedestrian safety training') {
   return el('div.brand', {}, [
-    el('h1', { text: 'BEAT THE HAZARD' }),
-    el('p', { text: sub }),
-    el('div.flagline', {}, [el('span.fl-team', { text: 'The Code Crafters' }), el('span.fl-dot', { text: '·' }), el('span', { text: 'Built by Kushal Neupane' })]),
+    logo({ size: 112, className: 'brand-logo' }),
+    el('div.brand-text', {}, [
+      el('h1', { text: 'Beat The Hazard' }),
+      el('p', { text: sub }),
+      el('div.flagline', {}, [el('span.fl-team', { text: 'The Code Crafters' }), el('span.fl-dot', { text: '·' }), el('span', { text: 'Built by Kushal Neupane' })]),
+    ]),
   ]);
 }
 
@@ -47,9 +53,9 @@ export function menuScreen(ctx) {
   const p = ctx.profile;
   const completion = p.completion(ENVIRONMENTS.map((e) => e.meta.id));
 
-  const tile = (icon, title, desc, to, primary = false) =>
+  const tile = (ic, title, desc, to, primary = false) =>
     el(`button.menu-tile${primary ? '.primary' : ''}`, { on: { click: () => ctx.go(to) } }, [
-      el('span.icon', { text: icon }),
+      el('span.icon', {}, [icon(ic, { size: 24 })]),
       el('span.title', { text: title }),
       el('span.desc', { text: desc }),
     ]);
@@ -69,12 +75,12 @@ export function menuScreen(ctx) {
       brand(),
       resumeBanner(ctx),
       el('div.menu-grid', {}, [
-        tile('🎓', 'Train Mode', 'Optional. No clock — a guide points you to every hazard and tells you where it is.', 'train-select', true),
-        tile('🎯', 'Test Mode', `${Math.round(TEST.timeLimitSeconds / 60)} minutes. No guide and no locations — find the hazards yourself. Scored and ranked.`, 'test-select', true),
-        tile('🏭', 'Environments', 'Three warehouses: general storage, dispatch bay and high-bay annexe.', 'environments'),
-        tile('📊', 'Progress', 'Scores, ranks, achievements and your session history.', 'progress'),
-        tile('📖', 'Hazard Guide', 'Reference for all 15 hazard types and their controls.', 'guide'),
-        tile('⚙️', 'Settings', 'Audio, motion, accessibility and data.', 'settings'),
+        tile('train', 'Train Mode', 'Optional. No clock — a guide points you to every hazard and tells you where it is.', 'train-select', true),
+        tile('test', 'Test Mode', `${Math.round(TEST.timeLimitSeconds / 60)} minutes. No guide and no locations — find the hazards yourself. Scored and ranked.`, 'test-select', true),
+        tile('warehouse', 'Environments', 'Three warehouses: general storage, dispatch bay and high-bay annexe.', 'environments'),
+        tile('chart', 'Progress', 'Scores, ranks, achievements and your session history.', 'progress'),
+        tile('book', 'Hazard Guide', 'Reference for all 15 hazard types and their controls.', 'guide'),
+        tile('settings', 'Settings', 'Audio, motion, accessibility and data.', 'settings'),
       ]),
       offlineStrip(ctx),
       el('p.faint.center.mt', { text: 'Desktop: mouse + keyboard or a controller. Tablet/phone: on-screen sticks.' }),
@@ -225,7 +231,7 @@ export function resultsScreen(ctx, { summary }) {
       el('span.mark', { text: '✓' }),
       el('div', { style: { flex: '1' } }, [
         el('div.hz-name', { text: h?.name ?? f.id }),
-        showWhere && s.foundLocations?.[f.id] && el('div.hz-where', {}, ['📍 ', s.foundLocations[f.id]]),
+        showWhere && s.foundLocations?.[f.id] && el('div.hz-where', {}, [icon('pin', { size: 14 }), s.foundLocations[f.id]]),
         el('div.hz-tip', { text: h?.safetyTip ?? '' }),
       ]),
       el('span.hz-time', { text: `${secs(f.reactionTime)} · +${f.points}` }),
@@ -237,7 +243,7 @@ export function resultsScreen(ctx, { summary }) {
       el('span.mark', { text: '✗' }),
       el('div', { style: { flex: '1' } }, [
         el('div.hz-name', {}, [h.name, ' ', el(`span.tag.tag-${h.severity}`, { text: h.severity })]),
-        showWhere && h.where && el('div.hz-where', {}, ['📍 ', h.where]),
+        showWhere && h.where && el('div.hz-where', {}, [icon('pin', { size: 14 }), h.where]),
         el('div.hz-tip', { text: h.safetyTip }),
       ]),
     ]),
@@ -302,7 +308,7 @@ export function resultsScreen(ctx, { summary }) {
       ]),
 
       achNodes.length > 0 && el('div.card.mt', {}, [
-        el('h3', { text: '🏅 New achievements' }),
+        el('h3', { text: 'New achievements' }),
         el('div.ach-grid', {}, achNodes),
       ]),
 
@@ -320,7 +326,7 @@ export function resultsScreen(ctx, { summary }) {
       el('div.row.mt', { style: { flexWrap: 'wrap' } }, [
         el('button.btn.btn-primary', { text: '↻ Retry this round', on: { click: () => ctx.actions.retry() } }),
         !isTrain && el('button.btn', { text: 'Change difficulty', on: { click: () => ctx.go('difficulty', { environment: s.environment }) } }),
-        isTrain && el('button.btn', { text: '🎯 Go to Test Mode', on: { click: () => ctx.go('difficulty', { environment: s.environment }) } }),
+        isTrain && el('button.btn', { text: 'Go to Test Mode', on: { click: () => ctx.go('difficulty', { environment: s.environment }) } }),
         el('button.btn', { text: 'Other environments', on: { click: () => ctx.go(isTrain ? 'train-select' : 'test-select') } }),
         el('button.btn.btn-ghost', { text: 'Main menu', on: { click: () => ctx.go('menu') } }),
       ]),
@@ -335,7 +341,9 @@ export function profileScreen(ctx) {
   const p = ctx.profile;
   const st = p.data.stats;
 
-  const nameInput = el('input', { type: 'text', value: p.name, maxLength: 32, id: 'pf-name' });
+  const nameInput = el('input', { type: 'text', value: p.name, maxLength: 32, id: 'pf-name', autocomplete: 'name' });
+  const nameErr = el('div.field-error', { role: 'alert' });
+  nameInput.addEventListener('input', () => { nameErr.textContent = ''; nameInput.classList.remove('invalid'); });
   const picker = avatarPicker(p.avatar);
 
   const stat = (v, k) => el('div.stat-box', {}, [el('div.v', { text: v }), el('div.k', { text: k })]);
@@ -346,14 +354,22 @@ export function profileScreen(ctx) {
       el('div.grid.grid-2', {}, [
         el('div.card.stack', {}, [
           el('h3', { text: 'Trainee details' }),
-          el('div', {}, [el('label', { for: 'pf-name', text: 'Name' }), nameInput]),
+          el('div.field', {}, [el('label', { for: 'pf-name', text: 'Name' }), nameInput, nameErr]),
+          el('div.field', {}, [el('label', { text: 'Email address' }), el('div.readonly-value', { text: p.data.email || '—' })]),
           el('div', {}, [el('label', { text: 'Your avatar' }), picker.node]),
           el('button.btn.btn-primary.btn-block', {
             text: 'Save changes',
             on: {
               click: () => {
+                const n = validateName(nameInput.value);
+                if (!n.ok) {
+                  nameErr.textContent = n.error;
+                  nameInput.classList.add('invalid');
+                  nameInput.focus();
+                  return;
+                }
                 p.signIn({
-                  name: nameInput.value.trim() || 'Trainee',
+                  name: n.value,
                   avatar: picker.value,
                   provider: p.data.authProvider,
                   email: p.data.email,
@@ -363,7 +379,7 @@ export function profileScreen(ctx) {
               },
             },
           }),
-          el('div.faint', { text: `Signed in via: ${p.data.authProvider}${p.data.email ? ` (${p.data.email})` : ''}` }),
+          el('div.faint', { text: 'Your account is saved on this device.' }),
         ]),
         el('div.card', {}, [
           el('div.profile-hero', {}, [whoAmI(p, { size: 96 })]),

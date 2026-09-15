@@ -27,7 +27,6 @@ looks like, then prove you can spot them on your own against the clock.
 - [Testing](#testing)
 - [Assets](#assets)
 - [Limitations — read this](#limitations--read-this)
-- [GitHub sign-in](#github-sign-in)
 - [Future improvements](#future-improvements)
 
 ---
@@ -70,10 +69,14 @@ what "good" looks like is half of hazard spotting.
 - **Three difficulties** that change the actual game, not just a label
 - Reaction clock, scoring, combo streaks, ranks and a detailed results breakdown
 - Profile with avatar, progression gates, achievements and score history
-- **Sign in with a passkey** (Windows Hello / Touch ID / Face ID), Google,
-  Facebook, or just a name — plus optional **authenticator-app 2FA**
+- **Accounts** — create one with your name and email, choose an avatar, and go
+  straight into the warehouse. Log back in with your email or a **passkey**
+  (Windows Hello / Touch ID / Face ID), plus optional **authenticator-app 2FA**
+- **Security built in** — validated input, lock-out after repeated wrong
+  attempts, one-time 2FA codes, and a strict Content-Security-Policy
 - Fully **synthesised audio** — ambience, forklift engine, reversing alarm, cues
-- Works **offline**; no server, no database, no account required
+- Works **offline**; no server and no database — your account is saved on your device
+- A clean, familiar interface: light theme, one blue, no visual effects that blur
 - Desktop, tablet and phone (on-screen sticks); keyboard-only playable
 
 ## Technology stack
@@ -186,7 +189,7 @@ Inspector), **Maria** (Emergency Response), **James** (Fire Warden) and **Aisha*
 the kit their role carries, so nothing is downloaded and they stay sharp at any
 size.
 
-The one you pick is you, everywhere: the login preview (*"You are Aisha"*), the
+The one you pick is you, everywhere: the first-run avatar step (*"You are Aisha"*), the
 menu, the profile, the results screen, and a player card in the corner of the HUD
 for the whole round. Change it any time from **Profile**. Profiles saved with the
 earlier two avatars are migrated automatically.
@@ -196,9 +199,9 @@ earlier two avatars are migrated automatically.
 Two ways, both from the game's menu (**Play without internet**) or the website:
 
 1. **Download** — the whole game as one file, `beat-the-hazard.html` (about
-   830 kB). Save it to a laptop or a USB stick and double-click it. It runs in
+   1 MB). Save it to a laptop or a USB stick and double-click it. It runs in
    any browser with the network unplugged. Progress is kept in that browser;
-   passkey sign-in needs the online version, everything else works.
+   passkey log-in needs the online version, everything else works.
 2. **Install as an app** — open the online version in Chrome or Edge and choose
    **Install** (or *Add to Home Screen* on a phone). A service worker keeps a
    copy of every game file, so after one visit it opens and plays offline, full
@@ -222,7 +225,7 @@ something real and applies immediately:
 | **Controls** | Camera view (third or first person) and the opening shot of your avatar, look sensitivity, invert Y, aim assist, and fully rebindable keys; any standard controller works |
 | **Gameplay** | Default difficulty, the five-minute limit, Train Mode locations, tutorials & hints, auto-save, crosshair style / size / colour |
 | **Accessibility** | Subtitles, closed captions for sounds, caption size, colour-blind modes (protanopia, deuteranopia, tritanopia), menu & HUD size, head bob, camera shake, reduce all motion |
-| **Account & data** | Passkeys, authenticator app, social sign-in setup, reset progress, sign out |
+| **Account & data** | Your account, passkeys, authenticator app, reset progress, log out |
 
 **What a browser does not let a game do**, shown as information rather than as a
 switch that does nothing: **V-Sync** is always on (browsers present every frame in
@@ -350,9 +353,9 @@ marketing/                  the marketing website — plain HTML, published at /
 npm test
 ```
 
-**283 automated tests, all passing** — scoring rules, combo, ranks, the reaction
-clock, hazard-data integrity, difficulty configuration, profile progression and
-achievements.
+**312 automated tests, all passing** — scoring rules, combo, ranks, the reaction
+clock, hazard-data integrity, difficulty configuration, profile progression,
+achievements, account validation, attempt limits, 2FA codes and movement direction.
 
 Because the gameplay logic is pure and framework-free, it is tested in Node with
 no browser or mocking.
@@ -400,48 +403,31 @@ that does not:
   figures with a procedural walk cycle.
 - **WebXR / VR is not implemented.** No headset was available, so rather than
   ship untested VR code, it is left out. Desktop play does not depend on it.
-- **Social sign-in is implemented but not tested against live servers.** Google
-  and Facebook work with no backend once you add a free Client ID; GitHub needs
-  a small server endpoint and says so — see [GitHub sign-in](#github-sign-in).
-- **Passkeys and TOTP are local, not server-verified.** With no backend they
-  protect a profile on a shared machine and implement the real standards
-  correctly, but they are not an authentication boundary. Documented in full.
+- **Accounts are local, not server-verified.** There is no server, so an
+  account (name, email, progress) lives in the browser on that device and the
+  email address is not verified. Passkeys, 2FA and the attempt limits protect it
+  from casual access on a shared machine and implement the real standards
+  correctly, but someone with developer tools on that machine is not stopped.
 - **No mobile device testing.** Touch controls are implemented and the layout is
   responsive, but they have only been exercised in a desktop browser.
 - **Performance was measured on one machine.** 60 fps there; low-end hardware
   will be slower. Adaptive pixel-ratio scaling is in place as mitigation.
 
-## GitHub sign-in
+## Accounts and security
 
-GitHub cannot finish a sign-in in the browser alone: the token exchange needs
-the client secret, and GitHub's token endpoint sends no CORS headers. Deploy
-this one-function endpoint (Cloudflare Worker, Netlify or Vercel — all free):
+**First run:** Welcome → **Create an account** (name + email) → *Account created
+successfully* → **Choose your avatar** → straight into Train Mode in the Main
+Storage Hall. There is no guest route. **Returning:** log in with the account's
+email, or a passkey if one is set up, then the 2FA code if it is turned on.
 
-```js
-export default async function handler(request) {
-  const { code } = await request.json();
-  const tokenRes = await fetch('https://github.com/login/oauth/access_token', {
-    method: 'POST',
-    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      client_id: process.env.GITHUB_CLIENT_ID,
-      client_secret: process.env.GITHUB_CLIENT_SECRET, // stays on the server
-      code,
-    }),
-  });
-  const { access_token } = await tokenRes.json();
-  const userRes = await fetch('https://api.github.com/user', {
-    headers: { Authorization: `Bearer ${access_token}`, 'User-Agent': 'beat-the-hazard' },
-  });
-  return new Response(await userRes.text(), {
-    headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-  });
-}
-```
-
-Then set `VITE_GITHUB_CLIENT_ID` and `VITE_GITHUB_TOKEN_ENDPOINT` (see
-`.env.example`), or paste both into the Set up form on the sign-in screen.
-Until then the GitHub button is disabled and says why.
+| Protection | What it does |
+|---|---|
+| Input validation | Names are letters (any script), spaces and `.'-`, 2–32 characters; emails are checked and stored lower-case. Anything else is refused before it is saved. |
+| Attempt limits | 5 wrong emails or 5 wrong 2FA codes lock that step for 30 s, doubling each time up to 5 minutes. The count survives a reload. |
+| One-time 2FA codes | A code that was accepted cannot be used again, including the one used to set the authenticator up. |
+| No account takeover by sign-up | Creating an account with an email already on the device is refused ("Log in instead"), so sign-up is never a way round 2FA. Replacing a different account asks first, then deletes its progress, passkeys and 2FA. |
+| Content-Security-Policy | The published page and the offline file only run their own scripts (the offline file by exact SHA-256 hash); no plug-ins, frames or form posts. |
+| Output | Names and emails are only ever rendered as text, never as HTML. |
 
 ## Future improvements
 

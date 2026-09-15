@@ -10,6 +10,7 @@ import { el, mount, secs } from './dom.js';
 import { bus, EV } from '../core/EventBus.js';
 import { Timer } from '../gameplay/Timer.js';
 import { avatarNode, getAvatar } from './avatars.js';
+import { icon } from './icons.js';
 
 export class HUD {
   constructor(root) {
@@ -37,7 +38,7 @@ export class HUD {
       this.elFound,
       el('div.progress-track', {}, [this.elProgFill]),
     ]);
-    this.comboBadge = el('div.combo-badge', { hidden: true }, ['🔥 COMBO', el('span', { text: '' })]);
+    this.comboBadge = el('div.combo-badge', { hidden: true }, ['COMBO', el('span', { text: '' })]);
     this.comboCount = this.comboBadge.lastChild;
 
     // Who is playing — your own avatar, in the corner, the whole round.
@@ -219,7 +220,7 @@ export class HUD {
         combo && el('span.tag.tag-minor', { text: 'combo' }),
         points && el('span.fb-points', { text: points }),
       ]),
-      location && el('div.fb-where', {}, ['📍 ', location]),
+      location && el('div.fb-where', {}, [icon('pin', { size: 16 }), location]),
       el('div.fb-body', { text: body }),
       extra && el('div.faint', { text: extra, style: { marginTop: '0.4rem' } }),
       train && el('div.fb-body', { text: train, style: { marginTop: '0.55rem' } }),
@@ -254,7 +255,7 @@ export class HUD {
       this.trainPanel,
       el('div.tp-k', { text: `Training · ${d.index}/${d.total} found` }),
       el('h4', {
-        text: complete ? '🎓 Training complete' : d.index === 0 ? 'Your first hazard' : 'Next hazard',
+        text: complete ? 'Training complete' : d.index === 0 ? 'Your first hazard' : 'Next hazard',
       }),
       d.next && !complete && el('div.tp-target', {}, [
         el('span', { text: d.next.name }),
@@ -262,7 +263,7 @@ export class HUD {
       ]),
       // Where to go, in words, from the very first frame.
       d.next?.where && !complete &&
-        el('div.tp-where', {}, [el('span.tp-pin', { text: '📍' }), d.next.where]),
+        el('div.tp-where', {}, [icon('pin', { size: 16, className: 'tp-pin' }), d.next.where]),
       el('p.tp-hint', {
         text: complete
           ? 'You found every hazard in this warehouse. When you are ready, try Test Mode — five minutes, no guide and no locations.'

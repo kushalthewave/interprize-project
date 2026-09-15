@@ -2,13 +2,14 @@
  * AuthManager.js
  * One place that knows how a person gets into the game.
  *
- * Four routes, in the order the login screen offers them:
- *   1. Passkey        — Windows Hello / Touch ID / Face ID, nothing typed
- *   2. Social sign-in — Google, Facebook (GitHub needs a backend)
- *   3. Name only      — the original zero-friction path, still the default
- *   4. Guest          — no name at all
+ * Every trainee has an account: a name and an email address, checked by
+ * validate.js. There is no guest route and no name-only route.
  *
- * Plus optional TOTP as a second factor on top of any of them.
+ *   1. Create an account — name + email, then an avatar
+ *   2. Log in            — the account's email, or a passkey if one is set up
+ *
+ * Plus optional TOTP as a second factor. Wrong emails and wrong codes are
+ * both rate-limited (throttle.js), and an accepted code cannot be used twice.
  *
  * ── Threat model, stated plainly ──────────────────────────────────────
  * There is no server. Everything below runs in the browser against data in
@@ -24,17 +25,28 @@
  * not having it.
  */
 import { bus, EV } from '../../core/EventBus.js';
-import { PROVIDERS, getProvider, github } from './providers.js';
 import {
   registerPasskey, authenticateWithPasskey, passkeyAvailability, describePasskeyError,
 } from './passkey.js';
 import { randomBase32Secret } from './base32.js';
-import { verifyTotp, otpauthURI } from './totp.js';
+import { verifyTotp, otpauthURI, timingSafeEqual } from './totp.js';
+import { validateName, validateEmail } from './validate.js';
+import { createThrottle, describeWait } from './throttle.js';
+
+const TOTP_PERIOD = 30;
 
 export class AuthManager {
-  /** @param {import('../Profile.js').Profile} profile */
-  constructor(profile) {
+  /**
+   * @param {import('../Profile.js').Profile} profile
+   * @param {object} [o]
+   * @param {{get:Function,set:Function}} [o.storage] where attempt counts live (tests pass memory)
+   * @param {() => number} [o.now]
+   */
+  constructor(profile, { storage, now } = {}) {
     this.profile = profile;
+    this.now = now ?? (() => Date.now());
+    this.loginThrottle = createThrottle({ key: 'beat-the-hazard:throttle:login', storage, now: this.now });
+    this.totpThrottle = createThrottle({ key: 'beat-the-hazard:throttle:totp', storage, now: this.now });
   }
 
   /* ---------------------------------------------------------------- *
@@ -61,16 +73,8 @@ export class AuthManager {
       totp: { enrolled: this.hasTotp },
       /** Who signed out last, so the login screen can say "welcome back". */
       remembered: this.profile.remembered,
-      providers: PROVIDERS.map((p) => ({
-        id: p.id,
-        label: p.label,
-        icon: p.icon,
-        colour: p.colour,
-        textColour: p.textColour,
-        configured: p.configured,
-        reason: p.configured ? '' : (p.blockedReason || 'Not configured on this build.'),
-        setupHint: p.setupHint,
-      })),
+      /** The account saved on this device, if any. */
+      account: this.profile.account,
     };
   }
 
@@ -87,49 +91,99 @@ export class AuthManager {
 
   /** @typedef {{name:string, avatar:string, provider:string, email:?string, picture?:?string, method:string}} Identity */
 
-  /** The zero-friction path: a name and an avatar. */
-  identityForName({ name, avatar }) {
-    return { name, avatar, provider: 'local', email: null, method: 'name' };
-  }
+  /* ---------------------------------------------------------------- *
+   * Accounts: create and log in
+   * ---------------------------------------------------------------- */
 
-  /** @param {'google'|'facebook'|'github'} providerId */
-  async identityFromProvider(providerId) {
-    const provider = getProvider(providerId);
-    if (!provider) throw new Error(`Unknown provider: ${providerId}`);
-    if (!provider.configured) {
-      throw new Error(provider.blockedReason || `${provider.label} is not configured on this build.`);
+  /**
+   * Check a new account before anything is written, and say what creating it
+   * would do on this device.
+   *
+   *   conflict null         nothing is in the way
+   *   conflict 'same-email' this device already has that account: log in
+   *                         instead. Creating it again must never be a way
+   *                         round the owner's two-factor code.
+   *   conflict 'replace'    a different account lives here; creating this one
+   *                         deletes it, so the screen asks first
+   *   completing true       the signed-in trainee predates emails and is only
+   *                         adding one; nothing is deleted
+   *
+   * @returns {{ok:false, field:'name'|'email', error:string} |
+   *           {ok:true, name:string, email:string, conflict:null|'same-email'|'replace', existing:?string, completing:boolean}}
+   */
+  planAccount({ name, email }) {
+    const n = validateName(name);
+    if (!n.ok) return { ok: false, field: 'name', error: n.error };
+    const e = validateEmail(email);
+    if (!e.ok) return { ok: false, field: 'email', error: e.error };
+
+    const p = this.profile;
+    const base = { ok: true, name: n.value, email: e.value, conflict: null, existing: null, completing: false };
+    if (p.isSignedIn && !p.data.email) return { ...base, completing: true };
+
+    const acct = p.account;
+    if (acct && timingSafeEqual(acct.email, e.value)) return { ...base, conflict: 'same-email', existing: acct.email };
+    if (acct || p.hasLocalData) {
+      return { ...base, conflict: 'replace', existing: acct?.email ?? p.remembered?.name ?? (p.name || null) };
     }
-    const account = await provider.signIn();
-    return {
-      name: account.name,
-      avatar: this.profile.remembered?.avatar ?? this.profile.avatar,
-      provider: account.provider,
-      email: account.email,
-      picture: account.picture ?? null,
-      method: account.provider,
-    };
+    return base;
   }
 
   /**
-   * The return leg of a redirect-based provider (GitHub). Safe to call on
-   * every boot; resolves to null when there is nothing to do.
+   * Create the account a plan describes. Returns the identity to commit.
+   * @param {ReturnType<AuthManager['planAccount']>} plan
+   * @param {{replace?:boolean, avatar?:string}} [o]
    */
-  async identityFromRedirect() {
-    try {
-      const account = await github.completeRedirect();
-      if (!account) return null;
-      return {
-        name: account.name,
-        avatar: this.profile.remembered?.avatar ?? this.profile.avatar,
-        provider: 'github',
-        email: account.email,
-        picture: account.picture ?? null,
-        method: 'github',
-      };
-    } catch (err) {
-      bus.emit(EV.TOAST, { message: err.message, kind: 'error' });
-      return null;
+  createAccount(plan, { replace = false, avatar } = {}) {
+    if (!plan?.ok) throw new Error(plan?.error ?? 'Please check your details.');
+    if (plan.conflict === 'same-email') {
+      throw new Error('An account with this email is already saved on this device. Log in instead.');
     }
+    if (plan.conflict === 'replace' && !replace) {
+      throw new Error('Confirm that the account already on this device should be replaced.');
+    }
+    const p = this.profile;
+    if (plan.completing) {
+      p.data.email = plan.email;
+      p.data.name = plan.name;
+      p.save();
+    } else {
+      // Starts clean: no scores and no passkeys or authenticator from whoever
+      // used this device before.
+      p.createAccount({ name: plan.name, email: plan.email, avatar: avatar ?? p.avatar });
+      this.loginThrottle.succeed();
+      this.totpThrottle.succeed();
+    }
+    return { name: plan.name, avatar: p.avatar, provider: 'local', email: plan.email, method: 'account' };
+  }
+
+  /** The message for a locked log-in form, or null. */
+  loginLock() {
+    const st = this.loginThrottle.status();
+    return st.locked ? `Too many attempts. Try again in ${describeWait(st.waitMs)}.` : null;
+  }
+
+  /**
+   * Log in to the account saved on this device with its email address.
+   * Nothing is written; the identity still goes through commit(), after the
+   * second factor if one is set up.
+   */
+  identityForLogin(email) {
+    const locked = this.loginLock();
+    if (locked) throw new Error(locked);
+    const e = validateEmail(email);
+    // A typo in the format is not a guess, so it does not count as an attempt.
+    if (!e.ok) throw new Error(e.error);
+
+    const acct = this.profile.account;
+    if (!acct || !timingSafeEqual(acct.email, e.value)) {
+      const st = this.loginThrottle.fail();
+      throw new Error(st.locked
+        ? `Too many attempts. Try again in ${describeWait(st.waitMs)}.`
+        : 'There is no account with that email on this device.');
+    }
+    this.loginThrottle.succeed();
+    return { name: acct.name, avatar: acct.avatar, provider: 'local', email: acct.email, method: 'account' };
   }
 
   /**
@@ -156,11 +210,6 @@ export class AuthManager {
     this.profile.save();
     bus.emit(EV.TOAST, { message: `Welcome, ${this.profile.name}`, kind: 'ok' });
     return this.profile.data;
-  }
-
-  /** Kept for callers that want the old one-step behaviour (no 2FA gate). */
-  signInWithName({ name, avatar }) {
-    return this.commit(this.identityForName({ name, avatar }));
   }
 
   /* ---------------------------------------------------------------- *
@@ -236,7 +285,7 @@ export class AuthManager {
     const secret = randomBase32Secret();
     const uri = otpauthURI({
       secret,
-      account: this.profile.name || 'Trainee',
+      account: this.profile.data.email || this.profile.name || 'Trainee',
       issuer: 'Beat The Hazard',
     });
     return { secret, uri };
@@ -244,19 +293,57 @@ export class AuthManager {
 
   /** Confirm enrolment by checking a code the app produced. */
   async confirmTotpEnrolment(secret, code) {
-    const { valid } = await verifyTotp(secret, code);
+    const time = Math.floor(this.now() / 1000);
+    const { valid, delta } = await verifyTotp(secret, code, { time });
     if (!valid) return false;
-    this.security.totp = { secret, enrolledAt: Date.now() };
+    this.security.totp = {
+      secret,
+      enrolledAt: this.now(),
+      // The code used to confirm cannot then be used to sign in.
+      lastCounter: Math.floor(time / TOTP_PERIOD) + delta,
+    };
     this.profile.save();
     bus.emit(EV.TOAST, { message: 'Authenticator app connected', kind: 'ok' });
     return true;
   }
 
-  /** Check a code at sign-in time. */
+  /**
+   * Check a code at sign-in time.
+   *
+   * Rate-limited: after 5 wrong codes the prompt locks, for longer each time.
+   * A code that was accepted once is refused afterwards, so a code read over
+   * someone's shoulder cannot be replayed in the same 90-second window.
+   *
+   * @returns {Promise<{ok:boolean, locked?:boolean, waitMs?:number, message?:string}>}
+   */
   async verifyTotpCode(code) {
-    if (!this.hasTotp) return true; // not enrolled: nothing to check
-    const { valid } = await verifyTotp(this.security.totp.secret, code);
-    return valid;
+    if (!this.hasTotp) return { ok: true }; // not enrolled: nothing to check
+    const lock = this.totpThrottle.status();
+    if (lock.locked) {
+      return { ok: false, locked: true, waitMs: lock.waitMs, message: `Too many wrong codes. Try again in ${describeWait(lock.waitMs)}.` };
+    }
+
+    const time = Math.floor(this.now() / 1000);
+    const { valid, delta } = await verifyTotp(this.security.totp.secret, code, { time });
+    const counter = valid ? Math.floor(time / TOTP_PERIOD) + delta : null;
+    const replayed = valid && counter <= (this.security.totp.lastCounter ?? -Infinity);
+
+    if (valid && !replayed) {
+      this.totpThrottle.succeed();
+      this.security.totp.lastCounter = counter;
+      this.profile.save();
+      return { ok: true };
+    }
+    const st = this.totpThrottle.fail();
+    if (st.locked) {
+      return { ok: false, locked: true, waitMs: st.waitMs, message: `Too many wrong codes. Try again in ${describeWait(st.waitMs)}.` };
+    }
+    return {
+      ok: false,
+      message: replayed
+        ? 'That code has already been used. Wait for the next one in your app.'
+        : 'That code is not right. Check the app and try again.',
+    };
   }
 
   disableTotp() {

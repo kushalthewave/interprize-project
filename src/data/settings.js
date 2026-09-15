@@ -134,7 +134,7 @@ export function unboundActions(keybinds) {
  * so they are a personal choice, never a side effect of choosing "Ultra".
  */
 export const PRESETS = {
-  low: { renderScale: '0.75', textureQuality: 'low', shadowQuality: 'off', antialias: 'off', lighting: 'low' },
+  low: { renderScale: 'auto', textureQuality: 'low', shadowQuality: 'off', antialias: 'off', lighting: 'low' },
   medium: { renderScale: 'auto', textureQuality: 'medium', shadowQuality: 'low', antialias: 'fxaa', lighting: 'medium' },
   high: { renderScale: 'auto', textureQuality: 'high', shadowQuality: 'high', antialias: 'msaa', lighting: 'high' },
   ultra: { renderScale: '1.5', textureQuality: 'ultra', shadowQuality: 'ultra', antialias: 'msaa', lighting: 'high' },
@@ -175,6 +175,21 @@ export function pixelRatioFor(renderScale, devicePixelRatio = 1, maxRatio = 2) {
   const scale = Number(renderScale);
   if (!Number.isFinite(scale) || scale <= 0) return Math.min(dpr, maxRatio);
   return Math.max(0.5, Math.min(dpr * scale, maxRatio * 1.5));
+}
+
+/**
+ * The lowest pixel ratio "Auto" may drop to when the frame rate falls.
+ *
+ * It used to drop all the way to 1. On a 150% Windows laptop or a 2× phone
+ * that renders the 3D view below the screen's own resolution, which the
+ * browser then stretches — the blur people saw on some devices and not
+ * others. Now Auto never goes below the display's real density up to 1.5×,
+ * so the picture is equally sharp everywhere; only very dense screens trade
+ * a little resolution for speed.
+ */
+export function adaptiveFloor(devicePixelRatio = 1, maxRatio = 2) {
+  const native = Math.min(Math.max(1, devicePixelRatio || 1), maxRatio);
+  return Math.min(native, 1.5);
 }
 
 /** The resolution that pixel ratio produces, for the label next to the setting. */
@@ -329,12 +344,12 @@ export const SCHEMA = [
 function pct(v) { return `${Math.round(v * 100)}%`; }
 
 export const TABS = [
-  { id: 'video', label: 'Video', icon: '🖥️' },
-  { id: 'audio', label: 'Audio', icon: '🔊' },
-  { id: 'controls', label: 'Controls', icon: '🎮' },
-  { id: 'gameplay', label: 'Gameplay', icon: '🎯' },
-  { id: 'access', label: 'Accessibility', icon: '♿' },
-  { id: 'account', label: 'Account & data', icon: '🔐' },
+  { id: 'video', label: 'Video', icon: 'monitor' },
+  { id: 'audio', label: 'Audio', icon: 'volume' },
+  { id: 'controls', label: 'Controls', icon: 'gamepad' },
+  { id: 'gameplay', label: 'Gameplay', icon: 'crosshair' },
+  { id: 'access', label: 'Accessibility', icon: 'access' },
+  { id: 'account', label: 'Account & data', icon: 'user' },
 ];
 
 /** Every default in one object, deep-copied so callers cannot mutate it. */

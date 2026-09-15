@@ -23,7 +23,7 @@ const LOADING_TIPS = [
 export class UIManager {
   /**
    * @param {HTMLElement} root
-   * @param {object} ctxBase  { profile, actions, googleClientId }
+   * @param {object} ctxBase  { profile, auth, actions, ... }
    */
   constructor(root, ctxBase) {
     this.root = root;
@@ -76,7 +76,7 @@ export class UIManager {
         el('h2', { text: 'Paused' }),
         el('button.btn.btn-primary.btn-block', { text: 'Resume', on: { click: () => this.ctx.actions.resume() } }),
         el('button.btn.btn-block', { text: 'Restart round', on: { click: () => this.ctx.actions.retry() } }),
-        el('button.btn.btn-block', { text: '⚙️ Settings', on: { click: () => this.openSettingsFromPause() } }),
+        el('button.btn.btn-block', { text: 'Settings', on: { click: () => this.openSettingsFromPause() } }),
         el('button.btn.btn-block', { text: 'End round & see results', on: { click: () => this.ctx.actions.endRound() } }),
         el('button.btn.btn-ghost.btn-block', { text: 'Quit to menu', on: { click: () => this.ctx.actions.quitToMenu() } }),
         el('div.faint.center', { text: 'Press Esc again to resume' }),
@@ -282,7 +282,7 @@ export class UIManager {
       if (a) this.toast(`${a.icon} ${a.label} unlocked`, 'achievement');
     });
     on(EV.TOAST, (t) => this.toast(t.message, t.kind));
-    on(EV.COMBO_START, () => this.toast('🔥 Combo started', 'achievement'));
+    on(EV.COMBO_START, () => this.toast('Combo started', 'achievement'));
   }
 
   /* ---------------------------------------------------------------- *
@@ -296,7 +296,11 @@ export class UIManager {
 
     let node;
     switch (screen) {
-      case 'login': node = Auth.loginScreen(c, params.caps ?? this.caps); break;
+      case 'welcome': node = Auth.welcomeScreen(c, this.caps); break;
+      case 'signup': node = Auth.signupScreen(c, params); break;
+      case 'signup-done': node = Auth.signupDoneScreen(c, params); break;
+      case 'avatar-select': node = Auth.avatarSelectScreen(c); break;
+      case 'login': node = Auth.loginScreen(c, this.caps, params); break;
       case 'totp-challenge': node = Auth.totpChallengeScreen(c, params); break;
       case 'totp-setup': node = Auth.totpSetupScreen(c, params); break;
       case 'menu': node = Screens.menuScreen(c); break;
@@ -321,7 +325,7 @@ export class UIManager {
 
     // focus the first control for keyboard users
     if (node) {
-      const first = node.querySelector('button, input, [tabindex]');
+      const first = node.querySelector('[data-autofocus]') ?? node.querySelector('button, input, [tabindex]');
       first?.focus?.({ preventScroll: true });
     }
     return node;

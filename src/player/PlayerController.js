@@ -36,6 +36,27 @@ const THIRD = { back: 2.35, right: 0.5, up: 0.22 };
 const INTRO = { hold: 1.8, sweep: 2.2, back: 1.3 };
 const easeInOut = (x) => (x < 0.5 ? 2 * x * x : 1 - (-2 * x + 2) ** 2 / 2);
 
+/**
+ * World-space direction for a move input, relative to where the player faces.
+ *
+ * Facing is (-sin yaw, 0, -cos yaw); the player's right-hand side is
+ * forward x up = (cos yaw, 0, -sin yaw). This used to be negated, which made
+ * D strafe left and A strafe right — and flipped the touch stick and the
+ * controller's left stick the same way.
+ *
+ * @param {number} yaw     radians, 0 = looking down -z
+ * @param {number} fwd     +1 forward, -1 back
+ * @param {number} strafe  +1 right, -1 left
+ */
+export function moveDirection(yaw, fwd, strafe) {
+  FORWARD.set(-Math.sin(yaw), 0, -Math.cos(yaw));
+  RIGHT.crossVectors(FORWARD, UP).normalize();
+  return {
+    x: FORWARD.x * fwd + RIGHT.x * strafe,
+    z: FORWARD.z * fwd + RIGHT.z * strafe,
+  };
+}
+
 export class PlayerController {
   /**
    * @param {THREE.PerspectiveCamera} camera
@@ -413,11 +434,7 @@ export class PlayerController {
         ? PLAYER.runSpeed
         : PLAYER.walkSpeed;
 
-    FORWARD.set(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
-    RIGHT.crossVectors(FORWARD, UP).normalize().multiplyScalar(-1);
-
-    const wishX = FORWARD.x * fwd + RIGHT.x * strafe;
-    const wishZ = FORWARD.z * fwd + RIGHT.z * strafe;
+    const { x: wishX, z: wishZ } = moveDirection(this.yaw, fwd, strafe);
 
     // --- accelerate toward the wish velocity, damp otherwise
     const targetVX = wishX * speed;

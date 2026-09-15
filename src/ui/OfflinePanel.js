@@ -4,6 +4,7 @@
  * line about what state this copy of the game is in.
  */
 import { el } from './dom.js';
+import { icon } from './icons.js';
 import { offline, canDownload, promptInstall } from '../services/offline.js';
 
 /** The file size, fetched once, for the label on the Download button. */
@@ -21,16 +22,16 @@ function fetchSize(update) {
 
 function status() {
   if (offline.isFileBuild) {
-    return { icon: '✅', text: 'You are playing the downloaded offline file. No internet needed — your progress is saved in this browser.' };
+    return { icon: 'check', text: 'You are playing the downloaded offline file. No internet needed — your progress is saved in this browser.' };
   }
   if (!offline.online) {
-    return { icon: '📴', text: 'You are offline. The game still works — it was saved on this device the last time you visited.' };
+    return { icon: 'download', text: 'You are offline. The game still works — it was saved on this device the last time you visited.' };
   }
   if (offline.isInstalled) {
-    return { icon: '✅', text: 'Installed as an app. It opens and plays with no internet.' };
+    return { icon: 'check', text: 'Installed as an app. It opens and plays with no internet.' };
   }
   if (offline.cachedForOffline) {
-    return { icon: '✅', text: 'This page is saved on this device, so it will also open without internet.' };
+    return { icon: 'check', text: 'This page is saved on this device, so it will also open without internet.' };
   }
   return null;
 }
@@ -96,13 +97,13 @@ export function offlineCard(ctx) {
   const render = () => {
     const st = status();
     holder.replaceChildren(
-      el('h3', { text: '📥 Play without internet' }),
-      st && el('div.auth-note', { text: `${st.icon} ${st.text}` }),
+      el('h3.with-ic', {}, [icon('download'), 'Play without internet']),
+      st && el('div.auth-note.with-ic', {}, [icon(st.icon, { size: 18 }), el('span', { text: st.text })]),
       el('div.offline-ways', {}, [
         el('div.ow', {}, [
           el('strong', { text: '1. Download the game' }),
           el('p.set-desc', {
-            text: 'The whole game in one HTML file. Save it to a laptop or a USB stick, then double-click it — it runs in any browser with no internet. Progress is kept in that browser. Passkey sign-in needs the online version; name sign-in and everything else work.',
+            text: 'The whole game in one HTML file. Save it to a laptop or a USB stick, then double-click it — it runs in any browser with no internet. Progress is kept in that browser. Passkey log-in needs the online version; email log-in and everything else work.',
           }),
           canDownload()
             ? downloadButton(render, { big: true })

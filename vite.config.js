@@ -1,10 +1,11 @@
 import { defineConfig } from 'vite';
 import { serviceWorker } from './scripts/sw-plugin.mjs';
+import { csp } from './scripts/csp.mjs';
 
 export default defineConfig({
   base: './',
   // Generates dist/sw.js so the installed / cached game works offline.
-  plugins: [serviceWorker()],
+  plugins: [serviceWorker(), csp()],
   server: { port: 5173, open: false, host: true },
   build: {
     target: 'es2022',

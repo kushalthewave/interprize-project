@@ -76,14 +76,14 @@ function boot() {
    * accepted: a failed or abandoned prompt leaves the existing profile exactly
    * as it was.
    */
-  async function completeSignIn(identity) {
+  async function completeSignIn(identity, next = () => ui.go('menu')) {
     audio.init();
     audio.resume();
     audio.startMusic();
     const finish = async () => {
       auth.commit(identity);
       await refreshCaps();
-      ui.go('menu');
+      next();
     };
     if (auth.needsSecondFactor(identity)) {
       ui.go('totp-challenge', {
@@ -106,12 +106,23 @@ function boot() {
   }
 
   const actions = {
-    async signInWithName({ name, avatar }) {
-      await completeSignIn(auth.identityForName({ name, avatar }));
+    /**
+     * Create an account from a checked plan (AuthManager.planAccount), then
+     * "Account created" → choose an avatar → into the game. A trainee who is
+     * only adding an email to an older profile goes straight back to the menu.
+     */
+    async createAccount(plan, { replace = false } = {}) {
+      const identity = auth.createAccount(plan, { replace });
+      if (plan.completing) {
+        await completeSignIn(identity);
+        return;
+      }
+      await completeSignIn(identity, () => ui.go('signup-done', { name: identity.name }));
     },
 
-    async signInWithProvider(id) {
-      const identity = await auth.identityFromProvider(id);
+    /** Log in with the email of the account saved on this device. */
+    async logIn(email) {
+      const identity = auth.identityForLogin(email);
       await completeSignIn(identity);
     },
 
@@ -120,27 +131,9 @@ function boot() {
       await completeSignIn(identity);
     },
 
-    /**
-     * Create a passkey and sign in with it in one step, straight from the
-     * login screen.
-     */
-    async createPasskeyAndSignIn({ name, avatar }) {
-      const before = { ...auth.profile.data };
-      // The profile needs a name before a credential can be attached to it.
-      auth.profile.signIn({ name, avatar, provider: 'passkey' });
-      try {
-        await auth.enrolPasskey();
-      } catch (err) {
-        // Put the profile back: a cancelled prompt must not sign anyone in.
-        Object.assign(auth.profile.data, {
-          name: before.name, avatar: before.avatar,
-          authProvider: before.authProvider, email: before.email,
-        });
-        auth.profile.save();
-        await refreshCaps();
-        throw err;
-      }
-      await completeSignIn({ name, avatar, provider: 'passkey', email: null, method: 'passkey' });
+    /** The end of first-run: straight into a training round in the first warehouse. */
+    async startFirstRound() {
+      await startRound('env01', 'simple', MODE.TRAIN);
     },
 
     /** Re-read auth capabilities after the provider settings change. */
@@ -161,7 +154,7 @@ function boot() {
 
     signOut() {
       auth.signOut();
-      refreshCaps().then(() => ui.go('login'));
+      refreshCaps().then(() => ui.go('welcome'));
     },
 
     async startTrain(envId) {
@@ -248,7 +241,7 @@ function boot() {
   // Offline play: register the service worker, catch the install offer, and
   // tell the player when the connection comes and goes.
   initOffline({
-    onOnlineChange: (on) => ui.toast(on ? 'Back online' : '📴 You are offline — the game keeps working', on ? 'ok' : ''),
+    onOnlineChange: (on) => ui.toast(on ? 'Back online' : 'You are offline — the game keeps working', on ? 'ok' : ''),
   });
 
   // Captions: sounds as [bracketed text], spoken lines as subtitles.
@@ -454,7 +447,7 @@ function boot() {
     if (game.state === STATE.PLAYING) game.pause();
     else if (game.state === STATE.PAUSED) actions.resume();
   };
-  player.onGamepadChange = (pad) => ui.toast(pad ? '🎮 Controller connected' : 'Controller disconnected', pad ? 'ok' : '');
+  player.onGamepadChange = (pad) => ui.toast(pad ? 'Controller connected' : 'Controller disconnected', pad ? 'ok' : '');
   player.onStep = () => { if (game.state === STATE.PLAYING) audio.footstep(); };
 
   engine.addUpdater((dt) => {
@@ -536,16 +529,12 @@ function boot() {
    * ---------------------------------------------------------------- */
   engine.start();
 
-  // Decide the opening screen only after we know what auth can offer, and
-  // after any OAuth redirect has been consumed.
+  // Decide the opening screen only after we know what auth can offer.
   (async () => {
-    const redirected = await auth.identityFromRedirect();
     await refreshCaps();
-    if (redirected) {
-      await completeSignIn(redirected);
-      return;
-    }
-    if (!profile.isSignedIn) { ui.go('login'); return; }
+    if (!profile.isSignedIn) { ui.go('welcome'); return; }
+    // Signed in from before accounts had an email: add one, keep the progress.
+    if (!profile.data.email) { ui.go('signup', { completing: true }); return; }
     // A returning trainee with 2FA on still has to present a code. Here the
     // profile already belongs to them, so cancelling does sign them out.
     if (auth.hasTotp) {

@@ -53,6 +53,12 @@ export class Graphics {
     this.focusTarget = 8;
     this.focus = 8;
     engine.renderFn = () => this.render();
+    // Moved to another monitor or zoomed: render at the new density at once.
+    engine.onPixelRatioChange = (dpr) => {
+      const ratio = pixelRatioFor(this.s.renderScale ?? 'auto', dpr, RENDER.maxPixelRatio);
+      engine.renderer.setPixelRatio(ratio);
+      this._sizeComposer();
+    };
     engine.addUpdater((dt) => this._update(dt));
   }
 

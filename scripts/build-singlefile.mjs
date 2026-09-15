@@ -8,6 +8,7 @@
  */
 import { readFileSync, writeFileSync, mkdirSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { contentSecurityPolicy, scriptHash, cspMeta, META_REFERRER } from './csp.mjs';
 
 const SRC = 'dist-single';
 const OUT = join(SRC, 'beat-the-hazard.html');
@@ -42,8 +43,10 @@ const html = `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
+${cspMeta(contentSecurityPolicy({ scriptHashes: [scriptHash(`\n${safeJs}\n`)] }))}
+${META_REFERRER}
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<meta name="theme-color" content="#0b0f14" />
+<meta name="theme-color" content="#1877f2" />
 <meta name="bth-build" content="offline-single-file" />
 <title>Beat The Hazard</title>
 <meta name="description" content="3D interactive warehouse forklift and pedestrian safety training game. This file runs offline." />
@@ -57,14 +60,14 @@ ${css}
 <div id="ui"></div>
 
 <noscript>
-  <div style="position:fixed;inset:0;display:grid;place-items:center;background:#0b0f14;color:#e9eef4;font-family:system-ui,sans-serif;padding:2rem;text-align:center">
-    <div><h1 style="color:#f2b90c">Beat The Hazard</h1><p>This training game needs JavaScript enabled to run.</p></div>
+  <div style="position:fixed;inset:0;display:grid;place-items:center;background:#f0f2f5;color:#1c1e21;font-family:system-ui,sans-serif;padding:2rem;text-align:center">
+    <div><h1 style="color:#1877f2">Beat The Hazard</h1><p>This training game needs JavaScript enabled to run.</p></div>
   </div>
 </noscript>
 
-<div id="boot-fallback" style="position:fixed;inset:0;display:grid;place-items:center;background:#0b0f14;color:#97a4b2;font-family:system-ui,sans-serif;z-index:5">
+<div id="boot-fallback" style="position:fixed;inset:0;display:grid;place-items:center;background:#f0f2f5;color:#65676b;font-family:system-ui,sans-serif;z-index:5">
   <div style="text-align:center">
-    <div style="font-size:1.6rem;font-weight:800;color:#f2b90c;margin-bottom:.5rem">BEAT THE HAZARD</div>
+    <div style="font-size:1.6rem;font-weight:800;color:#1877f2;margin-bottom:.5rem">Beat The Hazard</div>
     <div>Starting…</div>
   </div>
 </div>
@@ -82,6 +85,11 @@ const problems = [];
 if (!/^<!doctype html>/i.test(html)) problems.push('missing <!doctype html> (the page would render in quirks mode)');
 if (!/<meta charset="utf-8"/i.test(head)) problems.push('<meta charset="utf-8"> is not within the first 1024 bytes');
 if (/<script[^>]+\bsrc=/i.test(html)) problems.push('an external <script src> would need the network');
+{
+  // The inline script must be exactly the text the policy's hash was made from.
+  const m = /<script type="module">([\s\S]*?)<\/script>\s*<\/body>/.exec(html);
+  if (!m || !html.includes(scriptHash(m[1]))) problems.push('the Content-Security-Policy hash does not match the inline script');
+}
 if (/<link[^>]+rel="?stylesheet[^>]+href=/i.test(html)) problems.push('an external stylesheet would need the network');
 if (problems.length) {
   console.error('single-file build is NOT safe to open offline:\n  - ' + problems.join('\n  - '));

@@ -15,7 +15,7 @@
  *   becomes pink-magenta; red and green stay.
  */
 export const PALETTES = {
-  none: { major: '#ff4d4d', minor: '#ffc14d', success: '#22c55e', danger: '#ef4444' },
+  none: { major: '#e41e3f', minor: '#f0a500', success: '#31a24c', danger: '#d93025' },
   protanopia: { major: '#ffb000', minor: '#56b4e9', success: '#0072b2', danger: '#d55e00' },
   deuteranopia: { major: '#e69f00', minor: '#56b4e9', success: '#0072b2', danger: '#d55e00' },
   tritanopia: { major: '#ff4d4d', minor: '#e056a0', success: '#009e73', danger: '#d55e00' },

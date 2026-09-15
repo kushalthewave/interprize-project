@@ -129,6 +129,11 @@ export class Profile {
     this.data.security = { ...base.security, ...(this.data.security ?? {}) };
     // Profiles from before the five team-lead avatars stored 'male'/'female'.
     this.data.avatar = normaliseAvatar(this.data.avatar);
+    // Names saved before input was validated: drop anything that could never
+    // have been typed into the form (control characters, angle brackets).
+    const clean = (v) => (typeof v === 'string' ? v.replace(/[\u0000-\u001f\u007f<>]/g, '').slice(0, 32) : v);
+    this.data.name = clean(this.data.name) ?? '';
+    if (this.data.remembered) this.data.remembered.name = clean(this.data.remembered.name);
     if (this.data.remembered) {
       this.data.remembered.avatar = normaliseAvatar(this.data.remembered.avatar);
     }
@@ -146,6 +151,48 @@ export class Profile {
   get remembered() { return this.data.remembered ?? null; }
   get settings() { return this.data.settings; }
   get isSignedIn() { return !!this.data.name; }
+
+  /**
+   * The account saved on this device, signed in or not: { name, email, avatar }.
+   * Null when there is none, including a name-only profile from before
+   * accounts had an email.
+   */
+  get account() {
+    if (this.data.name && this.data.email) {
+      return { name: this.data.name, email: this.data.email, avatar: this.avatar };
+    }
+    const r = this.data.remembered;
+    if (!this.data.name && r?.email) {
+      return { name: r.name, email: r.email, avatar: normaliseAvatar(r.avatar) };
+    }
+    return null;
+  }
+
+  /** Is there anyone's progress or credentials here that a new account would replace? */
+  get hasLocalData() {
+    const s = this.data.security ?? {};
+    return !!(this.data.name || this.data.remembered || this.data.stats?.sessions > 0 ||
+      s.passkeys?.length || s.totp);
+  }
+
+  /**
+   * Start a brand-new account on this device. Everything that belonged to
+   * the previous person goes: scores, achievements, history, passkeys and the
+   * authenticator. Only device preferences (graphics, audio, controls) stay.
+   */
+  createAccount({ name, email, avatar = DEFAULT_AVATAR }) {
+    const { settings } = this.data;
+    this.data = {
+      ...blankProfile(),
+      settings,
+      name,
+      email,
+      avatar: normaliseAvatar(avatar),
+      authProvider: 'local',
+    };
+    this.save();
+    return this.data;
+  }
 
   signIn({ name, avatar = DEFAULT_AVATAR, provider = 'local', email = null }) {
     this.data.name = String(name ?? '').trim().slice(0, 32) || 'Trainee';
