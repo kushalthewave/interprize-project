@@ -98,7 +98,10 @@ if (problems.length) {
 
 mkdirSync(SRC, { recursive: true });
 writeFileSync(OUT, html, 'utf8');
+// A copy next to index.html, so the project folder has a file you can simply
+// double-click to play. Not committed: it is rebuilt from the source.
+writeFileSync('beat-the-hazard.html', html, 'utf8');
 
 const kb = (n) => `${(n / 1024).toFixed(0)} kB`;
-console.log(`single-file build → ${OUT}`);
+console.log(`single-file build → ${OUT} (and ./beat-the-hazard.html to double-click)`);
 console.log(`  css ${kb(css.length)} · js ${kb(js.length)} · total ${kb(html.length)}`);

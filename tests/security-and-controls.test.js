@@ -6,7 +6,8 @@ import { validateName, validateEmail } from '../src/services/auth/validate.js';
 import { createThrottle, memoryStorage, describeWait } from '../src/services/auth/throttle.js';
 import { moveDirection } from '../src/player/PlayerController.js';
 import { adaptiveFloor, pixelRatioFor, PRESETS } from '../src/data/settings.js';
-import { contentSecurityPolicy, scriptHash } from '../scripts/csp.mjs';
+import { contentSecurityPolicy, scriptHash, withPolicy, inlineScriptHashes } from '../scripts/csp.mjs';
+import { readFileSync } from 'node:fs';
 
 describe('Validation - names', () => {
   it('accepts real names, including other scripts and punctuation', () => {
@@ -168,5 +169,16 @@ describe('Content-Security-Policy', () => {
     expect(policy).toContain("object-src 'none'");
     expect(policy).toContain("form-action 'none'");
     expect(contentSecurityPolicy({ scriptHashes: [scriptHash('x')] })).toContain(`'${scriptHash('x')}'`);
+  });
+
+  it('allows the "opened from disk" notice in index.html by its exact hash, and nothing else inline', () => {
+    const src = readFileSync('index.html', 'utf8');
+    const hashes = inlineScriptHashes(src);
+    expect(hashes).toHaveLength(1);
+    const out = withPolicy(src);
+    expect(out).toContain(`'${hashes[0]}'`);
+    // Changing one character of the script would no longer match the policy.
+    const tampered = src.replace("location.protocol !== 'file:'", "location.protocol !== 'file:' ");
+    expect(inlineScriptHashes(tampered)[0]).not.toBe(hashes[0]);
   });
 });
