@@ -1,6 +1,7 @@
 node_modules/
 dist/
 dist-single/
+/beat-the-hazard.html
 .env
 .env.local
 *.log

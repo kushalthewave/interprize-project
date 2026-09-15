@@ -32,12 +32,54 @@
 
     <div id="boot-fallback" style="position:fixed;inset:0;display:grid;place-items:center;background:#f0f2f5;color:#65676b;font-family:system-ui,sans-serif;z-index:5">
       <div style="text-align:center">
-        <img src="./icons/icon-192.png" width="120" height="120" alt="" style="display:block;margin:0 auto 1rem" />
         <div style="font-size:1.6rem;font-weight:800;color:#1877f2;margin-bottom:.5rem">Beat The Hazard</div>
         <div>Starting…</div>
       </div>
     </div>
 
+    <!--
+      Opened straight from the folder (file://), browsers will not run the
+      game's module script, so the page would sit on "Starting…" for ever.
+      Say what happened and point at the file that does work from disk.
+      Runs before the module; on a web server it does nothing.
+    -->
+    <script>
+      (function () {
+        if (location.protocol !== 'file:') return;
+        var box = document.getElementById('boot-fallback');
+        if (!box) return;
+        var card = document.createElement('div');
+        card.style.cssText = 'max-width:520px;margin:1rem;padding:2rem;background:#fff;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,.1),0 8px 16px rgba(0,0,0,.1);text-align:center;color:#1c1e21;line-height:1.5';
+        var logo = document.createElement('img');
+        logo.alt = '';
+        logo.width = 110;
+        logo.height = 110;
+        logo.style.cssText = 'display:block;margin:0 auto 1rem;border-radius:50%';
+        // icons/ in a built folder, public/icons/ in the source folder.
+        logo.addEventListener('error', function once() {
+          logo.removeEventListener('error', once);
+          logo.src = 'public/icons/icon-192.png';
+          logo.addEventListener('error', function () { logo.remove(); });
+        });
+        logo.src = 'icons/icon-192.png';
+        var h = document.createElement('h1');
+        h.textContent = 'Open the game file instead';
+        h.style.cssText = 'margin:0 0 .6rem;font-size:1.5rem;color:#1877f2';
+        var p = document.createElement('p');
+        p.textContent = 'You opened index.html straight from the folder. Browsers do not run the game from this file when it is opened from disk, so it stays on "Starting…". Double-click beat-the-hazard.html in the same folder — it is the whole game in one file and plays with no internet.';
+        p.style.cssText = 'margin:0 0 1.2rem;color:#65676b';
+        var play = document.createElement('a');
+        play.href = 'beat-the-hazard.html';
+        play.textContent = 'Play beat-the-hazard.html';
+        play.style.cssText = 'display:block;padding:.85rem 1rem;margin-bottom:.6rem;border-radius:6px;background:#1877f2;color:#fff;font-weight:700;text-decoration:none';
+        var online = document.createElement('a');
+        online.href = 'https://kushalthewave.github.io/interprize-project/';
+        online.textContent = 'Or play online';
+        online.style.cssText = 'display:block;padding:.85rem 1rem;border-radius:6px;background:#e4e6eb;color:#1c1e21;font-weight:600;text-decoration:none';
+        card.append(logo, h, p, play, online);
+        box.replaceChildren(card);
+      })();
+    </script>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

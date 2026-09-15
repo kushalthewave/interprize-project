@@ -47,19 +47,26 @@ export function cspMeta(policy) {
   return `<meta http-equiv="Content-Security-Policy" content="${policy}" />`;
 }
 
+/** 'sha256-…' for every inline (no src) script in a page, in order. */
+export function inlineScriptHashes(html) {
+  const hashes = [];
+  for (const m of html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)) {
+    hashes.push(scriptHash(m[1]));
+  }
+  return hashes;
+}
+
+/** Add the policy to a page, allowing exactly the inline scripts it already has. */
+export function withPolicy(html) {
+  const policy = contentSecurityPolicy({ scriptHashes: inlineScriptHashes(html) });
+  return html.replace('<meta charset="utf-8" />', `<meta charset="utf-8" />\n    ${cspMeta(policy)}\n    ${META_REFERRER}`);
+}
+
 /** Vite plugin: add the policy to index.html in production builds only. */
 export function csp() {
   return {
     name: 'bth-csp',
     apply: 'build',
-    transformIndexHtml: {
-      order: 'post',
-      handler(html) {
-        if (/<script(?![^>]*\bsrc=)[^>]*>/i.test(html)) {
-          throw new Error('[csp] index.html has an inline script; the policy would block it.');
-        }
-        return html.replace('<meta charset="utf-8" />', `<meta charset="utf-8" />\n    ${cspMeta(contentSecurityPolicy())}\n    ${META_REFERRER}`);
-      },
-    },
+    transformIndexHtml: { order: 'post', handler: withPolicy },
   };
 }
