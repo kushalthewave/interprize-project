@@ -17,6 +17,8 @@ import { RENDER } from '../data/config.js';
 import { AudioManager } from '../audio/AudioManager.js';
 import { securityPanel } from './AuthScreens.js';
 import { offlineCard } from './OfflinePanel.js';
+import { icon } from './icons.js';
+import { avatarNode } from './avatars.js';
 
 let lastTab = 'video';
 
@@ -37,7 +39,7 @@ export function settingsScreen(ctx, params = {}) {
     el(`button.set-tab${t.id === tab ? '.active' : ''}`, {
       type: 'button', role: 'tab', 'aria-selected': String(t.id === tab),
       on: { click: () => ctx.go('settings', { tab: t.id, fromPause }) },
-    }, [el('span.set-tab-ic', { text: t.icon }), el('span', { text: t.label })]),
+    }, [el('span.set-tab-ic', {}, [icon(t.icon, { size: 18 })]), el('span', { text: t.label })]),
   ));
 
   const back = () => (fromPause ? ctx.actions.closeSettingsToPause() : ctx.go('menu'));
@@ -49,7 +51,7 @@ export function settingsScreen(ctx, params = {}) {
           el('h2', { text: 'Settings' }),
           el('p', { text: fromPause ? 'The round is paused. Changes apply as soon as you make them.' : 'Changes apply at once and are saved to this device.' }),
         ]),
-        el('button.btn.btn-ghost', { type: 'button', text: fromPause ? '← Back to pause menu' : '← Back', on: { click: back } }),
+        el('button.btn.btn-secondary', { type: 'button', on: { click: back } }, [icon('back', { size: 16 }), fromPause ? 'Back to pause menu' : 'Back']),
       ]),
       tabs,
       body,
@@ -343,10 +345,21 @@ function controllerLayout() {
 function accountTab(ctx, rerender) {
   const p = ctx.profile;
   return [
+    el('div.card.account-card', {}, [
+      el('h3.with-ic', {}, [icon('user'), 'Your account']),
+      el('div.account-chip', {}, [
+        avatarNode(p.avatar, { size: 52, badge: false }),
+        el('div', {}, [
+          el('div.who-name', { text: p.name }),
+          el('div.who-role', { text: p.data.email || 'No email saved' }),
+        ]),
+      ]),
+      el('p.set-desc', { text: 'Your account is saved on this device only. Add a passkey or two-factor below to protect it.' }),
+    ]),
     offlineCard(ctx),
     ...(ctx.auth ? securityPanel(ctx, ctx.authCaps ?? { passkey: { available: false, reason: '' } }, rerender) : []),
     el('div.card.stack.mt', {}, [
-      el('h3', { text: '💾 Data' }),
+      el('h3', { text: 'Data' }),
       el('p.faint', { text: 'Progress is stored in this browser. Clearing it cannot be undone. Passkeys and two-factor are kept.' }),
       el('button.btn.btn-danger.btn-block', {
         type: 'button', text: 'Reset all progress',
@@ -360,7 +373,7 @@ function accountTab(ctx, rerender) {
           },
         },
       }),
-      el('button.btn.btn-ghost.btn-block', { type: 'button', text: 'Sign out', on: { click: () => ctx.actions.signOut() } }),
+      el('button.btn.btn-secondary.btn-block', { type: 'button', on: { click: () => ctx.actions.signOut() } }, [icon('logout', { size: 18 }), 'Log out']),
     ]),
   ];
 }

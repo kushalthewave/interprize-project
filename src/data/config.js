@@ -20,9 +20,9 @@ export const SCORING = {
 };
 
 export const RANKS = [
-  { min: 50, id: 'champion', label: 'Safety Champion', color: '#22c55e' },
-  { min: 30, id: 'getting-there', label: 'Getting There', color: '#eab308' },
-  { min: -Infinity, id: 'needs-practice', label: 'Needs Practice', color: '#ef4444' },
+  { min: 50, id: 'champion', label: 'Safety Champion', color: '#31a24c' },
+  { min: 30, id: 'getting-there', label: 'Getting There', color: '#c77c00' },
+  { min: -Infinity, id: 'needs-practice', label: 'Needs Practice', color: '#e41e3f' },
 ];
 
 export function rankForScore(score) {

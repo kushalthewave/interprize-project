@@ -5,7 +5,7 @@
  */
 import * as THREE from 'three';
 import { RENDER } from '../data/config.js';
-import { shouldRenderFrame } from '../data/settings.js';
+import { shouldRenderFrame, adaptiveFloor } from '../data/settings.js';
 
 export class Engine {
   /**
@@ -71,6 +71,7 @@ export class Engine {
     window.addEventListener('resize', this._onResize);
     window.addEventListener('orientationchange', this._onResize);
     this.resize();
+    this._watchPixelRatio();
 
     // WebGL context-loss resilience
     canvas.addEventListener('webglcontextlost', (e) => {
@@ -84,6 +85,27 @@ export class Engine {
       this.onContextRestored?.();
       this.start();
     });
+  }
+
+  /**
+   * The device pixel ratio changes when the window moves to another monitor
+   * or the page is zoomed with Ctrl +/−. The renderer used to keep the old
+   * ratio, so the 3D view went soft until the next reload. A media query on
+   * the current resolution fires exactly when it changes.
+   */
+  _watchPixelRatio() {
+    if (typeof window.matchMedia !== 'function') return;
+    const listen = () => {
+      const mq = window.matchMedia(`(resolution: ${window.devicePixelRatio || 1}dppx)`);
+      const onChange = () => {
+        this.onPixelRatioChange?.(window.devicePixelRatio || 1);
+        this.resize();
+        listen();
+      };
+      if (mq.addEventListener) mq.addEventListener('change', onChange, { once: true });
+      else mq.addListener?.(onChange);
+    };
+    listen();
   }
 
   /** @returns {() => void} unregister */
@@ -174,8 +196,9 @@ export class Engine {
 
   /**
    * Cheap adaptive quality: if we are consistently below ~40fps, drop the
-   * device pixel ratio one notch (down to 1) before touching anything else.
-   * Recovers when headroom returns.
+   * device pixel ratio one notch before touching anything else — but never
+   * below adaptiveFloor(), so the picture does not go blurry. Recovers when
+   * headroom returns.
    */
   _adaptiveQuality() {
     // A resolution the player chose is respected, even if it is slow.
@@ -188,8 +211,9 @@ export class Engine {
     const target = Math.min(window.devicePixelRatio || 1, RENDER.maxPixelRatio);
     // A frame cap below 40 would otherwise read as "too slow" forever.
     const floor = this.fpsCap && this.fpsCap < 45 ? this.fpsCap * 0.85 : 40;
-    if (this.fps < floor && cur > 1) {
-      this.renderer.setPixelRatio(Math.max(1, cur - 0.25));
+    const lowest = adaptiveFloor(window.devicePixelRatio, RENDER.maxPixelRatio);
+    if (this.fps < floor && cur > lowest) {
+      this.renderer.setPixelRatio(Math.max(lowest, cur - 0.25));
       this._adaptiveCooldown = 8;
       this.onResize?.();
     } else if (this.fps > 58 && cur < target) {

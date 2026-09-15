@@ -1,21 +1,29 @@
 /**
  * AuthScreens.js
- * The login screen and the security panel.
+ * Getting into the game: create an account, log in, the second-factor
+ * prompt, and the security panel in Settings.
  *
- * Every method is labelled with what it actually protects. Where something is
- * a local device unlock rather than server-verified identity, it says so - a
- * training tool that overstates its own security is teaching the wrong lesson.
+ * The first-run path is deliberately short and in one direction:
+ *
+ *   Welcome → Create an account (name + email) → Account created
+ *           → Choose your avatar → straight into the warehouse
+ *
+ * There is no guest route. Every method is labelled with what it actually
+ * protects: with no server, an account lives on this device, and the screens
+ * say so rather than implying more.
  */
 import { el, mount } from './dom.js';
 import { qrToCanvas } from '../services/auth/qr.js';
 import { formatSecret } from '../services/auth/base32.js';
 import { totp, secondsRemaining } from '../services/auth/totp.js';
-import { setAuthConfig, getStoredAuthConfig, isFromBuild } from '../services/auth/providers.js';
+import { NAME_MAX, EMAIL_MAX } from '../services/auth/validate.js';
+import { icon } from './icons.js';
+import { logo } from './logo.js';
 
 import { AVATARS, AVATAR_ORDER, avatarNode, normaliseAvatar } from './avatars.js';
 
 /**
- * The avatar picker, shared by the login and profile screens. A large
+ * The avatar picker, shared by the first-run and profile screens. A large
  * preview shows who you are; the grid below shows all five. Returns the node
  * and a getter for the current choice.
  */
@@ -65,256 +73,307 @@ export function avatarPicker(initial, { onChange } = {}) {
 }
 
 /* ================================================================== *
- * Login
+ * Shared pieces
  * ================================================================== */
 
-/**
- * @param {object} ctx  { profile, auth, actions, go }
- * @param {object} caps result of AuthManager.capabilities()
- */
-export function loginScreen(ctx, caps) {
-  const p = ctx.profile;
-  const back = caps.remembered;          // who signed out last on this device
-  const err = el('div.auth-error', { role: 'alert' });
-  const showErr = (m) => { err.textContent = m; err.classList.toggle('show', !!m); };
-
-  /* ---- name + avatar (the default path) ---- */
-  const nameInput = el('input', {
-    type: 'text', placeholder: 'e.g. Sunita Shrestha', maxLength: 32,
-    value: p.name || back?.name || '', autocomplete: 'name', id: 'trainee-name',
-  });
-  const picker = avatarPicker(p.name ? p.avatar : (back?.avatar ?? p.avatar));
-
-  const submitName = async () => {
-    const name = nameInput.value.trim();
-    if (name.length < 2) {
-      showErr('Please enter a name of at least 2 characters.');
-      nameInput.focus();
-      return;
-    }
-    showErr('');
-    try { await ctx.actions.signInWithName({ name, avatar: picker.value }); }
-    catch (e) { showErr(e.message); }
-  };
-  nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitName(); });
-
-  /* ---- passkey ---- */
-  const passkeyBlock = () => {
-    const pk = caps.passkey;
-    if (pk.enrolled && pk.available) {
-      const who = back?.name;
-      return el('button.auth-btn.auth-passkey', {
-        type: 'button',
-        on: {
-          click: async () => {
-            showErr('');
-            try { await ctx.actions.signInWithPasskey(); }
-            catch (e) { showErr(e.message); }
-          },
-        },
-      }, [
-        back
-          ? avatarNode(back.avatar, { size: 40, badge: false, className: 'auth-avatar' })
-          : el('span.auth-icon', { text: '🔐' }),
-        el('span', {}, [
-          el('span.auth-label', { text: who ? `Sign in as ${who} with your passkey` : 'Sign in with a passkey' }),
-          el('span.auth-sub', { text: 'Fingerprint, face or device PIN — nothing to type' }),
-        ]),
-      ]);
-    }
-    if (!pk.available) {
-      return el('div.auth-unavailable', {}, [
-        el('span.auth-icon', { text: '🔐' }),
-        el('span', {}, [
-          el('span.auth-label', { text: 'Passkeys unavailable here' }),
-          el('span.auth-sub', { text: pk.reason }),
-        ]),
-      ]);
-    }
-    return el('button.auth-btn.auth-passkey', {
-      type: 'button',
-      on: {
-        click: async () => {
-          showErr('');
-          const name = nameInput.value.trim() || p.name || back?.name || 'Trainee';
-          try { await ctx.actions.createPasskeyAndSignIn({ name, avatar: picker.value }); }
-          catch (e) { showErr(e.message); }
-        },
-      },
-    }, [
-      el('span.auth-icon', { text: '🔐' }),
-      el('span', {}, [
-        el('span.auth-label', { text: 'Set up a passkey' }),
-        el('span.auth-sub', {
-          text: pk.platform
-            ? 'Use your fingerprint, face or device PIN — takes a few seconds'
-            : 'Use your phone or a security key — takes a few seconds',
-        }),
+/** Brand column beside the form, like a classic log-in page. */
+function authShell(card) {
+  return el('div.screen.auth-screen', {}, [
+    el('div.auth-layout', {}, [
+      el('div.auth-brand', {}, [
+        logo({ size: 200, className: 'auth-logo' }),
+        el('h1', { text: 'Beat The Hazard' }),
+        el('p', { text: 'Warehouse forklift and pedestrian safety training. Spot the hazards before they become accidents.' }),
+        el('div.team-line', { text: 'The Code Crafters · Built by Kushal Neupane' }),
       ]),
-    ]);
-  };
-
-  /* ---- social ---- */
-  // An unconfigured provider used to be a greyed-out button that did nothing,
-  // and the only place to configure it was behind a sign-in. Now it opens
-  // its setup form right here on the login screen.
-  const setupHost = el('div.provider-setup-host');
-  let openId = null;
-  const socialButtons = caps.providers.map((prov) => {
-    if (!prov.configured) {
-      return el('button.auth-btn.auth-social.needs-setup', {
-        type: 'button',
-        title: prov.setupHint,
-        on: {
-          click: () => {
-            showErr('');
-            openId = openId === prov.id ? null : prov.id;
-            mount(setupHost, openId ? providerQuickSetup(ctx, prov, () => ctx.go('login')) : null);
-          },
-        },
-      }, [
-        el('span.auth-icon', { text: prov.icon }),
-        el('span', { style: { flex: '1' } }, [
-          el('span.auth-label', { text: prov.label }),
-          el('span.auth-sub', { text: prov.reason }),
-        ]),
-        el('span.auth-setup', { text: 'Set up' }),
-      ]);
-    }
-    return el('button.auth-btn.auth-social', {
-      type: 'button',
-      style: { background: prov.colour, color: prov.textColour },
-      on: {
-        click: async () => {
-          showErr('');
-          try { await ctx.actions.signInWithProvider(prov.id); }
-          catch (e) { showErr(e.message); }
-        },
-      },
-    }, [
-      el('span.auth-icon', { text: prov.icon }),
-      el('span.auth-label', { text: prov.label }),
-    ]);
-  });
-
-  return el('div.screen', {}, [
-    el('div.screen-inner.narrow', {}, [
-      el('div.brand', {}, [
-        el('h1', { text: 'BEAT THE HAZARD' }),
-        el('p', { text: 'Warehouse Forklift & Pedestrian Safety Training' }),
-        el('div.flagline', {}, [el('span.fl-team', { text: 'The Code Crafters' }), el('span.fl-dot', { text: '·' }), el('span', { text: 'Built by Kushal Neupane' })]),
+      el('div.auth-main', {}, [
+        card,
+        el('p.auth-foot', { text: 'Your account and progress are saved on this device.' }),
       ]),
-
-      el('div.card.stack', {}, [
-        el('div.section-head', {}, [
-          el('h2', { text: back ? `Welcome back, ${back.name}` : 'Start training' }),
-          el('p', { text: 'Your name and progress are stored on this device only.' }),
-        ]),
-
-        caps.totp?.enrolled && el('div.auth-note.small', {
-          text: '🔢 This profile is protected by an authenticator app. After you sign in you will be asked for the 6-digit code.',
-        }),
-
-        passkeyBlock(),
-
-        caps.providers.length > 0 && el('div.auth-divider', {}, [el('span', { text: 'or continue with' })]),
-        ...socialButtons,
-        setupHost,
-
-        el('div.auth-divider', {}, [el('span', { text: 'or just use a name' })]),
-
-        el('div', {}, [el('label', { for: 'trainee-name', text: 'Your name' }), nameInput]),
-        el('div', {}, [el('label', { text: 'Choose your avatar' }), picker.node]),
-        err,
-        el('button.btn.btn-primary.btn-lg.btn-block', {
-          type: 'button', text: 'Enter the warehouse', on: { click: submitName },
-        }),
-        el('button.btn.btn-sm.btn-ghost.btn-block', {
-          type: 'button',
-          text: 'Continue as guest',
-          on: {
-            click: async () => {
-              showErr('');
-              try { await ctx.actions.signInWithName({ name: 'Guest', avatar: picker.value }); }
-              catch (e) { showErr(e.message); }
-            },
-          },
-        }),
-      ]),
-
-      el('p.faint.center.mt', {
-        text: 'This is a training simulation. Hazards shown are staged for teaching purposes.',
-      }),
     ]),
   ]);
 }
 
-/**
- * Inline setup for one provider, opened from its button on the login screen.
- * Only public identifiers are ever asked for. GitHub also needs the URL of a
- * server-side exchange, and the form says so rather than pretending otherwise.
- */
-function providerQuickSetup(ctx, prov, onSaved) {
-  const stored = getStoredAuthConfig();
-  const spec = {
-    google: {
-      fields: [['googleClientId', 'Google Client ID', 'xxxxxxxx.apps.googleusercontent.com']],
-      link: 'https://console.cloud.google.com/apis/credentials',
-      steps: 'Google Cloud Console → Credentials → Create OAuth client ID → Web application. Add the origin below under “Authorised JavaScript origins”. No secret is needed.',
-    },
-    facebook: {
-      fields: [['facebookAppId', 'Facebook App ID', '1234567890123456']],
-      link: 'https://developers.facebook.com/apps',
-      steps: 'Create an app → add “Facebook Login” → add the origin below as a valid domain.',
-    },
-    github: {
-      fields: [
-        ['githubClientId', 'GitHub Client ID', 'Iv1.xxxxxxxxxxxx'],
-        ['githubTokenEndpoint', 'Token exchange endpoint (your server)', 'https://your-worker.workers.dev/github'],
-      ],
-      link: 'https://github.com/settings/developers',
-      steps: 'GitHub cannot finish sign-in in a browser alone — the exchange needs the client secret. Register an OAuth App, deploy the one-function endpoint from the README (GitHub sign-in), and paste both here.',
-    },
-  }[prov.id];
-  if (!spec) return null;
+/** A labelled input with its own error line, wired for screen readers. */
+function field({ id, label, type = 'text', maxLength, autocomplete, placeholder = '', value = '', inputMode, autocapitalize }) {
+  const input = el('input', {
+    id, type, maxLength, autocomplete, placeholder, value,
+    inputMode, autocapitalize,
+    spellcheck: false,
+    'aria-describedby': `${id}-err`,
+  });
+  input.spellcheck = false;
+  const err = el('div.field-error', { id: `${id}-err`, role: 'alert' });
+  const setError = (msg) => {
+    err.textContent = msg || '';
+    input.setAttribute('aria-invalid', msg ? 'true' : 'false');
+    input.classList.toggle('invalid', !!msg);
+  };
+  input.addEventListener('input', () => setError(''));
+  return { input, setError, node: el('div.field', {}, [el('label', { for: id, text: label }), input, err]) };
+}
 
-  const inputs = spec.fields.map(([key, label, ph]) => {
-    const input = el('input', {
-      type: 'text', value: stored[key] ?? '', placeholder: ph,
-      id: `qs-${key}`, autocomplete: 'off', spellcheck: false,
-    });
-    return { key, input, node: el('div', {}, [el('label', { for: `qs-${key}`, text: label }), input]) };
+function formError() {
+  const node = el('div.auth-error', { role: 'alert' });
+  return {
+    node,
+    show(msg) { node.textContent = msg || ''; node.classList.toggle('show', !!msg); },
+  };
+}
+
+/** Run an async handler once at a time, with the button showing it is busy. */
+function guarded(button, fn) {
+  return async (e) => {
+    e?.preventDefault?.();
+    if (button.disabled) return;
+    button.disabled = true;
+    try { await fn(); } finally { if (button.isConnected && !button.dataset.locked) button.disabled = false; }
+  };
+}
+
+/* ================================================================== *
+ * Welcome
+ * ================================================================== */
+
+export function welcomeScreen(ctx, caps = {}) {
+  const acct = caps.account;
+  return authShell(el('div.card.auth-card.stack', {}, [
+    el('div.section-head', {}, [
+      el('h2', { text: acct ? `Welcome back, ${acct.name}` : 'Welcome' }),
+      el('p', { text: acct ? 'Log in to carry on where you left off.' : 'Create an account to start training.' }),
+    ]),
+    el('button.btn.btn-primary.btn-lg.btn-block', {
+      type: 'button', text: 'Create an account',
+      on: { click: () => ctx.go('signup') },
+    }),
+    el('div.auth-divider', {}, [el('span', { text: 'Already have an account?' })]),
+    el('button.btn.btn-secondary.btn-lg.btn-block', {
+      type: 'button', text: 'Log in',
+      on: { click: () => ctx.go('login') },
+    }),
+  ]));
+}
+
+/* ================================================================== *
+ * Create an account
+ * ================================================================== */
+
+/**
+ * @param {object} ctx
+ * @param {{completing?:boolean}} params  completing: a signed-in trainee from
+ *   before accounts had an email, adding one. Nothing is deleted.
+ */
+export function signupScreen(ctx, { completing = false } = {}) {
+  const p = ctx.profile;
+  const name = field({
+    id: 'su-name', label: 'Full name', maxLength: NAME_MAX, autocomplete: 'name',
+    placeholder: 'e.g. Sunita Shrestha', value: completing ? p.name : '', autocapitalize: 'words',
+  });
+  const email = field({
+    id: 'su-email', label: 'Email address', type: 'email', maxLength: EMAIL_MAX, autocomplete: 'email',
+    placeholder: 'name@example.com', inputMode: 'email', autocapitalize: 'off',
+  });
+  const error = formError();
+  const conflictHost = el('div.conflict-host');
+  const submit = el('button.btn.btn-primary.btn-lg.btn-block', { type: 'submit', text: completing ? 'Save and continue' : 'Create account' });
+
+  const create = async (plan, replace) => {
+    try {
+      await ctx.actions.createAccount(plan, { replace });
+    } catch (e) {
+      error.show(e.message);
+    }
+  };
+
+  const onSubmit = guarded(submit, async () => {
+    error.show('');
+    mount(conflictHost);
+    const plan = ctx.auth.planAccount({ name: name.input.value, email: email.input.value });
+    if (!plan.ok) {
+      (plan.field === 'name' ? name : email).setError(plan.error);
+      (plan.field === 'name' ? name : email).input.focus();
+      return;
+    }
+    // Show the cleaned-up values, so what is saved is what they see.
+    name.input.value = plan.name;
+    email.input.value = plan.email;
+
+    if (plan.conflict === 'same-email') {
+      mount(conflictHost, el('div.auth-note.stack', {}, [
+        el('div', { text: 'An account with this email is already saved on this device.' }),
+        el('button.btn.btn-secondary.btn-block', { type: 'button', text: 'Log in instead', on: { click: () => ctx.go('login', { email: plan.email }) } }),
+      ]));
+      return;
+    }
+    if (plan.conflict === 'replace') {
+      mount(conflictHost, el('div.auth-warning.stack', { role: 'alert' }, [
+        el('strong', { text: 'This device already has an account.' }),
+        el('div', {
+          text: `Creating a new account deletes ${plan.existing ? `the account for ${plan.existing}` : 'the saved account'}` +
+            ' — its scores, achievements, passkeys and two-factor settings. This cannot be undone.',
+        }),
+        el('button.btn.btn-danger.btn-block', {
+          type: 'button', text: 'Delete it and create my account',
+          on: { click: (e) => { e.currentTarget.disabled = true; create(plan, true); } },
+        }),
+        el('button.btn.btn-ghost.btn-block', { type: 'button', text: 'Cancel', on: { click: () => mount(conflictHost) } }),
+      ]));
+      return;
+    }
+    await create(plan, false);
   });
 
-  const title = prov.label.replace('Continue with ', '');
-  return el('div.card.provider-quick', {}, [
-    el('div.row.between', {}, [
-      el('strong', { text: `Set up ${title}` }),
-      el('a', { href: spec.link, target: '_blank', rel: 'noopener noreferrer', text: 'Open console ↗' }),
-    ]),
-    el('p.set-desc', { text: spec.steps }),
-    el('div.auth-note.small', {}, [
-      'Origin to register: ',
-      el('code', { text: window.location.origin, style: { userSelect: 'all' } }),
-    ]),
-    ...inputs.map((i) => i.node),
-    el('div.row', {}, [
-      el('button.btn.btn-primary.btn-sm', {
-        type: 'button',
-        text: 'Save & enable',
-        on: {
-          click: async () => {
-            const patch = {};
-            for (const i of inputs) patch[i.key] = i.input.value;
-            setAuthConfig(patch);
-            await ctx.actions.refreshAuthCaps();
-            ctx.actions.toast(`${title} settings saved`, 'ok');
-            onSaved();
-          },
-        },
+  const form = el('form.stack', { noValidate: true, on: { submit: onSubmit } }, [
+    name.node,
+    email.node,
+    error.node,
+    conflictHost,
+    submit,
+  ]);
+
+  return authShell(el('div.card.auth-card.stack', {}, [
+    el('div.section-head', {}, [
+      el('h2', { text: completing ? 'Finish your account' : 'Create an account' }),
+      el('p', {
+        text: completing
+          ? 'Accounts now have an email address. Add yours to keep your progress.'
+          : 'It only takes a moment.',
       }),
     ]),
+    form,
+    completing
+      ? el('button.btn.btn-ghost.btn-block', { type: 'button', text: 'Sign out', on: { click: () => ctx.actions.signOut() } })
+      : el('p.auth-switch', {}, [
+          'Already have an account? ',
+          el('button.link', { type: 'button', text: 'Log in', on: { click: () => ctx.go('login') } }),
+        ]),
+  ]));
+}
+
+/* ================================================================== *
+ * Account created
+ * ================================================================== */
+
+export function signupDoneScreen(ctx, { name = '' } = {}) {
+  return authShell(el('div.card.auth-card.stack.center', {}, [
+    el('div.success-mark', {}, [icon('check', { size: 56 })]),
+    el('h2', { text: 'Account created successfully' }),
+    el('p.muted', { text: `Welcome to Beat The Hazard, ${name || ctx.profile.name}.` }),
+    el('button.btn.btn-primary.btn-lg.btn-block', {
+      type: 'button', text: 'Choose your avatar',
+      on: { click: () => ctx.go('avatar-select') },
+    }),
+  ]));
+}
+
+/* ================================================================== *
+ * Choose your avatar (first run)
+ * ================================================================== */
+
+export function avatarSelectScreen(ctx) {
+  const picker = avatarPicker(ctx.profile.avatar);
+  const start = el('button.btn.btn-primary.btn-lg.btn-block', { type: 'button', 'data-autofocus': '' }, [icon('play', { size: 18 }), 'Start playing']);
+  start.addEventListener('click', guarded(start, async () => {
+    ctx.profile.setAvatar(picker.value);
+    await ctx.actions.startFirstRound();
+  }));
+
+  return el('div.screen', {}, [
+    el('div.screen-inner.narrow-md', {}, [
+      el('div.card.stack', {}, [
+        el('div.section-head', {}, [
+          el('h2', { text: 'Choose your avatar' }),
+          el('p', { text: 'This is you in the warehouse. You can change it later in your profile.' }),
+        ]),
+        picker.node,
+        start,
+        el('button.btn.btn-ghost.btn-block', {
+          type: 'button', text: 'Go to the main menu instead',
+          on: { click: () => { ctx.profile.setAvatar(picker.value); ctx.go('menu'); } },
+        }),
+      ]),
+    ]),
   ]);
+}
+
+/* ================================================================== *
+ * Log in
+ * ================================================================== */
+
+/**
+ * @param {object} ctx
+ * @param {object} caps   AuthManager.capabilities()
+ * @param {{email?:string}} [params]
+ */
+export function loginScreen(ctx, caps = {}, { email: prefill = '' } = {}) {
+  const acct = caps.account;
+  const email = field({
+    id: 'li-email', label: 'Email address', type: 'email', maxLength: EMAIL_MAX, autocomplete: 'email',
+    placeholder: 'name@example.com', inputMode: 'email', autocapitalize: 'off', value: prefill,
+  });
+  const error = formError();
+  const submit = el('button.btn.btn-primary.btn-lg.btn-block', { type: 'submit', text: 'Log in' });
+
+  // A locked form stays locked across reloads; re-enable it when the wait ends.
+  let timer = null;
+  const refreshLock = () => {
+    const msg = ctx.auth.loginLock();
+    submit.disabled = !!msg;
+    if (msg) submit.dataset.locked = '1'; else delete submit.dataset.locked;
+    email.input.disabled = !!msg;
+    if (msg) {
+      error.show(msg);
+      clearTimeout(timer);
+      timer = setTimeout(() => { if (submit.isConnected) refreshLock(); }, 1000);
+    } else if (error.node.textContent.startsWith('Too many')) {
+      error.show('');
+    }
+  };
+
+  const onSubmit = guarded(submit, async () => {
+    error.show('');
+    try {
+      await ctx.actions.logIn(email.input.value);
+    } catch (e) {
+      error.show(e.message);
+      refreshLock();
+      if (!email.input.disabled) email.input.focus();
+    }
+  });
+
+  const passkey = caps.passkey?.enrolled && caps.passkey?.available
+    ? el('button.btn.btn-secondary.btn-block', {
+        type: 'button',
+        on: {
+          click: async () => {
+            error.show('');
+            try { await ctx.actions.signInWithPasskey(); } catch (e) { error.show(e.message); }
+          },
+        },
+      }, [icon('key', { size: 18 }), 'Log in with a passkey'])
+    : null;
+
+  const card = el('div.card.auth-card.stack', {}, [
+    el('div.section-head', {}, [
+      el('h2', { text: 'Log in' }),
+      el('p', { text: acct ? `Welcome back, ${acct.name}.` : 'Enter the email address you signed up with.' }),
+    ]),
+    acct && el('div.account-chip', {}, [
+      avatarNode(acct.avatar, { size: 44, badge: false }),
+      el('div', {}, [el('div.who-name', { text: acct.name }), el('div.who-role', { text: 'Saved on this device' })]),
+    ]),
+    el('form.stack', { noValidate: true, on: { submit: onSubmit } }, [email.node, error.node, submit]),
+    passkey && el('div.auth-divider', {}, [el('span', { text: 'or' })]),
+    passkey,
+    el('p.auth-switch', {}, [
+      'New here? ',
+      el('button.link', { type: 'button', text: 'Create an account', on: { click: () => ctx.go('signup') } }),
+    ]),
+    el('button.btn.btn-ghost.btn-block', { type: 'button' }, [icon('back', { size: 16 }), 'Back']),
+  ]);
+  card.lastChild.addEventListener('click', () => ctx.go('welcome'));
+  setTimeout(() => { refreshLock(); if (!email.input.disabled) email.input.focus(); }, 30);
+  return authShell(card);
 }
 
 /* ================================================================== *
@@ -323,53 +382,79 @@ function providerQuickSetup(ctx, prov, onSaved) {
 
 export function totpChallengeScreen(ctx, { onSuccess, onCancel, canUsePasskey = false, pending = null }) {
   const err = el('div.auth-error', { role: 'alert' });
+  const showErr = (m) => { err.textContent = m || ''; err.classList.toggle('show', !!m); };
   const input = el('input', {
     type: 'text', inputMode: 'numeric', autocomplete: 'one-time-code',
-    maxLength: 7, placeholder: '000000', id: 'totp-code', class: 'totp-input',
+    maxLength: 6, placeholder: '000000', id: 'totp-code', class: 'totp-input',
+    'aria-label': '6-digit code',
   });
+  const verify = el('button.btn.btn-primary.btn-block', { type: 'button', text: 'Verify' });
+
+  let busy = false;
+  let timer = null;
+  const lockFor = (ms, message) => {
+    input.disabled = true;
+    verify.disabled = true;
+    showErr(message);
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      if (!input.isConnected) return;
+      input.disabled = false;
+      verify.disabled = false;
+      showErr('');
+      input.focus();
+    }, ms + 250);
+  };
 
   const submit = async () => {
-    const ok = await ctx.auth.verifyTotpCode(input.value);
-    if (ok) { onSuccess(); return; }
-    err.textContent = 'That code is not right. Check the app and try again.';
-    err.classList.add('show');
-    input.value = '';
-    input.focus();
+    if (busy || input.disabled) return;
+    busy = true;
+    try {
+      const res = await ctx.auth.verifyTotpCode(input.value);
+      if (res.ok) { onSuccess(); return; }
+      input.value = '';
+      if (res.locked) lockFor(res.waitMs, res.message);
+      else { showErr(res.message); input.focus(); }
+    } finally {
+      busy = false;
+    }
   };
+  verify.addEventListener('click', submit);
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
   input.addEventListener('input', () => {
     input.value = input.value.replace(/\D/g, '').slice(0, 6);
     if (input.value.length === 6) submit();
   });
 
-  setTimeout(() => input.focus(), 50);
+  setTimeout(() => {
+    const lock = ctx.auth.totpThrottle?.status();
+    if (lock?.locked) lockFor(lock.waitMs, 'Too many wrong codes. Wait a moment and try again.');
+    else input.focus();
+  }, 50);
 
-  return el('div.screen', {}, [
-    el('div.screen-inner.narrow', {}, [
-      el('div.card.stack.center', {}, [
-        el('div', { text: '🔢', style: { fontSize: '2.4rem' } }),
-        pending && el('div.row', { style: { justifyContent: 'center' } }, [avatarNode(pending.avatar, { size: 64, badge: false })]),
-        el('h2', { text: pending ? `${pending.name}, enter your 6-digit code` : 'Enter your 6-digit code' }),
-        el('p.muted', { text: 'Open your authenticator app and type the current code for Beat The Hazard.' }),
-        input,
-        err,
-        el('button.btn.btn-primary.btn-block', { text: 'Verify', on: { click: submit } }),
-        canUsePasskey && el('button.btn.btn-block', {
-          text: '🔐 Use my passkey instead',
-          on: {
-            click: async () => {
-              try { await ctx.actions.signInWithPasskey(); }
-              catch (e) { err.textContent = e.message; err.classList.add('show'); }
-            },
-          },
-        }),
-        el('button.btn.btn-ghost.btn-sm', {
-          text: pending ? '← Back' : 'Sign out',
-          on: { click: () => (onCancel ? onCancel() : ctx.actions.signOut()) },
-        }),
-      ]),
-    ]),
-  ]);
+  return authShell(el('div.card.auth-card.stack.center', {}, [
+    el('div.success-mark.info', {}, [icon('shield', { size: 48 })]),
+    pending && el('div.row', { style: { justifyContent: 'center' } }, [avatarNode(pending.avatar, { size: 64, badge: false })]),
+    el('h2', { text: pending ? `${pending.name}, enter your 6-digit code` : 'Enter your 6-digit code' }),
+    el('p.muted', { text: 'Open your authenticator app and type the current code for Beat The Hazard.' }),
+    input,
+    err,
+    verify,
+    canUsePasskey && el('button.btn.btn-secondary.btn-block', {
+      type: 'button',
+      on: {
+        click: async () => {
+          try { await ctx.actions.signInWithPasskey(); }
+          catch (e) { showErr(e.message); }
+        },
+      },
+    }, [icon('key', { size: 18 }), 'Use my passkey instead']),
+    el('button.btn.btn-ghost.btn-sm', {
+      type: 'button',
+      text: pending ? 'Back' : 'Sign out',
+      on: { click: () => (onCancel ? onCancel() : ctx.actions.signOut()) },
+    }),
+  ]));
 }
 
 /* ================================================================== *
@@ -384,7 +469,7 @@ export function securityPanel(ctx, caps, rerender) {
   const pk = caps.passkey;
   const passkeyRows = auth.security.passkeys.map((cred) =>
     el('div.cred-row', {}, [
-      el('span.cred-icon', { text: '🔐' }),
+      el('span.cred-icon', {}, [icon('key', { size: 20 })]),
       el('div', { style: { flex: '1' } }, [
         el('div.cred-name', { text: cred.deviceLabel || 'Passkey' }),
         el('div.cred-meta', {
@@ -407,7 +492,7 @@ export function securityPanel(ctx, caps, rerender) {
   );
 
   rows.push(el('div.card', {}, [
-    el('h3', { text: '🔐 Passkeys' }),
+    el('h3.with-ic', {}, [icon('key'), 'Passkeys']),
     el('p.set-desc', {
       text: 'Sign in with your fingerprint, face or device PIN instead of typing anything. ' +
         'The key never leaves this device.',
@@ -433,9 +518,9 @@ export function securityPanel(ctx, caps, rerender) {
   /* ---- TOTP ---- */
   rows.push(auth.hasTotp
     ? el('div.card.mt', {}, [
-        el('h3', { text: '🔢 Authenticator app' }),
+        el('h3.with-ic', {}, [icon('shield'), 'Two-factor authentication']),
         el('div.cred-row', {}, [
-          el('span.cred-icon', { text: '✅' }),
+          el('span.cred-icon.ok', {}, [icon('check', { size: 20 })]),
           el('div', { style: { flex: '1' } }, [
             el('div.cred-name', { text: 'Two-factor is on' }),
             el('div.cred-meta', {
@@ -453,7 +538,7 @@ export function securityPanel(ctx, caps, rerender) {
         ]),
       ])
     : el('div.card.mt', {}, [
-        el('h3', { text: '🔢 Authenticator app' }),
+        el('h3.with-ic', {}, [icon('shield'), 'Two-factor authentication']),
         el('p.set-desc', {
           text: 'Add a 6-digit code from Google Authenticator, Authy, 1Password or any ' +
             'other TOTP app as a second step at sign-in.',
@@ -464,110 +549,7 @@ export function securityPanel(ctx, caps, rerender) {
         }),
       ]));
 
-  /* ---- social provider setup ---- */
-  rows.push(providerSetupPanel(ctx, caps, rerender));
-
   return rows;
-}
-
-/**
- * Let the user switch on Google / Facebook / GitHub without editing .env or
- * redeploying. A Client ID is a public identifier by design, so it is safe to
- * paste into the app and keep in localStorage; no secret is ever entered here.
- */
-function providerSetupPanel(ctx, caps, rerender) {
-  const stored = getStoredAuthConfig();
-
-  const field = (key, label, placeholder, help, link) => {
-    const input = el('input', {
-      type: 'text', value: stored[key] ?? '', placeholder,
-      id: `cfg-${key}`, autocomplete: 'off', spellcheck: false,
-    });
-    const fromBuild = isFromBuild(key);
-    return {
-      key,
-      input,
-      node: el('div', { style: { marginTop: '0.9rem' } }, [
-        el('label', {
-          for: `cfg-${key}`, text: label,
-          style: { textTransform: 'none', letterSpacing: 'normal', fontSize: '0.82rem', color: 'var(--text)' },
-        }),
-        el('div.set-desc', { style: { marginBottom: '0.4rem' } }, [
-          help,
-          link ? ' ' : '',
-          link ? el('a', {
-            href: link, target: '_blank', rel: 'noopener noreferrer',
-            text: 'Open console ↗',
-            style: { color: 'var(--accent)', fontWeight: '700' },
-          }) : '',
-        ]),
-        input,
-        fromBuild ? el('div.set-desc', { text: 'Currently supplied by .env at build time.' }) : '',
-      ]),
-    };
-  };
-
-  const fields = [
-    field('googleClientId', 'Google Client ID',
-      'xxxxxxxx.apps.googleusercontent.com',
-      'Credentials → Create OAuth client ID → Web application. Add this site under "Authorised JavaScript origins". No secret needed.',
-      'https://console.cloud.google.com/apis/credentials'),
-    field('facebookAppId', 'Facebook App ID',
-      '1234567890123456',
-      'Create an app → add "Facebook Login" → add this site to Valid OAuth Redirect URIs.',
-      'https://developers.facebook.com/apps'),
-    field('githubClientId', 'GitHub Client ID',
-      'Iv1.xxxxxxxxxxxx',
-      'Register an OAuth App. On its own this is not enough — GitHub also needs the endpoint below.',
-      'https://github.com/settings/developers'),
-    field('githubTokenEndpoint', 'GitHub token endpoint (server)',
-      'https://your-worker.workers.dev/github',
-      'GitHub cannot finish sign-in in a browser: the exchange needs the client secret and its endpoint sends no CORS headers. Deploy the small function from the README (GitHub sign-in) and paste its URL here.',
-      null),
-  ];
-
-  const origin = el('code', {
-    text: window.location.origin,
-    style: { color: 'var(--accent)', userSelect: 'all', wordBreak: 'break-all' },
-  });
-
-  return el('div.card.mt', {}, [
-    el('h3', { text: '🌐 Social sign-in' }),
-    el('p.set-desc', {
-      text: 'Turn on the buttons on the login screen. These are public identifiers, ' +
-        'so they are safe to paste here — you are never asked for a secret.',
-    }),
-    el('div.auth-note.small', {}, [
-      'When a provider asks for an authorised origin or redirect URL, use: ', origin,
-    ]),
-    ...fields.map((f) => f.node),
-    el('div.row.mt', {}, [
-      el('button.btn.btn-primary', {
-        text: 'Save & enable',
-        on: {
-          click: async () => {
-            const patch = {};
-            for (const f of fields) patch[f.key] = f.input.value;
-            setAuthConfig(patch);
-            await ctx.actions.refreshAuthCaps();
-            ctx.actions.toast('Sign-in providers updated', 'ok');
-            rerender();
-          },
-        },
-      }),
-      el('button.btn.btn-ghost', {
-        text: 'Clear all',
-        on: {
-          click: async () => {
-            if (!confirm('Remove the saved sign-in provider settings?')) return;
-            setAuthConfig({ googleClientId: '', facebookAppId: '', githubClientId: '', githubTokenEndpoint: '' });
-            await ctx.actions.refreshAuthCaps();
-            rerender();
-          },
-        },
-      }),
-    ]),
-  ]);
 }
 
 /* ================================================================== *
