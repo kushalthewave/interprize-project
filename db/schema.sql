@@ -24,7 +24,10 @@ create table if not exists public.profiles (
 );
 
 comment on table public.profiles is
-  'One row per account. Created automatically when someone signs up.';
+  'One row per account. Created automatically when someone signs up. '
+  'last_seen is updated on sign in, which is all the activity tracking this '
+  'product needs: no device labels, no IP addresses, nothing to identify a '
+  'machine.';
 
 -- A new sign up gets a profile without the game having to ask for one.
 create or replace function public.handle_new_user()
@@ -51,24 +54,7 @@ create trigger on_auth_user_created
   for each row execute function public.handle_new_user();
 
 -- ─────────────────────────────────────────────────────────────────────────
--- 2. Sign ins
---
--- Deliberately coarse: a label like "Windows, Chrome" and a timestamp, never
--- a fingerprint or an IP address. Enough for "where have I signed in from",
--- not enough to track a person.
--- ─────────────────────────────────────────────────────────────────────────
-create table if not exists public.login_events (
-  id        bigserial   primary key,
-  user_id   uuid        not null references public.profiles (id) on delete cascade,
-  device    text,                      -- 'Windows, Chrome'
-  at        timestamptz not null default now()
-);
-
-create index if not exists login_events_user_at
-  on public.login_events (user_id, at desc);
-
--- ─────────────────────────────────────────────────────────────────────────
--- 3. Finished rounds
+-- 2. Finished rounds
 -- ─────────────────────────────────────────────────────────────────────────
 create table if not exists public.sessions (
   id               uuid        primary key default gen_random_uuid(),
@@ -97,7 +83,7 @@ create index if not exists sessions_user_played
   on public.sessions (user_id, played_at desc);
 
 -- ─────────────────────────────────────────────────────────────────────────
--- 4. What happened to each hazard in that round
+-- 3. What happened to each hazard in that round
 --
 -- This is the table a safety officer actually wants: it answers "which
 -- hazards does everybody miss".
@@ -118,7 +104,7 @@ create index if not exists session_hazards_session on public.session_hazards (se
 create index if not exists session_hazards_hazard  on public.session_hazards (hazard_id, status);
 
 -- ─────────────────────────────────────────────────────────────────────────
--- 5. Who is an admin
+-- 4. Who is an admin
 -- ─────────────────────────────────────────────────────────────────────────
 create or replace function public.is_admin()
 returns boolean
@@ -134,10 +120,9 @@ as $$
 $$;
 
 -- ─────────────────────────────────────────────────────────────────────────
--- 6. Row level security
+-- 5. Row level security
 -- ─────────────────────────────────────────────────────────────────────────
 alter table public.profiles       enable row level security;
-alter table public.login_events   enable row level security;
 alter table public.sessions       enable row level security;
 alter table public.session_hazards enable row level security;
 
@@ -157,18 +142,6 @@ create policy profiles_update_own on public.profiles
   with check (id = auth.uid() and role = (select role from public.profiles p where p.id = auth.uid()));
 create policy profiles_delete_own on public.profiles
   for delete using (id = auth.uid());
-
--- Sign ins: write and read your own; an admin reads all.
-drop policy if exists login_insert_own  on public.login_events;
-drop policy if exists login_select_own  on public.login_events;
-drop policy if exists login_select_admin on public.login_events;
-
-create policy login_insert_own on public.login_events
-  for insert with check (user_id = auth.uid());
-create policy login_select_own on public.login_events
-  for select using (user_id = auth.uid());
-create policy login_select_admin on public.login_events
-  for select using (public.is_admin());
 
 -- Rounds: write and read your own, delete your own; an admin reads all.
 drop policy if exists sessions_insert_own  on public.sessions;
@@ -205,7 +178,7 @@ create policy hazards_delete_own on public.session_hazards
 -- deleted by the person it belongs to.
 
 -- ─────────────────────────────────────────────────────────────────────────
--- 7. Views for the admin page
+-- 6. Views for the admin page
 -- ─────────────────────────────────────────────────────────────────────────
 create or replace view public.admin_overview as
   select
@@ -215,14 +188,12 @@ create or replace view public.admin_overview as
     p.role,
     p.created_at,
     p.last_seen,
-    count(distinct s.id)                            as rounds_played,
-    coalesce(max(s.score), 0)                       as best_score,
-    coalesce(round(avg(s.score)), 0)                as average_score,
-    max(s.played_at)                                as last_played,
-    count(distinct l.id)                            as sign_ins
+    count(s.id)                      as rounds_played,
+    coalesce(max(s.score), 0)        as best_score,
+    coalesce(round(avg(s.score)), 0) as average_score,
+    max(s.played_at)                 as last_played
   from public.profiles p
-  left join public.sessions s     on s.user_id = p.id
-  left join public.login_events l on l.user_id = p.id
+  left join public.sessions s on s.user_id = p.id
   group by p.id;
 
 create or replace view public.hazard_misses as
@@ -246,7 +217,7 @@ alter view public.admin_overview set (security_invoker = on);
 alter view public.hazard_misses  set (security_invoker = on);
 
 -- ─────────────────────────────────────────────────────────────────────────
--- 8. After creating the admin user in Authentication → Users, run this once:
+-- 7. After creating the admin user in Authentication → Users, run this once:
 --
 --   update public.profiles set role = 'admin' where email = 'kushaln717@gmail.com';
 --
