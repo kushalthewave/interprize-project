@@ -20,12 +20,20 @@ import { getAvatar } from './data/avatars.js';
 import { setColourMode, palette } from './data/palette.js';
 import { initOffline, onOfflineChange } from './services/offline.js';
 import { enforceTopLevel } from './services/security.js';
+import { recordSession, flushOnReconnect, flushQueue } from './services/db/sync.js';
+
+/** Stamped into every stored round, so a bug report says which build. */
+const APP_VERSION = __APP_VERSION__;
 
 /** Where a training round in progress is kept, so a closed tab can resume it. */
 const CHECKPOINT_KEY = 'beat-the-hazard:checkpoint:v1';
 const AIM_ASSIST = { off: { size: 1, friction: 1 }, low: { size: 1.25, friction: 0.7 }, high: { size: 1.55, friction: 0.5 } };
 
 function boot() {
+  // Rounds that could not be uploaded earlier go up as soon as we are online.
+  flushQueue().catch(() => {});
+  flushOnReconnect();
+
   const canvas = document.getElementById('scene');
   if (!canvas) throw new Error('#scene canvas missing');
 
@@ -494,6 +502,10 @@ function boot() {
     audio.setMusicDuck(false);
     clearCheckpoint();
     audio.say(`Round over. ${s.score} points. ${s.rank.label}.`, { interrupt: true });
+    // Upload the round if there is an account and a connection. It queues on
+    // this device otherwise, and a failure never reaches the trainee: the
+    // result is already saved in the profile either way.
+    recordSession(s, { appVersion: APP_VERSION }).catch(() => {});
   });
 
   // Auto-pause when the tab is hidden - a reaction clock running in a

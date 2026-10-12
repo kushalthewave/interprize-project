@@ -7,6 +7,7 @@ import { el, mount } from './dom.js';
 import { bus, EV } from '../core/EventBus.js';
 import { HUD } from './HUD.js';
 import * as Screens from './Screens.js';
+import { historyScreen } from './HistoryScreen.js';
 import * as Auth from './AuthScreens.js';
 import * as SettingsScreen from './SettingsScreen.js';
 import { ACHIEVEMENTS } from '../data/config.js';
@@ -311,6 +312,7 @@ export class UIManager {
       case 'results': node = Screens.resultsScreen(c, params); break;
       case 'profile': node = Screens.profileScreen(c); break;
       case 'progress': node = Screens.progressScreen(c); break;
+      case 'history': node = historyScreen(c); break;
       case 'guide': node = Screens.guideScreen(c); break;
       case 'settings': node = SettingsScreen.settingsScreen(c, params); break;
       case 'game': node = null; break;
