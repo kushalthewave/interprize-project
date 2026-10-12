@@ -3,6 +3,7 @@ import { serviceWorker } from './scripts/sw-plugin.mjs';
 import { csp } from './scripts/csp.mjs';
 
 import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 /** Stamped into stored results so a report says which build produced them. */
 const version = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version;
@@ -19,6 +20,12 @@ export default defineConfig({
     sourcemap: false,
     chunkSizeWarningLimit: 900,
     rollupOptions: {
+      // Two pages: the game, and the supervisor's records page. The records
+      // page loads none of the 3D engine.
+      input: {
+        main: resolve(import.meta.dirname, 'index.html'),
+        admin: resolve(import.meta.dirname, 'admin.html'),
+      },
       output: {
         manualChunks(id) {
           if (id.includes('node_modules/three')) return 'three';

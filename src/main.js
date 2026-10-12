@@ -21,6 +21,7 @@ import { setColourMode, palette } from './data/palette.js';
 import { initOffline, onOfflineChange } from './services/offline.js';
 import { enforceTopLevel } from './services/security.js';
 import { recordSession, flushOnReconnect, flushQueue } from './services/db/sync.js';
+import { db } from './services/db/client.js';
 
 /** Stamped into every stored round, so a bug report says which build. */
 const APP_VERSION = __APP_VERSION__;
@@ -120,8 +121,27 @@ function boot() {
      * "Account created" → choose an avatar → into the game. A trainee who is
      * only adding an email to an older profile goes straight back to the menu.
      */
-    async createAccount(plan, { replace = false } = {}) {
+    async createAccount(plan, { replace = false, password = '' } = {}) {
+      // With a results service configured the account is created there first:
+      // if the email is taken or the password is too short, nothing has been
+      // written on this device yet and the trainee just fixes the field.
+      if (db.configured) {
+        try {
+          await db.signUp({ email: plan.email, password, name: plan.name });
+        } catch (err) {
+          // A rejected email or a weak password is the trainee's to fix. A
+          // service that cannot be reached is not: training must never wait
+          // on a network, so the account is made on this device and the
+          // rounds queue until there is a connection.
+          if (err?.code !== 'offline' && err?.status !== 0) throw err;
+          bus.emit(EV.TOAST, {
+            message: 'Created on this computer. It will sync when you are back online.',
+            kind: 'warn',
+          });
+        }
+      }
       const identity = auth.createAccount(plan, { replace });
+      flushQueue().catch(() => {});
       if (plan.completing) {
         await completeSignIn(identity);
         return;
@@ -129,8 +149,31 @@ function boot() {
       await completeSignIn(identity, () => ui.go('signup-done', { name: identity.name }));
     },
 
-    /** Log in with the email of the account saved on this device. */
-    async logIn(email) {
+    /**
+     * Log in. With a results service the account lives there, so the password
+     * is checked by the server and the history follows the trainee to any
+     * computer. Without one, it is the account saved on this device.
+     */
+    async logIn(email, { password = '' } = {}) {
+      if (db.configured) {
+        const session = await db.signIn({ email, password })
+          .catch((err) => {
+            // Offline: fall back to the account saved on this computer, so a
+            // dropped connection cannot stop someone training.
+            if (err?.code === 'offline' && auth.profile.account) return null;
+            throw err;
+          });
+        if (session === null) {
+          await completeSignIn(auth.identityForLogin(email));
+          return;
+        }
+        const name = session?.user?.name || auth.profile.name || 'Trainee';
+        flushQueue().catch(() => {});
+        await completeSignIn({
+          name, avatar: auth.profile.avatar, provider: 'account', email, method: 'account',
+        });
+        return;
+      }
       const identity = auth.identityForLogin(email);
       await completeSignIn(identity);
     },

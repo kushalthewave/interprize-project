@@ -13,6 +13,7 @@
  * say so rather than implying more.
  */
 import { el, mount } from './dom.js';
+import { db } from '../services/db/client.js';
 import { qrToCanvas } from '../services/auth/qr.js';
 import { formatSecret } from '../services/auth/base32.js';
 import { totp, secondsRemaining } from '../services/auth/totp.js';
@@ -113,6 +114,21 @@ function field({ id, label, type = 'text', maxLength, autocomplete, placeholder 
   return { input, setError, node: el('div.field', {}, [el('label', { for: id, text: label }), input, err]) };
 }
 
+/**
+ * What is wrong with this password, or '' if nothing is.
+ *
+ * Eight characters rather than the service's own six: a shared warehouse PC
+ * is exactly where a four-character password gets watched over a shoulder.
+ */
+export function passwordProblem(value) {
+  const pw = String(value ?? '');
+  if (!pw) return 'Choose a password.';
+  if (pw.length < 8) return 'Your password needs at least 8 characters.';
+  if (pw.length > 72) return 'That password is too long.';
+  if (!/[a-zA-Z]/.test(pw) || !/[0-9]/.test(pw)) return 'Use at least one letter and one number.';
+  return '';
+}
+
 function formError() {
   const node = el('div.auth-error', { role: 'alert' });
   return {
@@ -173,13 +189,22 @@ export function signupScreen(ctx, { completing = false } = {}) {
     id: 'su-email', label: 'Email address', type: 'email', maxLength: EMAIL_MAX, autocomplete: 'email',
     placeholder: 'name@example.com', inputMode: 'email', autocapitalize: 'off',
   });
+  // The password belongs to the account in the results service. Builds with
+  // no service configured keep the device-only account and never ask for one.
+  const wantsPassword = db.configured && !completing;
+  const password = wantsPassword
+    ? field({
+        id: 'su-password', label: 'Password', type: 'password', maxLength: 72,
+        autocomplete: 'new-password', placeholder: 'At least 8 characters',
+      })
+    : null;
   const error = formError();
   const conflictHost = el('div.conflict-host');
   const submit = el('button.btn.btn-primary.btn-lg.btn-block', { type: 'submit', text: completing ? 'Save and continue' : 'Create account' });
 
   const create = async (plan, replace) => {
     try {
-      await ctx.actions.createAccount(plan, { replace });
+      await ctx.actions.createAccount(plan, { replace, password: password?.input.value ?? '' });
     } catch (e) {
       error.show(e.message);
     }
@@ -197,6 +222,15 @@ export function signupScreen(ctx, { completing = false } = {}) {
     // Show the cleaned-up values, so what is saved is what they see.
     name.input.value = plan.name;
     email.input.value = plan.email;
+
+    if (password) {
+      const pw = passwordProblem(password.input.value);
+      if (pw) {
+        password.setError(pw);
+        password.input.focus();
+        return;
+      }
+    }
 
     if (plan.conflict === 'same-email') {
       mount(conflictHost, el('div.auth-note.stack', {}, [
@@ -226,6 +260,8 @@ export function signupScreen(ctx, { completing = false } = {}) {
   const form = el('form.stack', { noValidate: true, on: { submit: onSubmit } }, [
     name.node,
     email.node,
+    password?.node,
+    password && el('p.faint', { text: 'Your password lets you log in on any computer and see your own training history.' }),
     error.node,
     conflictHost,
     submit,
@@ -311,6 +347,12 @@ export function loginScreen(ctx, caps = {}, { email: prefill = '' } = {}) {
     id: 'li-email', label: 'Email address', type: 'email', maxLength: EMAIL_MAX, autocomplete: 'email',
     placeholder: 'name@example.com', inputMode: 'email', autocapitalize: 'off', value: prefill,
   });
+  const password = db.configured
+    ? field({
+        id: 'li-password', label: 'Password', type: 'password', maxLength: 72,
+        autocomplete: 'current-password', placeholder: 'Your password',
+      })
+    : null;
   const error = formError();
   const submit = el('button.btn.btn-primary.btn-lg.btn-block', { type: 'submit', text: 'Log in' });
 
@@ -333,7 +375,7 @@ export function loginScreen(ctx, caps = {}, { email: prefill = '' } = {}) {
   const onSubmit = guarded(submit, async () => {
     error.show('');
     try {
-      await ctx.actions.logIn(email.input.value);
+      await ctx.actions.logIn(email.input.value, { password: password?.input.value ?? '' });
     } catch (e) {
       error.show(e.message);
       refreshLock();
@@ -362,7 +404,7 @@ export function loginScreen(ctx, caps = {}, { email: prefill = '' } = {}) {
       avatarNode(acct.avatar, { size: 44, badge: false }),
       el('div', {}, [el('div.who-name', { text: acct.name }), el('div.who-role', { text: 'Saved on this device' })]),
     ]),
-    el('form.stack', { noValidate: true, on: { submit: onSubmit } }, [email.node, error.node, submit]),
+    el('form.stack', { noValidate: true, on: { submit: onSubmit } }, [email.node, password?.node, error.node, submit]),
     passkey && el('div.auth-divider', {}, [el('span', { text: 'or' })]),
     passkey,
     el('p.auth-switch', {}, [
