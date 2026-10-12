@@ -6,12 +6,20 @@ on:
     branches: [main]
   pull_request:
 
+# Checking out and testing needs nothing but read access. Without this block a
+# workflow gets whatever the repository default happens to be, which is more.
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      # Actions are pinned to a commit, not a tag: a tag can be moved to point
+      # at different code by whoever owns the action. The comment says which
+      # release the commit is, so the pin can be read and updated by a human.
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: 22
           cache: npm
@@ -22,3 +30,11 @@ jobs:
         run: npm test
       - name: Production build
         run: npm run build
+
+      # The game ships one runtime dependency, so an advisory against it
+      # matters. Dev-only advisories are reported but do not fail the run,
+      # because a build tool flaw is not shipped to a trainee's browser.
+      - name: Audit runtime dependencies
+        run: npm audit --omit=dev --audit-level=high
+      - name: Audit build dependencies (report only)
+        run: npm audit || true

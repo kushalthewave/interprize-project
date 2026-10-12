@@ -1,0 +1,35 @@
+# Dependency updates.
+#
+# The game has one runtime dependency (Three.js) and a small build toolchain,
+# and all of them are pinned by package-lock.json with integrity hashes. That
+# protects against a package changing underneath us, but it does nothing about
+# a flaw found in the version we pinned - someone has to notice and move.
+# Dependabot is that someone: it opens a pull request when a dependency has a
+# newer version, and an immediate one when an advisory affects us.
+#
+# Actions are watched too, because they are pinned to commit SHAs here and a
+# pinned SHA never updates itself.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      # One pull request for the build tools rather than four.
+      build-tooling:
+        patterns:
+          - vite
+          - vitest
+          - jsqr
+    commit-message:
+      prefix: deps
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: deps

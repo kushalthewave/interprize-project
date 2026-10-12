@@ -135,7 +135,7 @@ describe('Auth - logging in', () => {
     const { profile, auth, clock } = mk();
     signUp(auth);
     profile.signOut();
-    expect(() => auth.identityForLogin('someone@example.com')).toThrow(/no account/i);
+    expect(() => auth.identityForLogin('someone@example.com')).toThrow(/could not sign you in/i);
     expect(profile.isSignedIn).toBe(false);
   });
 
@@ -151,7 +151,7 @@ describe('Auth - logging in', () => {
     const { profile, auth, clock } = mk();
     signUp(auth);
     profile.signOut();
-    for (let i = 0; i < 4; i++) expect(() => auth.identityForLogin(`x${i}@example.com`)).toThrow(/no account/i);
+    for (let i = 0; i < 4; i++) expect(() => auth.identityForLogin(`x${i}@example.com`)).toThrow(/could not sign you in/i);
     expect(() => auth.identityForLogin('x5@example.com')).toThrow(/Too many attempts/);
     // Even the right email is refused while locked.
     expect(() => auth.identityForLogin('kushal@example.com')).toThrow(/Too many attempts/);
@@ -163,7 +163,7 @@ describe('Auth - logging in', () => {
 
   it('keeps the signed-in trainee out of the log-in path entirely when there is no account', () => {
     const { auth, clock } = mk();
-    expect(() => auth.identityForLogin('anyone@example.com')).toThrow(/no account/i);
+    expect(() => auth.identityForLogin('anyone@example.com')).toThrow(/could not sign you in/i);
   });
 });
 

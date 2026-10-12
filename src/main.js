@@ -19,6 +19,7 @@ import { actionForKey, presetPatch, detectPreset, isPresetKey, keyLabel } from '
 import { getAvatar } from './data/avatars.js';
 import { setColourMode, palette } from './data/palette.js';
 import { initOffline, onOfflineChange } from './services/offline.js';
+import { enforceTopLevel } from './services/security.js';
 
 /** Where a training round in progress is kept, so a closed tab can resume it. */
 const CHECKPOINT_KEY = 'beat-the-hazard:checkpoint:v1';
@@ -564,14 +565,31 @@ function hasWebGL() {
   }
 }
 
+/**
+ * The last-resort error screen.
+ *
+ * Built node by node with textContent rather than innerHTML: the title and
+ * message can carry text from a browser error, and a message is not the place
+ * to find out that some engine quotes HTML into its error strings.
+ */
 function showFatal(title, message) {
   const d = document.createElement('div');
   d.style.cssText =
     'position:fixed;inset:0;display:grid;place-items:center;padding:2rem;background:#0b0f14;color:#e9eef4;font-family:system-ui,sans-serif;z-index:999';
-  d.innerHTML = `<div style="max-width:520px;text-align:center">
-    <h1 style="color:#f2b90c;margin:0 0 .8rem;font-size:1.5rem">${title}</h1>
-    <p style="color:#97a4b2;line-height:1.6;margin:0">${message}</p>
-  </div>`;
+
+  const box = document.createElement('div');
+  box.style.cssText = 'max-width:520px;text-align:center';
+
+  const h = document.createElement('h1');
+  h.style.cssText = 'color:#f2b90c;margin:0 0 .8rem;font-size:1.5rem';
+  h.textContent = title;
+
+  const p = document.createElement('p');
+  p.style.cssText = 'color:#97a4b2;line-height:1.6;margin:0';
+  p.textContent = message;
+
+  box.append(h, p);
+  d.append(box);
   document.body.append(d);
 }
 
@@ -579,8 +597,13 @@ function showFatal(title, message) {
 window.addEventListener('error', (e) => console.error('[Uncaught]', e.error ?? e.message));
 window.addEventListener('unhandledrejection', (e) => console.error('[Unhandled rejection]', e.reason));
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', boot);
-} else {
-  boot();
+// Refuse to run inside another site's frame. A meta Content-Security-Policy
+// cannot express frame-ancestors and GitHub Pages sends no X-Frame-Options,
+// so this is the only clickjacking defence available to us.
+if (enforceTopLevel()) {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
 }
