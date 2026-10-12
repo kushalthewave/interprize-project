@@ -22,6 +22,11 @@ import { initOffline, onOfflineChange } from './services/offline.js';
 import { enforceTopLevel } from './services/security.js';
 import { recordSession, flushOnReconnect, flushQueue } from './services/db/sync.js';
 import { db } from './services/db/client.js';
+import { deleteServerData } from './services/db/account.js';
+import { createIdleLock } from './services/idle.js';
+
+/** The idle watch, created in boot() and reset whenever someone signs in. */
+let idleLock = null;
 
 /** Stamped into every stored round, so a bug report says which build. */
 const APP_VERSION = __APP_VERSION__;
@@ -205,8 +210,26 @@ function boot() {
     },
 
     signOut() {
+      idleLock?.reset();
       auth.signOut();
       refreshCaps().then(() => ui.go('welcome'));
+    },
+
+    /**
+     * Delete the account: this device first, then the training record.
+     *
+     * This device first on purpose. If the network call fails we can still
+     * tell the trainee exactly what is gone and what is not, which is better
+     * than leaving a half-deleted account behind a spinner.
+     */
+    async deleteEverything() {
+      idleLock?.reset();
+      const outcome = await deleteServerData();
+      profile.wipe();
+      clearCheckpoint();
+      await refreshCaps();
+      ui.go('welcome');
+      return outcome;
     },
 
     async startTrain(envId) {
@@ -284,6 +307,7 @@ function boot() {
     profile,
     auth,
     actions,
+    version: APP_VERSION,
     graphics,
     engine,
     player,
@@ -550,6 +574,26 @@ function boot() {
     // result is already saved in the profile either way.
     recordSession(s, { appVersion: APP_VERSION }).catch(() => {});
   });
+
+  // Shared warehouse PC: after a spell with no input, pause a round in
+  // progress and then return to the sign-in screen, so the next person at the
+  // keyboard does not land inside someone else's profile.
+  idleLock = createIdleLock({
+    isPlaying: () => game.state === STATE.PLAYING,
+    pauseMs: () => 2 * 60_000,
+    lockMs: () => {
+      const choice = profile.settings?.idleLock ?? '5';
+      return choice === 'off' ? 0 : Number(choice) * 60_000;
+    },
+    onPause: () => {
+      if (game.state === STATE.PLAYING) game.pause();
+    },
+    onLock: () => {
+      actions.signOut();
+      ui.toast('Locked after a spell with no activity', '');
+    },
+  });
+  idleLock.start();
 
   // Auto-pause when the tab is hidden - a reaction clock running in a
   // background tab would be unfair and confusing.

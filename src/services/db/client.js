@@ -243,6 +243,20 @@ export class DbClient {
     return (await this._call(`/rest/v1/sessions?${q}`)) ?? [];
   }
 
+  /**
+   * Delete this account's data: the profile row, and every round with it
+   * through the foreign key cascade. The policies allow a trainee to delete
+   * their own rows and nothing else, so this can only ever remove your own.
+   */
+  async deleteMyData() {
+    await this.ensureFresh();
+    if (!this.userId) return;
+    await this._call(`/rest/v1/profiles?id=eq.${this.userId}`, {
+      method: 'DELETE',
+      headers: { Prefer: 'return=minimal' },
+    });
+  }
+
   /** Mark this account as active now. Never worth failing a sign in over. */
   async touchLastSeen() {
     if (!this.userId) return;
