@@ -178,9 +178,12 @@ export class AuthManager {
     const acct = this.profile.account;
     if (!acct || !timingSafeEqual(acct.email, e.value)) {
       const st = this.loginThrottle.fail();
+      // One message whether the email is unknown or simply the wrong one.
+      // Saying "there is no account with that email" tells anyone trying
+      // addresses which of them belongs to a colleague on this machine.
       throw new Error(st.locked
         ? `Too many attempts. Try again in ${describeWait(st.waitMs)}.`
-        : 'There is no account with that email on this device.');
+        : 'We could not sign you in with those details.');
     }
     this.loginThrottle.succeed();
     return { name: acct.name, avatar: acct.avatar, provider: 'local', email: acct.email, method: 'account' };
