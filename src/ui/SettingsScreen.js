@@ -22,6 +22,57 @@ import { avatarNode } from './avatars.js';
 
 let lastTab = 'video';
 
+/**
+ * Delete my account and all data.
+ *
+ * Separate from "reset progress": that keeps the account and clears the
+ * scores, this removes the person. Typing DELETE rather than clicking a
+ * confirm box, because nothing can be recovered afterwards - there is no
+ * password reset email for the copy held on this device.
+ */
+function deleteCard(ctx) {
+  const confirmBox = el('input', {
+    type: 'text', id: 'del-confirm', autocomplete: 'off', placeholder: 'DELETE',
+    'aria-label': 'Type DELETE to confirm',
+  });
+  const result = el('div.auth-error', { role: 'alert' });
+  const button = el('button.btn.btn-danger.btn-block', {
+    type: 'button', text: 'Delete my account and all data', disabled: true,
+  });
+
+  confirmBox.addEventListener('input', () => {
+    button.disabled = confirmBox.value.trim().toUpperCase() !== 'DELETE';
+  });
+
+  button.addEventListener('click', async () => {
+    button.disabled = true;
+    button.textContent = 'Deleting...';
+    const outcome = await ctx.actions.deleteEverything();
+    if (outcome.server === 'failed') {
+      result.textContent = outcome.message;
+      result.classList.add('show');
+      button.textContent = 'Delete my account and all data';
+      return;
+    }
+    ctx.actions.toast(outcome.message, 'ok');
+  });
+
+  return el('div.card.stack.mt', {}, [
+    el('h3', { text: 'Delete my account' }),
+    el('p.faint', {
+      text: 'Removes your name, email, scores, achievements, passkeys and two-factor settings from '
+        + 'this computer, and your training record from the results service if you are signed in. '
+        + 'This cannot be undone.',
+    }),
+    el('div.field', {}, [
+      el('label', { for: 'del-confirm', text: 'Type DELETE to confirm' }),
+      confirmBox,
+    ]),
+    result,
+    button,
+  ]);
+}
+
 export function settingsScreen(ctx, params = {}) {
   const tab = params.tab ?? lastTab;
   lastTab = tab;
@@ -375,5 +426,7 @@ function accountTab(ctx, rerender) {
       }),
       el('button.btn.btn-secondary.btn-block', { type: 'button', on: { click: () => ctx.actions.signOut() } }, [icon('logout', { size: 18 }), 'Log out']),
     ]),
+    deleteCard(ctx),
+    el('p.faint.center.mt', { text: `Beat The Hazard ${ctx.version ?? ''}`.trim() }),
   ];
 }

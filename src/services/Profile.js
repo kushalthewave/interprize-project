@@ -400,4 +400,22 @@ export class Profile {
     this.data = { ...blankProfile(), name, avatar, authProvider, email, settings, security, remembered };
     this.save();
   }
+
+  /**
+   * Erase the person, not just their scores.
+   *
+   * The opposite choice to resetProgress: name, email, history, achievements,
+   * passkeys, two-factor and the remembered trainee all go, and the stored
+   * copy is removed rather than overwritten, so nothing is left in the
+   * browser to read afterwards. Settings stay, because they belong to the
+   * computer, not the person: the next trainee should not lose the
+   * accessibility options someone set up for that machine.
+   */
+  wipe() {
+    const { settings } = this.data;
+    this.adapter.clear();
+    this.data = { ...blankProfile(), settings };
+    this.save();
+    return this.data;
+  }
 }

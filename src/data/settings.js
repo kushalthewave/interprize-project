@@ -310,6 +310,11 @@ export const SCHEMA = [
     label: 'Auto-save', desc: 'Progress is always saved when a round ends. This also saves a training round while you play, so closing the tab does not lose it. Tests are never checkpointed — pausing a test by closing the tab would not be fair.',
     options: [opt('off', 'Only at the end of a round'), opt('30', 'Every 30 seconds'), opt('60', 'Every 60 seconds')] },
 
+  { key: 'idleLock', tab: 'gameplay', group: 'Rounds', type: 'select', default: '5',
+    label: 'Lock when idle',
+    desc: 'On a shared computer, returns to the sign-in screen after a spell of no input, so the next person does not land inside your profile. A round in progress pauses first and is still there when you sign back in.',
+    options: [opt('off', 'Never'), opt('2', 'After 2 minutes'), opt('5', 'After 5 minutes'), opt('10', 'After 10 minutes'), opt('15', 'After 15 minutes')] },
+
   { key: 'crosshairStyle', tab: 'gameplay', group: 'Crosshair', type: 'select', default: 'crossdot',
     label: 'Crosshair style', options: [opt('crossdot', 'Cross + dot'), opt('cross', 'Cross'), opt('dot', 'Dot'), opt('circle', 'Circle')] },
   { key: 'crosshairSize', tab: 'gameplay', group: 'Crosshair', type: 'range', default: 1, min: 0.6, max: 2, step: 0.1,
