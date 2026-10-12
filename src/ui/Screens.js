@@ -79,6 +79,7 @@ export function menuScreen(ctx) {
         tile('test', 'Test Mode', `${Math.round(TEST.timeLimitSeconds / 60)} minutes. No guide and no locations — find the hazards yourself. Scored and ranked.`, 'test-select', true),
         tile('warehouse', 'Environments', 'Three warehouses: general storage, dispatch bay and high-bay annexe.', 'environments'),
         tile('chart', 'Progress', 'Scores, ranks, achievements and your session history.', 'progress'),
+        tile('clock', 'Your history', 'Every round you have played, with the date, the score and the rank.', 'history'),
         tile('book', 'Hazard Guide', 'Reference for all 15 hazard types and their controls.', 'guide'),
         tile('settings', 'Settings', 'Audio, motion, accessibility and data.', 'settings'),
       ]),
