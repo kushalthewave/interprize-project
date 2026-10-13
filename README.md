@@ -443,7 +443,7 @@ email, or a passkey if one is set up, then the 2FA code if it is turned on.
 
 ---
 
-**The Code Crafters** · Built by Kushal Neupane.
+**The Codecrafters** · Built by Kushal Neupane.
 
 Built as a university project. Hazards are staged for teaching purposes and the
 safety guidance is educational, not a substitute for site-specific training or a

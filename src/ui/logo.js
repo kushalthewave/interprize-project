@@ -1,6 +1,6 @@
 /**
  * logo.js
- * The Beat The Hazard badge by The Code Crafters.
+ * The Beat The Hazard badge by The Codecrafters.
  *
  * Imported as an asset so Vite fingerprints it for the web build and inlines
  * it into the single offline file.
@@ -15,7 +15,7 @@ export { logoUrl };
 export function logo({ size = 120, className = '' } = {}) {
   const img = document.createElement('img');
   img.src = logoUrl;
-  img.alt = 'Beat The Hazard — The Code Crafters';
+  img.alt = 'Beat The Hazard — The Codecrafters';
   img.width = size;
   img.height = size;
   img.decoding = 'async';

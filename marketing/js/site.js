@@ -1,5 +1,5 @@
 /* ==================================================================
-   The Code Crafters — shared site script.
+   The Codecrafters — shared site script.
 
    Three small jobs and nothing else: the shadow under the sticky bar,
    the menu button on a narrow screen, and the year in the footer. The

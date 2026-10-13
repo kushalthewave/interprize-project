@@ -85,7 +85,7 @@ function authShell(card) {
         logo({ size: 200, className: 'auth-logo' }),
         el('h1', { text: 'Beat The Hazard' }),
         el('p', { text: 'Warehouse forklift and pedestrian safety training. Spot the hazards before they become accidents.' }),
-        el('div.team-line', { text: 'The Code Crafters · Built by Kushal Neupane' }),
+        el('div.team-line', { text: 'The Codecrafters · Built by Kushal Neupane' }),
       ]),
       el('div.auth-main', {}, [
         card,

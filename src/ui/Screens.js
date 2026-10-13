@@ -37,7 +37,7 @@ function brand(sub = 'Warehouse forklift and pedestrian safety training') {
     el('div.brand-text', {}, [
       el('h1', { text: 'Beat The Hazard' }),
       el('p', { text: sub }),
-      el('div.flagline', {}, [el('span.fl-team', { text: 'The Code Crafters' }), el('span.fl-dot', { text: '·' }), el('span', { text: 'Built by Kushal Neupane' })]),
+      el('div.flagline', {}, [el('span.fl-team', { text: 'The Codecrafters' }), el('span.fl-dot', { text: '·' }), el('span', { text: 'Built by Kushal Neupane' })]),
     ]),
   ]);
 }
