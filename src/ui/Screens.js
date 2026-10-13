@@ -16,6 +16,8 @@ import { Timer } from '../gameplay/Timer.js';
 import { icon } from './icons.js';
 import { logo } from './logo.js';
 import { validateName } from '../services/auth/validate.js';
+import { quizPanel } from './QuizPanel.js';
+import { categoryBreakdown, breakdownAdvice } from '../gameplay/breakdown.js';
 
 /** The signed-in trainee: portrait, name and role, as one block. */
 function whoAmI(p, { size = 56 } = {}) {
@@ -220,6 +222,9 @@ export function difficultyScreen(ctx, { environment }) {
  * ================================================================== */
 export function resultsScreen(ctx, { summary }) {
   const s = summary;
+  // What this round says about the trainee, by hazard type: a score says they
+  // did badly, this says what to work on.
+  const breakdown = categoryBreakdown(s);
   const env = ENVIRONMENTS.find((e) => e.meta.id === s.environment);
   const isTrain = s.mode === 'train';
   // Locations are a Train Mode aid. A test result names what you missed but
@@ -297,16 +302,23 @@ export function resultsScreen(ctx, { summary }) {
         el('div.card', {}, [
           el('h3', { text: 'How to improve' }),
           el('div.tips-list', {}, (s.tips ?? []).map((t) => el('div.tip-item', { text: t }))),
-          (s.improvementAreas ?? []).length > 0 && el('div.mt', {}, [
-            el('div.faint.mb', { text: 'Weakest hazard categories this round:' }),
-            el('div.row', { style: { flexWrap: 'wrap' } },
-              s.improvementAreas.map((a) =>
-                el('span.stat-pill', {
-                  text: `${HAZARD_CATEGORIES[a.category]?.label ?? a.category} (${a.count} missed)`,
-                }))),
+          breakdownAdvice(breakdown) && el('p.mt', { text: breakdownAdvice(breakdown) }),
+          breakdown.length > 0 && el('div.mt', {}, [
+            el('div.faint.mb', { text: 'By hazard type, worst first:' }),
+            el('div.cat-breakdown', {}, breakdown.map((r) => el('div.cat-row', {}, [
+              el('div.cat-name', { text: r.label }),
+              el('div.cat-bar', { title: `${r.found} of ${r.total} found` }, [
+                el('div.cat-fill', { style: { width: `${Math.round(r.rate * 100)}%` } }),
+              ]),
+              el('div.cat-num', { text: `${r.found}/${r.total}` }),
+            ]))),
           ]),
         ]),
       ]),
+
+      quizPanel(s, {
+        onFinish: (r) => ctx.actions?.toast?.(`Quiz: ${r.correct} of ${r.total} correct`, r.passed ? 'ok' : ''),
+      }),
 
       achNodes.length > 0 && el('div.card.mt', {}, [
         el('h3', { text: 'New achievements' }),
