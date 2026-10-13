@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Portfolio — Beat The Hazard | The Code Crafters</title>
+<meta name="description" content="A case study of Beat The Hazard: browser based 3D warehouse safety training built for a logistics operator. Fifteen hazards, three warehouses, a five minute test, and a results store a supervisor can trust.">
+<meta name="theme-color" content="#1877f2">
+<link rel="icon" href="img/logo-mark.png">
+<link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to content</a>
+
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="index.html">
+      <img src="img/logo-mark.png" alt="">
+      <span>The Code Crafters<small>Software that gets used</small></span>
+    </a>
+    <button class="menu-btn" aria-expanded="false" aria-controls="site-menu">Menu</button>
+    <nav id="site-menu">
+      <a href="index.html">Home</a>
+      <a href="services.html">Services</a>
+      <a href="portfolio.html" aria-current="page">Portfolio</a>
+      <a href="about.html">About</a>
+      <a href="contact.html">Contact</a>
+      <a class="btn btn-primary" href="https://kushalthewave.github.io/interprize-project/" target="_blank" rel="noopener">Play the demo</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+<div class="phead">
+  <div class="wrap">
+    <p class="crumb"><a href="index.html">Home</a> &rsaquo; Portfolio</p>
+    <h1>Portfolio</h1>
+    <p class="lead">
+      One product, built properly, against a real brief from a real client. We would
+      rather show you one thing you can open and use than a page of logos.
+    </p>
+  </div>
+</div>
+
+<!-- ============================ CASE ============================ -->
+<section id="case">
+  <div class="wrap">
+    <p class="eyebrow">Case study</p>
+    <h2>Beat The Hazard</h2>
+    <p class="lead" style="margin-bottom:28px">
+      Browser based 3D warehouse safety training for forklift and pedestrian risk, built
+      over twelve weeks for Sulav Graj of Vantec.
+    </p>
+
+    <div class="case">
+      <img src="img/env01_walkway.jpg" alt="A marked pedestrian walkway running beside a forklift lane inside the simulated warehouse">
+      <div class="body">
+        <h3>The brief</h3>
+        <p>Warehouse induction records attendance. A new starter watches a slideshow,
+        signs a sheet, and walks onto a floor where forklifts and people share the same
+        lane. Nothing in that process asks them to look at a working warehouse and point
+        at the thing that is about to hurt someone.</p>
+        <p>The client put it plainly in our first meeting: the paperwork satisfies an
+        auditor, but it does not tell a supervisor which of the three people who started
+        on Monday would walk past an unguarded dock edge on Friday.</p>
+
+        <h3 style="margin-top:28px">What we built</h3>
+        <p>A warehouse you walk around in a browser. Fifteen hazards are staged in it as
+        ordinary objects: a forklift reversing across a pedestrian lane, a spill with no
+        sign beside it, a fire exit stacked shut with pallets. The trainee walks up, flags
+        what looks unsafe, and is told why it is unsafe and what a safe site does instead.</p>
+        <p>Then the game takes the guidance away, starts a clock, and measures them. The
+        round ends with a score, a rank, every hazard they walked past explained in full,
+        and three questions built from the ones they missed, so understanding is checked
+        and not just spotting.</p>
+
+        <dl>
+          <dt>Client</dt><dd>Sulav Graj, Vantec</dd>
+          <dt>Duration</dt><dd>12 weeks</dd>
+          <dt>Team</dt><dd>Three people</dd>
+          <dt>Status</dt><dd>Live, in client review</dd>
+        </dl>
+      </div>
+    </div>
+
+    <div class="cta-row">
+      <a class="btn btn-primary" href="https://kushalthewave.github.io/interprize-project/" target="_blank" rel="noopener">Play the live demo →</a>
+      <a class="btn btn-ghost" href="../beat-the-hazard.html" download="beat-the-hazard.html">⬇ Download to play offline</a>
+    </div>
+  </div>
+</section>
+
+<div class="wrap"><div class="rule"></div></div>
+
+<!-- ============================ HOW ============================ -->
+<section id="how">
+  <div class="wrap">
+    <p class="eyebrow">How it works</p>
+    <h2>Learn it, then prove it</h2>
+    <div class="grid g2" style="margin-top:30px">
+      <div class="mode train">
+        <h3>Train Mode</h3>
+        <p>Guided, unhurried, impossible to fail, and optional.</p>
+        <ul>
+          <li>No clock at all, so the trainee sets the pace</li>
+          <li>An arrow and a distance point to the nearest hazard</li>
+          <li>Its location is named, and a column of light marks the spot</li>
+          <li>Every find explains <em>why</em> it is a hazard</li>
+          <li>It can be left at any time and is still there on return</li>
+        </ul>
+      </div>
+      <div class="mode test">
+        <h3>Test Mode</h3>
+        <p>Five minutes, scored, ranked. This is the assessment.</p>
+        <ul>
+          <li>Open from the start, with no training required first</li>
+          <li>No guidance and no locations: find them by looking</li>
+          <li>Safe look alikes are placed to catch a trainee who is guessing</li>
+          <li>Speed is scored, not only whether it was found</li>
+          <li>Ends with a rank, a full breakdown, and a quiz</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3 style="margin:46px 0 16px;font-size:1.05rem">Scoring</h3>
+    <table class="tbl num">
+      <tr><th>Call</th><th>Reaction</th><th>Points</th></tr>
+      <tr><td>Major hazard</td><td>Within half the time allowed</td><td>+15</td></tr>
+      <tr><td>Major hazard</td><td>After that</td><td>+7</td></tr>
+      <tr><td>Minor hazard</td><td>Within half the time allowed</td><td>+5</td></tr>
+      <tr><td>Minor hazard</td><td>After that</td><td>+2</td></tr>
+      <tr><td>A safe look alike, or nothing there</td><td>Any</td><td>0</td></tr>
+      <tr><td>Combo, three correct in a row</td><td>Per find, while it holds</td><td>+3</td></tr>
+    </table>
+    <p style="margin-top:16px;font-size:.88rem;color:var(--faint)">
+      50 points or more is Safety Champion. 30 to 49 is Getting There. Below 30 is Needs
+      Practice. Every test is five minutes. In time means within 45 seconds on Simple,
+      30 on Mid and 19 on Hard.
+    </p>
+
+    <h3 style="margin:46px 0 16px;font-size:1.05rem">Difficulty changes the task, not the label</h3>
+    <table class="tbl">
+      <tr><th>Setting</th><th>Clock per hazard</th><th>Safe look alikes</th><th>Guidance</th><th>Score multiplier</th></tr>
+      <tr><td><b>Simple</b></td><td>90 seconds</td><td>None</td><td>Hazards highlighted, count shown</td><td>&times;1.0</td></tr>
+      <tr><td><b>Mid</b></td><td>60 seconds</td><td>6</td><td>Count shown, nothing highlighted</td><td>&times;1.25</td></tr>
+      <tr><td><b>Hard</b></td><td>38 seconds</td><td>12</td><td>None, and the lights are lower</td><td>&times;1.6</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ============================ HAZARDS ============================ -->
+<section class="band" id="hazards">
+  <div class="wrap">
+    <p class="eyebrow">The catalogue</p>
+    <h2>Fifteen hazards, staged not labelled</h2>
+    <p class="lead" style="margin-bottom:34px">
+      None of these is a floating icon. Each is built into the world as the situation it
+      describes, so it has to be recognised the way it would be recognised on shift.
+    </p>
+    <div class="hz">
+      <div><i class="dot major"></i>Forklift on a pedestrian route</div>
+      <div><i class="dot major"></i>Reversing forklift, worker in the blind spot</div>
+      <div><i class="dot major"></i>Unstable and falling boxes</div>
+      <div><i class="dot major"></i>Damaged, leaning racking</div>
+      <div><i class="dot major"></i>Blocked emergency exit</div>
+      <div><i class="dot major"></i>Person at an open loading dock edge</div>
+      <div><i class="dot major"></i>Unsafe ladder use</div>
+      <div><i class="dot major"></i>Blind corner conflict</div>
+      <div><i class="dot minor"></i>Oil or liquid spill, unmarked</div>
+      <div><i class="dot minor"></i>Blocked pedestrian walkway</div>
+      <div><i class="dot minor"></i>Blocked fire extinguisher</div>
+      <div><i class="dot minor"></i>Worker without PPE</div>
+      <div><i class="dot minor"></i>Trailing electrical cable</div>
+      <div><i class="dot minor"></i>Broken, damaged pallet in service</div>
+      <div><i class="dot minor"></i>Overloaded, over height stack</div>
+    </div>
+    <div class="key">
+      <span><i class="dot major"></i> Major: could injure or kill today</span>
+      <span><i class="dot minor"></i> Minor: housekeeping that becomes major</span>
+    </div>
+
+    <h3 style="margin:42px 0 16px;font-size:1.05rem">Three warehouses, not three skins</h3>
+    <table class="tbl">
+      <tr><th>Environment</th><th>Character</th><th>Hazards placed</th></tr>
+      <tr><td><b>Main Storage Hall</b></td><td>General warehouse, wide aisles, mixed traffic</td><td>15</td></tr>
+      <tr><td><b>Loading and Dispatch Bay</b></td><td>Cross dock, heavy vehicle traffic, open dock edges</td><td>12</td></tr>
+      <tr><td><b>High Bay Annexe</b></td><td>Narrow aisle, low light, work at height</td><td>15</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ============================ GALLERY ============================ -->
+<section id="gallery">
+  <div class="wrap">
+    <p class="eyebrow">From the build</p>
+    <h2>Every surface in it was generated</h2>
+    <p class="lead" style="margin-bottom:34px">
+      The geometry, the textures and the sound are written in code and produced when the
+      page loads. There is not a single downloaded model, texture or audio file in the
+      product, which is how the whole thing fits in about 1 MB.
+    </p>
+    <div class="gal">
+      <figure><img src="img/env01_wide.jpg" alt="Main warehouse, wide view down the racking"><figcaption>Main Storage Hall, looking down the racking</figcaption></figure>
+      <figure><img src="img/env01_walkway.jpg" alt="Marked pedestrian walkway beside a forklift lane"><figcaption>Segregated walkway and forklift lane</figcaption></figure>
+      <figure><img src="img/hz_reversing.jpg" alt="A forklift reversing across a walkway"><figcaption>Reversing forklift, no spotter</figcaption></figure>
+      <figure><img src="img/hz_blocked_exit.jpg" alt="A fire exit with pallets stacked against it"><figcaption>Blocked fire exit</figcaption></figure>
+      <figure><img src="img/hz_damaged_rack.jpg" alt="A visibly damaged racking upright under load"><figcaption>Damaged upright, still loaded</figcaption></figure>
+      <figure><img src="img/env03_highbay.jpg" alt="High bay aisle with tall racking"><figcaption>High Bay Annexe</figcaption></figure>
+      <figure><img src="img/hz_falling_boxes.jpg" alt="Cartons overhanging a rack beam, one tilted and about to fall"><figcaption>Unstable load above head height</figcaption></figure>
+      <figure><img src="img/env03_aisle.jpg" alt="Narrow aisle between two runs of racking"><figcaption>Narrow aisle run, low light</figcaption></figure>
+      <figure><img src="img/hz_rack2.jpg" alt="Close view of a buckled racking upright and impact debris"><figcaption>Impact damage at floor level</figcaption></figure>
+      <figure><img src="img/hz_exit2.jpg" alt="Emergency exit door with keep clear hatching obstructed"><figcaption>Keep clear hatching, ignored</figcaption></figure>
+      <figure><img src="img/hz_falling2.jpg" alt="A carton mid fall from an upper rack beam"><figcaption>The moment it lets go</figcaption></figure>
+      <figure><img src="img/env01_wide.jpg" alt="The warehouse floor from the trainee's position at the start of a round"><figcaption>Where a round begins</figcaption></figure>
+    </div>
+    <p style="margin-top:22px;font-size:.86rem;color:var(--faint)">
+      Screenshots taken from the running product, not concept art.
+    </p>
+  </div>
+</section>
+
+<!-- ============================ STACK + OUTCOME ============================ -->
+<section class="band" id="stack">
+  <div class="wrap">
+    <div class="grid g2">
+      <div>
+        <p class="eyebrow">Under the bonnet</p>
+        <h2>How it is built</h2>
+        <table class="tbl" style="margin-top:20px">
+          <tr><td><b>Three.js 0.180.0</b></td><td>The only runtime dependency. No game engine, no framework.</td></tr>
+          <tr><td><b>Plain JavaScript modules</b></td><td>Built with Vite and deployed from the main branch automatically.</td></tr>
+          <tr><td><b>405 automated tests</b></td><td>Across 21 files: scoring, hazards, timing, sync, security, accounts.</td></tr>
+          <tr><td><b>Security</b></td><td>Content Security Policy, HTTPS with HSTS, a frame guard, row level security.</td></tr>
+          <tr><td><b>Offline</b></td><td>Cached after one visit, plus a single file build of about 1 MB.</td></tr>
+        </table>
+      </div>
+      <div>
+        <p class="eyebrow">What came of it</p>
+        <h2>Outcome</h2>
+        <ol class="steps" style="margin-top:20px">
+          <li><b>Demonstrated to the client in September.</b> He gave written feedback the
+          same day and asked for two changes: the trainee visible during play, and the
+          training round made skippable.</li>
+          <li><b>Both were live the next morning.</b> Turning a request around in a day is
+          the clearest way to show a client that their input changes the product.</li>
+          <li><b>Four more were built after that.</b> The end of round quiz, the full
+          explanation of every hazard missed, a results store that cannot be edited, and a
+          supervisor's page.</li>
+          <li><b>The honest part.</b> Screen reader support, Firefox, Safari and phone
+          hardware are listed as not yet tested, and the frame rate needs measuring again
+          on the training laptop. All of that is written down and handed over.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="final">
+      <h2>Fifteen hazards. Five minutes. How many would you catch?</h2>
+      <p>The demo is the real product, not a cut down version of it. Nothing is installed
+      and nothing is charged.</p>
+      <div class="cta-row" style="justify-content:center">
+        <a class="btn btn-primary" href="https://kushalthewave.github.io/interprize-project/" target="_blank" rel="noopener">Play the live demo →</a>
+        <a class="btn btn-ghost" href="contact.html">Ask us about your site</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="fgrid">
+      <div>
+        <a class="brand" href="index.html" style="margin-bottom:14px">
+          <img src="img/logo-mark.png" alt="">
+          <span>The Code Crafters<small>Software that gets used</small></span>
+        </a>
+        <p style="font-size:.88rem;max-width:38ch;margin:0">
+          Browser based training software and web applications.<br>
+          Sunderland, United Kingdom.
+        </p>
+      </div>
+      <div>
+        <h4>Company</h4>
+        <a href="services.html">Services</a>
+        <a href="portfolio.html">Portfolio</a>
+        <a href="about.html">About the team</a>
+        <a href="contact.html">Contact</a>
+      </div>
+      <div>
+        <h4>Beat The Hazard</h4>
+        <a href="https://kushalthewave.github.io/interprize-project/" target="_blank" rel="noopener">Play the live demo</a>
+        <a href="../beat-the-hazard.html" download="beat-the-hazard.html">Download to play offline</a>
+        <a href="portfolio.html#how">Modes and scoring</a>
+        <a href="portfolio.html#gallery">Screenshots</a>
+      </div>
+      <div>
+        <h4>Project</h4>
+        <a href="https://github.com/kushalthewave/interprize-project" target="_blank" rel="noopener">Source on GitHub</a>
+        <a href="about.html#module">CET257 Enterprise Project</a>
+        <a href="contact.html">Work with us</a>
+      </div>
+    </div>
+    <div class="legal">
+      <span>&copy; <span id="yr">2026</span> The Code Crafters &middot; Kushal Neupane, Aastika Gautam, Kiran Khatri &middot; CET257 Enterprise Project, University of Sunderland.</span>
+      <span>No trackers. No cookies. No third party requests.</span>
+    </div>
+  </div>
+</footer>
+
+<script src="js/site.js"></script>
+</body>
+</html>
