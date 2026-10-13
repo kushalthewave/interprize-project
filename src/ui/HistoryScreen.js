@@ -12,6 +12,7 @@ import { DIFFICULTIES } from '../data/config.js';
 import { ENVIRONMENTS } from '../environment/registry.js';
 import { db } from '../services/db/client.js';
 import { queueSize } from '../services/db/sync.js';
+import { roundsToCsv, exportFilename, downloadText } from '../services/export.js';
 
 const siteName = (id) => ENVIRONMENTS.find((e) => e.meta.id === id)?.meta.name ?? id ?? '—';
 const modeLabel = (r) =>
@@ -78,8 +79,24 @@ function summaryBoxes(rows) {
 export function historyScreen(ctx, { client = db } = {}) {
   const body = el('div.card.mt', {}, [el('p.faint', { text: 'Loading your rounds…' })]);
   const head = el('div', {});
+  // Whatever the table is currently showing, so the file always matches the
+  // page rather than quietly exporting something else.
+  let shown = [];
+
+  const download = el('button.btn', {
+    text: 'Download as CSV',
+    disabled: true,
+    on: {
+      click: () => {
+        const who = ctx.profile?.name ?? '';
+        downloadText(exportFilename(who), roundsToCsv(shown, { name: who }));
+      },
+    },
+  });
 
   const show = (rows, note) => {
+    shown = rows;
+    download.disabled = rows.length === 0;
     body.replaceChildren(
       el('h3', { text: 'Your rounds' }),
       rows.length
@@ -123,6 +140,7 @@ export function historyScreen(ctx, { client = db } = {}) {
       body,
       el('div.row.mt', {}, [
         el('button.btn', { text: '← Back', on: { click: () => ctx.go('menu') } }),
+        download,
       ]),
     ]),
   ]);
