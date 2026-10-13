@@ -55,8 +55,13 @@ people's rows. That is the control working, not a bug.
 3. Rebuild: `npm run build`.
 
 For the published site, the same two values go in the repository's
-**Settings → Secrets and variables → Actions → Variables**, and the deploy
-workflow passes them to the build.
+**Settings → Secrets and variables → Actions → Variables**, as
+`VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. The deploy workflow reads
+them from there and passes them to both builds, so the next push to `main`
+publishes a site that is connected. They are *variables* rather than secrets
+on purpose: both values end up visible in the published page, and pretending
+otherwise would hide where the real protection is, which is the policies in
+`db/schema.sql`.
 
 ## What is safe to share, and what is not
 

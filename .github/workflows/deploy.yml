@@ -51,11 +51,24 @@ jobs:
       - name: Run tests
         run: npm test
 
+      # The results service, if this repository has been given one. Both are
+      # public values: the anon key is designed to ship inside the page, and
+      # the database's row level security is what protects the data. They are
+      # repository *variables*, not secrets, so they are readable here and in
+      # the built page, which is where they end up anyway. With neither set
+      # the build produces exactly what it does today: accounts and results
+      # stay on the trainee's device.
       - name: Build
         run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
 
       - name: Build the standalone single-file version
         run: npm run build:single
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
 
       - name: Assemble the site
         run: |
