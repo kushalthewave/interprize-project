@@ -24,9 +24,13 @@ function when(value) {
   return `${d.toLocaleDateString()} ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 }
 
-/** The game's own saved history, shaped like a row from the database. */
+/**
+ * The game's own saved history, shaped like a row from the database, with
+ * each round's integrity state carried through so an edited one can be shown
+ * as what it is.
+ */
 function localRows(profile) {
-  return (profile.data.history ?? []).map((h) => ({
+  return profile.historyWithIntegrity().map(({ entry: h, state }) => ({
     played_at: new Date(h.at).toISOString(),
     mode: h.mode,
     environment: h.environment,
@@ -35,6 +39,7 @@ function localRows(profile) {
     rank: h.rank,
     correct: h.correct,
     total_hazards: h.total,
+    integrity: state,
   }));
 }
 
@@ -54,7 +59,13 @@ function table(rows) {
       el('td', { text: modeLabel(r) }),
       el('td.num', { text: `${r.correct ?? 0}/${r.total_hazards ?? 0}` }),
       el('td.num', { text: String(r.score ?? 0) }),
-      el('td', { text: r.rank ?? '—' }),
+      el('td', {}, [
+        r.rank ?? '—',
+        // A round stored on this computer whose values no longer match its
+        // tag. Said plainly rather than hidden: a supervisor reading this
+        // needs to know which numbers to trust.
+        r.integrity === 'edited' && el('span.tag.tag-major', { text: 'Unverified', title: 'This round was changed after it was saved.' }),
+      ]),
     ]))),
   ]);
 }

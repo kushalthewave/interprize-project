@@ -11,6 +11,7 @@
 import { ACHIEVEMENTS, DIFFICULTY_ORDER, PROGRESSION } from '../data/config.js';
 import { bus, EV } from '../core/EventBus.js';
 import { DEFAULT_AVATAR, normaliseAvatar } from '../data/avatars.js';
+import { newSalt, tagRound, checkHistory } from './integrity.js';
 import { defaultSettings, migrateSettings, sanitise } from '../data/settings.js';
 
 const KEY = 'beat-the-hazard:profile:v1';
@@ -105,6 +106,12 @@ function blankProfile() {
     history: [],
     /** Credentials: passkeys and TOTP. Managed by services/auth/AuthManager. */
     security: { passkeys: [], totp: null, lastMethod: null },
+    /**
+     * Random per profile, mixed into each stored round's tag so an edited
+     * score can be told from a real one. See services/integrity.js for what
+     * that does and does not protect against.
+     */
+    integritySalt: newSalt(),
     /** Every player setting; see data/settings.js for the schema. */
     settings: defaultSettings(),
   };
@@ -316,7 +323,8 @@ export class Profile {
       p[summary.difficulty] = Math.max(p[summary.difficulty] ?? 0, summary.score);
     }
 
-    this.data.history.unshift({
+    this.data.integritySalt ??= newSalt();
+    this.data.history.unshift(tagRound({
       at: summary.finishedAt ?? Date.now(),
       mode: summary.mode,
       environment: summary.environment,
@@ -326,7 +334,7 @@ export class Profile {
       correct: summary.correct,
       wrong: summary.wrong,
       total: summary.totalHazards,
-    });
+    }, this.data.integritySalt));
     this.data.history = this.data.history.slice(0, 50);
 
     const unlocked = this._evaluateAchievements(summary);
@@ -399,6 +407,17 @@ export class Profile {
     const { name, avatar, authProvider, email, settings, security, remembered } = this.data;
     this.data = { ...blankProfile(), name, avatar, authProvider, email, settings, security, remembered };
     this.save();
+  }
+
+  /**
+   * The history, each round marked 'ok', 'untagged' or 'edited'.
+   *
+   * 'untagged' is a round saved before tagging existed, which is not a
+   * claim about the trainee; 'edited' means the stored values no longer
+   * match their tag.
+   */
+  historyWithIntegrity() {
+    return checkHistory(this.data.history ?? [], this.data.integritySalt);
   }
 
   /**

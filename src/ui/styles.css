@@ -1145,3 +1145,14 @@ html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after 
 .cat-bar { height: 0.55rem; border-radius: 999px; background: var(--danger-soft); overflow: hidden; }
 .cat-fill { height: 100%; background: var(--success); border-radius: 999px; }
 .cat-num { font-size: 0.85rem; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+
+/* ── "What you missed" review ─────────────────────────────────────────
+   Long-form teaching text, so the measure is reading width rather than the
+   grid the rest of the menus use. */
+.review-card { margin-top: 0.9rem; }
+.review-card p { line-height: 1.6; max-width: 62ch; }
+.review-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.review-head h3 { margin: 0 0 0.4rem; }
+.review-block { margin-top: 0.8rem; padding-left: 0.85rem; border-left: 3px solid var(--border); }
+.review-label { font-size: 0.78rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-dim); }
+.review-block p { margin: 0.25rem 0 0; }

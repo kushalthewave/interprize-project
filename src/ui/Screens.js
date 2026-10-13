@@ -333,6 +333,10 @@ export function resultsScreen(ctx, { summary }) {
         el('div.card', {}, [
           el('h3', { text: `✗ Hazards you missed (${missedRows.length})` }),
           missedRows.length ? el('div.hazard-list', {}, missedRows) : el('p.faint', { text: 'Nothing missed. Excellent.' }),
+          missedRows.length > 0 && el('button.btn.btn-block.mt', {
+            text: 'Read why these matter',
+            on: { click: () => ctx.go('review', { summary: s }) },
+          }),
         ]),
       ]),
 
