@@ -12,7 +12,7 @@
 
   /* The address enquiries are sent to. It is in one place on purpose:
      change it here and every page follows. */
-  var CONTACT_EMAIL = 'thecodecrafters.cet257@gmail.com';
+  var CONTACT_EMAIL = 'kushaln717@gmail.com';
 
   // ---- sticky bar ----------------------------------------------------
   var bar = document.querySelector('header');
