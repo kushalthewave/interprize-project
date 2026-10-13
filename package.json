@@ -13,7 +13,7 @@
     "build:single": "vite build --config vite.single.config.js && node scripts/build-singlefile.mjs"
   },
   "dependencies": {
-    "three": "^0.180.0"
+    "three": "^0.186.1"
   },
   "devDependencies": {
     "jsqr": "^1.4.0",
