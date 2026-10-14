@@ -96,7 +96,11 @@ export function offlineCard(ctx) {
   const holder = el('div.card.mt');
   const render = () => {
     const st = status();
-    holder.replaceChildren(
+    // replaceChildren turns anything that is not a Node into text, so a falsy
+    // child arrives on screen as the word "null". status() returns null in the
+    // ordinary case - online, not installed, nothing cached yet - which is what
+    // a first time visitor has, so the filter is doing real work here.
+    holder.replaceChildren(...[
       el('h3.with-ic', {}, [icon('download'), 'Play without internet']),
       st && el('div.auth-note.with-ic', {}, [icon(st.icon, { size: 18 }), el('span', { text: st.text })]),
       el('div.offline-ways', {}, [
@@ -120,7 +124,7 @@ export function offlineCard(ctx) {
             }),
         ]),
       ]),
-    );
+    ].filter(Boolean));
   };
   render();
   return holder;
