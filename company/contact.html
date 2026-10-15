@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Contact — The Codecrafters</title>
+<meta name="description" content="Get in touch with The Codecrafters about training software, a browser based simulation, or a web application. No tracking, no cookies, and nothing stored on our side.">
+<meta name="theme-color" content="#1877f2">
+<link rel="icon" href="img/logo-mark.png">
+<link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to content</a>
+
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="index.html">
+      <img src="img/logo-mark.png" alt="">
+      <span>The Codecrafters<small>Software that gets used</small></span>
+    </a>
+    <button class="menu-btn" aria-expanded="false" aria-controls="site-menu">Menu</button>
+    <nav id="site-menu">
+      <a href="index.html">Home</a>
+      <a href="services.html">Services</a>
+      <a href="portfolio.html">Portfolio</a>
+      <a href="about.html">About</a>
+      <a href="contact.html" aria-current="page">Contact</a>
+      <a class="btn btn-primary" href="https://kushalthewave.github.io/interprize-project/" target="_blank" rel="noopener">Play the demo</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+<div class="phead">
+  <div class="wrap">
+    <p class="crumb"><a href="index.html">Home</a> &rsaquo; Contact</p>
+    <h1>Contact</h1>
+    <p class="lead">
+      Tell us what goes wrong today rather than what you think you need built. That is
+      usually enough for us to say whether we are the right people, and we will say so
+      if we are not.
+    </p>
+  </div>
+</div>
+
+<section>
+  <div class="wrap contact-grid">
+
+    <!-- ---------------- form ---------------- -->
+    <form class="enquiry" novalidate>
+      <h2 style="font-size:1.4rem">Send us an enquiry</h2>
+      <p style="font-size:.93rem">
+        Everything is optional except a message and a way to reply. The more you can tell
+        us about the job itself, the more useful our first answer will be.
+      </p>
+
+      <div class="field">
+        <label for="name">Your name</label>
+        <input id="name" name="name" type="text" autocomplete="name" placeholder="Jane Fletcher">
+      </div>
+
+      <div class="field">
+        <label for="org">Organisation</label>
+        <input id="org" name="org" type="text" autocomplete="organization" placeholder="Where you work">
+      </div>
+
+      <div class="field">
+        <label for="email">Email so we can reply</label>
+        <input id="email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required>
+      </div>
+
+      <div class="field">
+        <label for="topic">What is this about?</label>
+        <select id="topic" name="topic">
+          <option>A training simulation for our site</option>
+          <option>A web application</option>
+          <option>Accounts, records or security</option>
+          <option>Testing and documentation for something we already have</option>
+          <option>A question about Beat The Hazard</option>
+          <option>Something else</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="message">What goes wrong today?</label>
+        <textarea id="message" name="message" placeholder="For example: we induct about forty agency staff a year, we can prove they attended, and we have no idea which of them would spot a blocked fire exit." required></textarea>
+        <p class="hint">Rough is fine. We would rather read the problem in your words than a tidy specification.</p>
+      </div>
+
+      <button class="btn btn-primary" type="submit">Compose the email →</button>
+
+      <p class="form-note">
+        <strong>How this works:</strong> there is no server behind this website, so
+        nothing you type here is submitted to us or stored anywhere. Pressing the button
+        opens your own email program with the message filled in, and nothing is sent
+        until you send it yourself. If you would rather not use a form at all, just write
+        to <a data-email href="#">our address</a> directly.
+      </p>
+      <p class="form-note" id="sent-note" hidden>
+        Your email program should now be open with the message ready. If nothing
+        happened, your browser may not have an email program set up, in which case
+        copy the address above and write to us from wherever you normally do.
+      </p>
+    </form>
+
+    <!-- ---------------- details ---------------- -->
+    <div>
+      <div class="detail">
+        <h3>Email</h3>
+        <p><a data-email href="#">our address</a></p>
+        <p style="margin-top:8px;color:var(--faint);font-size:.86rem">
+          The quickest route. We read it daily during the week.
+        </p>
+      </div>
+
+      <div class="detail">
+        <h3>Where we are</h3>
+        <p>Sunderland, United Kingdom.</p>
+        <p style="margin-top:8px;color:var(--faint);font-size:.86rem">
+          We work on site in the North East and remotely anywhere else. Our client
+          meetings so far have been a mix of in person and online.
+        </p>
+      </div>
+
+      <div class="detail">
+        <h3>The code</h3>
+        <p><a href="https://github.com/kushalthewave/interprize-project" target="_blank" rel="noopener">github.com/kushalthewave/interprize-project</a></p>
+        <p style="margin-top:8px;color:var(--faint);font-size:.86rem">
+          The whole product is public, including the test suite and the documentation.
+          Read it before you talk to us if you would rather judge the work than the pitch.
+        </p>
+      </div>
+
+      <div class="detail">
+        <h3>Try it first</h3>
+        <p><a href="https://kushalthewave.github.io/interprize-project/" target="_blank" rel="noopener">Play Beat The Hazard</a></p>
+        <p style="margin-top:8px;color:var(--faint);font-size:.86rem">
+          Free, no install, and no account needed to look around. Five minutes in it will
+          tell you more about how we build than this page will.
+        </p>
+      </div>
+
+      <div class="detail">
+        <h3>What happens next</h3>
+        <p>We reply within two working days, normally with questions rather than a quote.
+        If what you need is outside what we do, we will tell you that instead of taking
+        the work on and learning it at your expense.</p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============================ PRIVACY ============================ -->
+<section class="band">
+  <div class="wrap">
+    <p class="eyebrow">While you are here</p>
+    <h2>What this website does with your data</h2>
+    <div class="grid g3" style="margin-top:26px">
+      <div class="card">
+        <h3>Nothing is collected</h3>
+        <p>No analytics, no tracking pixels, no advertising tags and no third party
+        scripts of any kind. The pages load from this site and nowhere else.</p>
+      </div>
+      <div class="card">
+        <h3>No cookies, so no banner</h3>
+        <p>We set none, which is why you were not asked to agree to any. A consent banner
+        is only needed when there is something to consent to.</p>
+      </div>
+      <div class="card">
+        <h3>The form sends nothing</h3>
+        <p>It opens your own email program with the text filled in. Until you press send
+        in that program, what you typed has not left your computer.</p>
+      </div>
+    </div>
+    <p style="margin-top:22px;font-size:.9rem;max-width:72ch">
+      When you do write to us we keep your email only for as long as the conversation
+      needs, and we do not add anyone to a mailing list. The product itself is separate
+      and has its own account and data handling, which is described inside it.
+    </p>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="fgrid">
+      <div>
+        <a class="brand" href="index.html" style="margin-bottom:14px">
+          <img src="img/logo-mark.png" alt="">
+          <span>The Codecrafters<small>Software that gets used</small></span>
+        </a>
+        <p style="font-size:.88rem;max-width:38ch;margin:0">
+          Browser based training software and web applications.<br>
+          Sunderland, United Kingdom.
+        </p>
+      </div>
+      <div>
+        <h4>Company</h4>
+        <a href="services.html">Services</a>
+        <a href="portfolio.html">Portfolio</a>
+        <a href="about.html">About the team</a>
+        <a href="contact.html">Contact</a>
+      </div>
+      <div>
+        <h4>Beat The Hazard</h4>
+        <a href="https://kushalthewave.github.io/interprize-project/" target="_blank" rel="noopener">Play the live demo</a>
+        <a href="../beat-the-hazard.html" download="beat-the-hazard.html">Download to play offline</a>
+        <a href="portfolio.html#how">Modes and scoring</a>
+        <a href="portfolio.html#gallery">Screenshots</a>
+      </div>
+      <div>
+        <h4>Project</h4>
+        <a href="https://github.com/kushalthewave/interprize-project" target="_blank" rel="noopener">Source on GitHub</a>
+        <a href="about.html#module">CET257 Enterprise Project</a>
+        <a href="contact.html">Work with us</a>
+      </div>
+    </div>
+    <div class="legal">
+      <span>&copy; <span id="yr">2026</span> The Codecrafters &middot; Kushal Neupane, Aastika Gautam, Kiran Khatri &middot; CET257 Enterprise Project, University of Sunderland.</span>
+      <span>No trackers. No cookies. No third party requests.</span>
+    </div>
+  </div>
+</footer>
+
+<script src="js/site.js"></script>
+</body>
+</html>
