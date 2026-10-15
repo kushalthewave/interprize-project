@@ -3,7 +3,7 @@
  * "Play without internet": the Download and Install buttons, and an honest
  * line about what state this copy of the game is in.
  */
-import { el } from './dom.js';
+import { el, mount } from './dom.js';
 import { icon } from './icons.js';
 import { offline, canDownload, promptInstall } from '../services/offline.js';
 
@@ -75,7 +75,7 @@ export function offlineStrip(ctx) {
     holder.hidden = alreadyOffline;
     if (alreadyOffline) { holder.replaceChildren(); return; }
     const st = status();
-    holder.replaceChildren(
+    mount(holder,
       el('div.os-text', {}, [
         el('div.os-k', { text: 'Play without internet' }),
         el('div.os-d', {
@@ -96,11 +96,11 @@ export function offlineCard(ctx) {
   const holder = el('div.card.mt');
   const render = () => {
     const st = status();
-    // replaceChildren turns anything that is not a Node into text, so a falsy
-    // child arrives on screen as the word "null". status() returns null in the
-    // ordinary case - online, not installed, nothing cached yet - which is what
-    // a first time visitor has, so the filter is doing real work here.
-    holder.replaceChildren(...[
+    // mount(), not replaceChildren: replaceChildren turns anything that is not
+    // a Node into text, so a falsy child arrives on screen as the word "null".
+    // status() returns null in the ordinary case - online, not installed,
+    // nothing cached yet - which is what a first time visitor has.
+    mount(holder,
       el('h3.with-ic', {}, [icon('download'), 'Play without internet']),
       st && el('div.auth-note.with-ic', {}, [icon(st.icon, { size: 18 }), el('span', { text: st.text })]),
       el('div.offline-ways', {}, [
@@ -124,7 +124,7 @@ export function offlineCard(ctx) {
             }),
         ]),
       ]),
-    ].filter(Boolean));
+    );
   };
   render();
   return holder;

@@ -7,7 +7,7 @@
  * account, or no connection, it falls back to the rounds saved on this
  * device and says so, rather than showing an empty page and looking broken.
  */
-import { el } from './dom.js';
+import { el, mount } from './dom.js';
 import { DIFFICULTIES } from '../data/config.js';
 import { ENVIRONMENTS } from '../environment/registry.js';
 import { db } from '../services/db/client.js';
@@ -38,6 +38,9 @@ function localRows(profile) {
     score: h.score,
     rank: h.rank,
     correct: h.correct,
+    // The stored round has this; without it the Wrong flags column in the
+    // exported file was always empty for a round played on this device.
+    wrong: h.wrong,
     total_hazards: h.total,
     integrity: state,
   }));
@@ -97,10 +100,12 @@ export function historyScreen(ctx, { client = db } = {}) {
   const download = el('button.btn', {
     text: 'Download as CSV',
     disabled: true,
+    // A greyed out button with no reason on it reads as broken.
+    title: 'Finish a round and this will save your history as a spreadsheet file.',
     on: {
       click: () => {
         const who = ctx.profile?.name ?? '';
-        downloadText(exportFilename(who), roundsToCsv(shown, { name: who }));
+        downloadText(exportFilename(who), roundsToCsv(shown, { name: who, siteName }));
       },
     },
   });
@@ -108,7 +113,7 @@ export function historyScreen(ctx, { client = db } = {}) {
   const show = (rows, note) => {
     shown = rows;
     download.disabled = rows.length === 0;
-    body.replaceChildren(
+    mount(body,
       el('h3', { text: 'Your rounds' }),
       rows.length
         ? table(rows)

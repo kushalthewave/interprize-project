@@ -90,3 +90,41 @@ describe('The file name', () => {
     expect(exportFilename('', { now })).toBe('beat-the-hazard-trainee-2026-10-13.csv');
   });
 });
+
+// Three defects found by exporting a real round and reading the file rather
+// than the code: the wrong-flag count never arrived, the warehouse column held
+// the internal id, and the per cent column was given a fraction.
+describe('A round export, the columns a supervisor reads', () => {
+  const siteName = (id) => ({ env01: 'Main Storage Hall', env02: 'Loading & Dispatch Bay' }[id] ?? id);
+
+  it('writes the warehouse by name, the way the screen shows it', () => {
+    const row = roundsToCsv([{ environment: 'env01' }], { siteName }).split('\r\n')[1];
+    expect(row).toContain('Main Storage Hall');
+    expect(row).not.toContain('env01');
+  });
+
+  it('falls back to the id when no name is available, rather than going blank', () => {
+    const row = roundsToCsv([{ environment: 'env09' }]).split('\r\n')[1];
+    expect(row).toContain('env09');
+  });
+
+  it('keeps the wrong-flag count, which is what a device round was losing', () => {
+    const row = roundsToCsv([{ correct: 11, wrong: 2 }]).split('\r\n')[1].split(',');
+    expect(row[9]).toBe('2');
+  });
+
+  it('writes accuracy as a percentage, not as the fraction the database holds', () => {
+    const row = roundsToCsv([{ correct: 11, wrong: 2, accuracy: 0.85 }]).split('\r\n')[1].split(',');
+    expect(row[10]).toBe('84.6');
+  });
+
+  it('scales a stored fraction when the counts cannot give an answer', () => {
+    const row = roundsToCsv([{ accuracy: 0.85 }]).split('\r\n')[1].split(',');
+    expect(row[10]).toBe('85');
+  });
+
+  it('leaves accuracy empty when there is nothing to work from', () => {
+    const row = roundsToCsv([{}]).split('\r\n')[1].split(',');
+    expect(row[10]).toBe('');
+  });
+});

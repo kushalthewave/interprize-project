@@ -42,7 +42,35 @@ const iso = (v) => {
  * @param {object} [o]
  * @param {string} [o.name]  who these belong to
  */
-export function roundsToCsv(rounds, { name = '' } = {}) {
+/**
+ * Accuracy as a percentage, the same definition ScoreManager uses:
+ * correct out of the flags that were actually made.
+ *
+ * It is computed from the counts rather than read from the round, because the
+ * two sources disagree: the database stores a fraction (0.85) and the column
+ * is headed with a per cent sign. A stored value is only used when the counts
+ * cannot give an answer, and is scaled if it looks like a fraction.
+ */
+function accuracyPercent(r) {
+  const correct = Number(r.correct);
+  const wrong = Number(r.wrong);
+  if (Number.isFinite(correct) && Number.isFinite(wrong) && correct + wrong > 0) {
+    return Math.round((correct / (correct + wrong)) * 1000) / 10;
+  }
+  const stored = Number(r.accuracy);
+  if (!Number.isFinite(stored)) return '';
+  return stored <= 1 ? Math.round(stored * 1000) / 10 : stored;
+}
+
+/**
+ * @param {object[]} rounds
+ * @param {object} [o]
+ * @param {string} [o.name] the trainee, repeated on every row
+ * @param {(id: string) => string} [o.siteName] turns env01 into Main Storage
+ *   Hall. Passed in rather than imported: this file stays free of the 3D
+ *   engine so it can be tested without one.
+ */
+export function roundsToCsv(rounds, { name = '', siteName = (id) => id ?? '' } = {}) {
   const headers = [
     'Trainee', 'Played at', 'Warehouse', 'Mode', 'Difficulty',
     'Score', 'Rank', 'Hazards found', 'Hazards total', 'Wrong flags', 'Accuracy %',
@@ -50,7 +78,7 @@ export function roundsToCsv(rounds, { name = '' } = {}) {
   const rows = rounds.map((r) => [
     name,
     iso(r.played_at ?? r.at),
-    r.environment ?? '',
+    siteName(r.environment) ?? '',
     r.mode ?? '',
     r.mode === 'train' ? '' : (r.difficulty ?? ''),
     r.score ?? 0,
@@ -58,7 +86,7 @@ export function roundsToCsv(rounds, { name = '' } = {}) {
     r.correct ?? 0,
     r.total_hazards ?? r.total ?? 0,
     r.wrong ?? '',
-    r.accuracy ?? '',
+    accuracyPercent(r),
   ]);
   return toCsv(headers, rows);
 }

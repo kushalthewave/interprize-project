@@ -7,7 +7,7 @@
  * the thirty seconds of reading after a mistake, which is where the hazard
  * actually gets learned.
  */
-import { el } from './dom.js';
+import { el, mount } from './dom.js';
 import { buildQuiz, scoreQuiz } from '../gameplay/quiz.js';
 
 /**
@@ -81,7 +81,7 @@ export function quizPanel(summary, { onFinish } = {}) {
 
     const missed = questions.filter((q, i) => given[i] !== q.answer);
 
-    host.replaceChildren(
+    mount(host,
       el('div.quiz-score', { text: `${result.correct} of ${result.total} correct` }),
       el('p', {
         text: result.passed
